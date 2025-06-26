@@ -15,7 +15,7 @@ This is my public “toolbox” where I (Moinuddin / Kalponic Studio/Kalponic Ga
 🎥 Video Series
 
 Want to see these tools in action?
-Check out the full YouTube Playlist for demos, devlogs, and how-tos.
+Check out the full [YouTube Playlist](https://www.youtube.com/watch?v=A_a7Gbjomi0&list=PLaTHVltQr1eMOgCdw5K5Fn13gIJJQOrgR&pp=gAQB) for demos, devlogs, and how-tos.
 
 ---
 
