@@ -1,0 +1,1068 @@
+{
+  "id": "252ac843-368c-41d6-bcbe-29a7a7c95df1",
+  "revision": 0,
+  "last_node_id": 51,
+  "last_link_id": 59,
+  "nodes": [
+    {
+      "id": 36,
+      "type": "ProjectorzParameter",
+      "pos": [
+        -150,
+        1500
+      ],
+      "size": [
+        315,
+        82
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "slot_index": 0,
+          "links": [
+            36
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ProjectorzParameter",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "height",
+        1024
+      ]
+    },
+    {
+      "id": 37,
+      "type": "ProjectorzStringToInt",
+      "pos": [
+        200,
+        1350
+      ],
+      "size": [
+        315,
+        58
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": 35
+        }
+      ],
+      "outputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "slot_index": 0,
+          "links": [
+            33
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ProjectorzStringToInt",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        ""
+      ]
+    },
+    {
+      "id": 38,
+      "type": "ProjectorzStringToInt",
+      "pos": [
+        200,
+        1500
+      ],
+      "size": [
+        315,
+        58
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": 36
+        }
+      ],
+      "outputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "slot_index": 0,
+          "links": [
+            34
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ProjectorzStringToInt",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        ""
+      ]
+    },
+    {
+      "id": 34,
+      "type": "EmptyLatentImage",
+      "pos": [
+        550,
+        1350
+      ],
+      "size": [
+        315,
+        106
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 33
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 34
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            37
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "EmptyLatentImage",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        2048,
+        2048,
+        1
+      ]
+    },
+    {
+      "id": 43,
+      "type": "ProjectorzOutput",
+      "pos": [
+        1500,
+        850
+      ],
+      "size": [
+        315,
+        58
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 46
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "ProjectorzOutput",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "ProjectorOutputBlob_wyWsqJzOfx_"
+      ]
+    },
+    {
+      "id": 35,
+      "type": "ProjectorzParameter",
+      "pos": [
+        -150,
+        1350
+      ],
+      "size": [
+        315,
+        82
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "slot_index": 0,
+          "links": [
+            35
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ProjectorzParameter",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "width",
+        1024
+      ]
+    },
+    {
+      "id": 33,
+      "type": "CLIPTextEncode",
+      "pos": [
+        -64,
+        1101
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 59
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": 52
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            32
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "CLIPTextEncode",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "bad art"
+      ]
+    },
+    {
+      "id": 28,
+      "type": "PreviewImage",
+      "pos": [
+        712.0322265625,
+        259.6670227050781
+      ],
+      "size": [
+        210,
+        246
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 48
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "PreviewImage",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 40,
+      "type": "VAEDecode",
+      "pos": [
+        495.6094055175781,
+        629.306884765625
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 41
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 56
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            46,
+            47
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "VAEDecode",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 51,
+      "type": "VAELoader",
+      "pos": [
+        -74.16492462158203,
+        644.3978881835938
+      ],
+      "size": [
+        315,
+        58
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "slot_index": 0,
+          "links": [
+            56
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.27",
+        "Node name for S&R": "VAELoader",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "klF8Anime2VAE_klF8Anime2VAE.safetensors"
+      ]
+    },
+    {
+      "id": 39,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        -997.1837158203125,
+        535.3992309570312
+      ],
+      "size": [
+        315,
+        98
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            55
+          ]
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "slot_index": 1,
+          "links": [
+            57
+          ]
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "slot_index": 2,
+          "links": []
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "CheckpointLoaderSimple",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "arthemyComics_v70.safetensors"
+      ]
+    },
+    {
+      "id": 46,
+      "type": "ProjectorzParameter",
+      "pos": [
+        -759.7968139648438,
+        854.0350952148438
+      ],
+      "size": [
+        315,
+        82
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "slot_index": 0,
+          "links": [
+            51
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ProjectorzParameter",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "prompt",
+        "A full-body, head-to-toe image of a stylized fantasy female mage or warlock, standing in a T-pose. She has short white hair and wears a fitted blue-green armored bodysuit with silver accents and thigh-high boots. Her outfit features decorative shoulder armor and mystical jewelry. Expressive face, confident and mystical, soft painterly shading, highly detailed, anime Ghibli-inspired, game character concept art, clean background"
+      ]
+    },
+    {
+      "id": 32,
+      "type": "CLIPTextEncode",
+      "pos": [
+        -41.77595520019531,
+        754.380126953125
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 58
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": 51
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            43
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "CLIPTextEncode",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "wood door"
+      ]
+    },
+    {
+      "id": 47,
+      "type": "ProjectorzParameter",
+      "pos": [
+        -793,
+        1191
+      ],
+      "size": [
+        315,
+        82
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "slot_index": 0,
+          "links": [
+            52
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ProjectorzParameter",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "negative_prompt",
+        "no photorealism, no modern clothing, no text, no logos, no background clutter, no extra objects, no sitting, no dynamic poses, no cropping, no close-up, must show feet, NSFW, sex, porn, penis, vagina"
+      ]
+    },
+    {
+      "id": 50,
+      "type": "Power Lora Loader (rgthree)",
+      "pos": [
+        -478.85223388671875,
+        333.302490234375
+      ],
+      "size": [
+        340.20001220703125,
+        190
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "dir": 3,
+          "name": "model",
+          "type": "MODEL",
+          "link": 55
+        },
+        {
+          "dir": 3,
+          "name": "clip",
+          "type": "CLIP",
+          "link": 57
+        }
+      ],
+      "outputs": [
+        {
+          "dir": 4,
+          "name": "MODEL",
+          "shape": 3,
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            54
+          ]
+        },
+        {
+          "dir": 4,
+          "name": "CLIP",
+          "shape": 3,
+          "type": "CLIP",
+          "slot_index": 1,
+          "links": [
+            58,
+            59
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "rgthree-comfy",
+        "ver": "b84f39c7c224de765de0b54c55b967329011819d",
+        "Show Strengths": "Single Strength",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        {},
+        {
+          "type": "PowerLoraLoaderHeaderWidget"
+        },
+        {
+          "on": true,
+          "lora": "sxz-concept.safetensors",
+          "strength": 0.8,
+          "strengthTwo": null
+        },
+        {
+          "on": true,
+          "lora": "add_detail.safetensors",
+          "strength": 0.8,
+          "strengthTwo": null
+        },
+        {},
+        ""
+      ],
+      "color": "#332922",
+      "bgcolor": "#593930"
+    },
+    {
+      "id": 31,
+      "type": "KSampler",
+      "pos": [
+        1050.9996337890625,
+        1063.2193603515625
+      ],
+      "size": [
+        315,
+        474
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 54
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 50
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 32
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 37
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            41
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "KSampler",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        824643442824616,
+        "randomize",
+        30,
+        8,
+        "dpmpp_2m_sde",
+        "karras",
+        1
+      ]
+    },
+    {
+      "id": 41,
+      "type": "ControlNetApply",
+      "pos": [
+        571.6061401367188,
+        924.6829223632812
+      ],
+      "size": [
+        317.4000244140625,
+        98
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 43
+        },
+        {
+          "name": "control_net",
+          "type": "CONTROL_NET",
+          "link": 45
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 49
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            50
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "ControlNetApply",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        1
+      ]
+    },
+    {
+      "id": 45,
+      "type": "ProjectorzControlnetInput",
+      "pos": [
+        -77.22117614746094,
+        421.6095886230469
+      ],
+      "size": [
+        315,
+        102
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            48,
+            49
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ProjectorzControlnetInput",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        0,
+        "ProjectorControlnetBlob_wyWsqJzOfx_"
+      ]
+    },
+    {
+      "id": 44,
+      "type": "SaveImage",
+      "pos": [
+        1500,
+        950
+      ],
+      "size": [
+        315,
+        270
+      ],
+      "flags": {},
+      "order": 19,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 47
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "SaveImage",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "ComfyUI"
+      ]
+    },
+    {
+      "id": 42,
+      "type": "ControlNetLoader",
+      "pos": [
+        489.70001220703125,
+        769.7998046875
+      ],
+      "size": [
+        315,
+        58
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CONTROL_NET",
+          "type": "CONTROL_NET",
+          "slot_index": 0,
+          "links": [
+            45
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.30",
+        "Node name for S&R": "ControlNetLoader",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "control_v11f1p_sd15_depth.pth"
+      ]
+    }
+  ],
+  "links": [
+    [
+      32,
+      33,
+      0,
+      31,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      33,
+      37,
+      0,
+      34,
+      0,
+      "INT"
+    ],
+    [
+      34,
+      38,
+      0,
+      34,
+      1,
+      "INT"
+    ],
+    [
+      35,
+      35,
+      0,
+      37,
+      0,
+      "STRING"
+    ],
+    [
+      36,
+      36,
+      0,
+      38,
+      0,
+      "STRING"
+    ],
+    [
+      37,
+      34,
+      0,
+      31,
+      3,
+      "LATENT"
+    ],
+    [
+      41,
+      31,
+      0,
+      40,
+      0,
+      "LATENT"
+    ],
+    [
+      43,
+      32,
+      0,
+      41,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      45,
+      42,
+      0,
+      41,
+      1,
+      "CONTROL_NET"
+    ],
+    [
+      46,
+      40,
+      0,
+      43,
+      0,
+      "IMAGE"
+    ],
+    [
+      47,
+      40,
+      0,
+      44,
+      0,
+      "IMAGE"
+    ],
+    [
+      48,
+      45,
+      0,
+      28,
+      0,
+      "IMAGE"
+    ],
+    [
+      49,
+      45,
+      0,
+      41,
+      2,
+      "IMAGE"
+    ],
+    [
+      50,
+      41,
+      0,
+      31,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      51,
+      46,
+      0,
+      32,
+      1,
+      "STRING"
+    ],
+    [
+      52,
+      47,
+      0,
+      33,
+      1,
+      "STRING"
+    ],
+    [
+      54,
+      50,
+      0,
+      31,
+      0,
+      "MODEL"
+    ],
+    [
+      55,
+      39,
+      0,
+      50,
+      0,
+      "MODEL"
+    ],
+    [
+      56,
+      51,
+      0,
+      40,
+      1,
+      "VAE"
+    ],
+    [
+      57,
+      39,
+      1,
+      50,
+      1,
+      "CLIP"
+    ],
+    [
+      58,
+      50,
+      1,
+      32,
+      0,
+      "CLIP"
+    ],
+    [
+      59,
+      50,
+      1,
+      33,
+      0,
+      "CLIP"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "workspace_info": {
+      "id": "2-ETy_XTyj5xfIrk71V1D"
+    },
+    "ds": {
+      "scale": 1.2100000000000002,
+      "offset": [
+        189.91142948882455,
+        -497.06319782989146
+      ]
+    },
+    "ue_links": [],
+    "links_added_by_ue": [],
+    "frontendVersion": "1.17.11",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}
