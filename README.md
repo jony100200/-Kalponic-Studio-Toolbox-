@@ -63,7 +63,7 @@ If you find something useful, that’s great! Otherwise, please use at your own 
 
 - YouTube: [Kalponic Studio](https://youtube.com/@kalponic_studio)
 - Twitter: [@kalponicgames](https://twitter.com/kalponicgames)
-- Discord: [Kalponic Studio](discord.gg/TpJ6wDp7P8)
+- Discord: [discord.gg/TpJ6wDp7P8]
 
 ---
 
