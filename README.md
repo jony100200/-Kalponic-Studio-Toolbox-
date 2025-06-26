@@ -12,8 +12,15 @@ This is my public “toolbox” where I (Moinuddin / Kalponic Studio/Kalponic Ga
 - Asset pipeline helpers (Blender, Krita, etc.)
 - Random experiments, one-off utilities, and more
 
+🎥 Video Series
+
+Want to see these tools in action?
+Check out the full YouTube Playlist for demos, devlogs, and how-tos.
+
+---
+
 **Some are AI-powered, some are not!  
-Some are rough drafts, others are more polished. Use at your own risk.**
+Some are rough drafts, others are more polished. You can use it at your own risk.**
 
 ---
 
