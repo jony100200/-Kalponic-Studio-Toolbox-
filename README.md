@@ -67,6 +67,6 @@ If you find something useful, that’s great! Otherwise, please use at your own 
 
 ---
 
-*Thanks for stopping by! Start the repo if you find anything helpful.*
+*Thanks for stopping by! Star the repo if you find anything helpful.*
 
 
