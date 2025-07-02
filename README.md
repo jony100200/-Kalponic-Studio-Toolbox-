@@ -6,7 +6,7 @@
 
 ## What is this?
 
-This is my public “toolbox” where I (Moinuddin / Kalponic Studio/Kalponic Games) drop all sorts of scripts and prototypes:
+This is my public “toolbox” where I (Moinuddin Ahmed / Kalponic Studio/Kalponic Games) drop all sorts of scripts and prototypes:
 - Local AI model launchers & automation
 - Unity workflow scripts & batch tools
 - Asset pipeline helpers (Blender, Krita, etc.)
