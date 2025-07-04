@@ -82,4 +82,4 @@ Join our Discord: [\[Kalponic Studio\] ](https://discord.com/invite/TpJ6wDp7P8)
 
 Follow for updates: [@KalponicStudio](https://twitter.com/kalponicstudio)
 
-Video Link[Youtube](https://youtu.be/EI1eS4u6n4U)
+Video Link: [Youtube](https://youtu.be/EI1eS4u6n4U)
