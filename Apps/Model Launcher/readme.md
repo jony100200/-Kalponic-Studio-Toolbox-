@@ -1,4 +1,4 @@
-# 🧠 Pathline — Model Picker UI  
+# 🧠 Model Picker UI  
 **Launch LLMs & Whisper models with zero terminal hassle.**
 
 A Python-based GUI to easily launch local AI models (like GGUF LLMs or Whisper ASR) using a config file or manual selection. No need to type commands or deal with terminal paths—just point, click, and go.
