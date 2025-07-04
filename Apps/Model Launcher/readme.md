@@ -78,5 +78,5 @@ MIT License — free to use and modify. Credit appreciated.
 
 ## 💬 Community & Support
 
-Join our Discord: [your Discord invite here]  
+Join our Discord: [\[Kalsponic Studio\] ](https://discord.com/invite/TpJ6wDp7P8) 
 Follow for updates: [@KalponicStudio](https://twitter.com/kalponicstudio)
