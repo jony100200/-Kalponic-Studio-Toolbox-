@@ -1,17 +1,28 @@
-# 🚀 SPRITE NEXUS - Batch Icon Processor
+# 🚀 SPRITE NEXUS - Dual Mode Icon Processor
 
-A modern Python application for batch processing icons with random backgrounds and creating spritesheets, featuring a sci-fi dark theme UI designed with KISS and SOLID principles.
+A modern Python application for batch processing icons with random backgrounds and creating transparent sprite sheets, featuring a sci-fi dark theme UI designed with KISS and SOLID principles.
 
 ## ✨ Features
 
+### 🔀 Icon + Background Merger Mode
 - **📁 Folder-Based Processing**: Select entire folders of icons and backgrounds
 - **🎯 Smart Icon Merging**: Each icon gets paired with a random background
 - **📐 Aspect-Fit Scaling**: Icons maintain aspect ratio and center perfectly
 - **🔮 Advanced Spritesheets**: Configurable grid with power-of-2 canvas option
 - **⚡ Batch Operations**: Process hundreds of images in one go
+- **🎯 Flexible Output Modes**: Choose between Sprite Sheets, Individual PNGs, or Both
+
+### 📋 Sprite Sheet Maker Mode (NEW!)
+- **🎯 Transparent Sprite Sheets**: Create sprite sheets from transparent icons only
+- **📐 Bottom-Center Alignment**: Sprites positioned at bottom-center of each cell
+- **🔧 Smart Scaling**: Auto-scale down oversized sprites while preserving originals
+- **📏 Configurable Spacing**: Adjustable grid spacing and bottom margins
+- **📋 Multi-Sheet Pagination**: Automatically creates multiple sheets when needed
+- **💎 Power-of-2 Canvas**: Optional power-of-2 canvas expansion for game engines
+
+### 🎨 Common Features
 - **🌌 Sci-Fi Dark Theme**: Modern CustomTkinter interface with futuristic styling
 - **🏗️ Clean Architecture**: Modular design following SOLID principles
-- **🎯 Flexible Output Modes**: Choose between Sprite Sheets, Individual PNGs, or Both
 - **📝 Smart Versioning**: Automatic file naming with version numbers when needed
 - **📊 Index Generation**: Creates JSON index files for individual PNG collections
 
@@ -39,6 +50,10 @@ python main.py
 
 Or use the VS Code task: **"Run Sprite Processor"**
 
+The application features **two processing modes** accessible via tabs:
+
+## 🔀 Mode 1: Icon + Background Merger
+
 ### 📁 Folder Selection
 1. **Icon Folder**: Select folder containing your icon images
 2. **Background Folder**: Select folder containing background textures
@@ -58,45 +73,90 @@ Or use the VS Code task: **"Run Sprite Processor"**
 - **📝 Smart Naming**: Uses icon folder name as base (e.g., "fire_sheet_1.png", "fire_sheet_2.png")
 - **🔄 Version Control**: Adds _v2, _v3 suffixes if files already exist
 - **Power-of-2 Canvas**: Auto-expand canvas to next power of 2 (up to 2048px)
-- **🎯 Perfect Pagination**: Distributes images optimally across multiple sheets
+
+## 📋 Mode 2: Sprite Sheet Maker (NEW!)
+
+### 📁 Folder Selection
+1. **Icons Folder**: Select folder containing transparent icon images
+2. **Output Folder**: Choose where to save sprite sheets
+
+### ⚙️ Sprite Sheet Configuration
+- **Cell Size**: Size of each cell in pixels (default: 256px)
+- **Grid Spacing**: Spacing between cells in pixels (default: 2px)
+- **Bottom Margin**: Extra space below sprite in cell (default: 0px)
+- **Grid Rows/Columns**: Configure grid layout (default: 8×8)
+- **Power-of-2 Canvas**: Optional canvas expansion for game engine compatibility
+
+### 🎯 Sprite Behavior
+1. **Load & Sort**: All images loaded and sorted by filename for consistency
+2. **Smart Scaling**: Sprites larger than cell size are uniformly scaled down to fit
+3. **Bottom-Center Alignment**: Each sprite positioned at bottom-center of its cell
+4. **Preserve Transparency**: Full alpha channel preservation throughout process
+5. **Auto-Pagination**: Multiple sheets created automatically when needed
+6. **Grid Spacing**: Configurable gutters between cells on the sheet
+
+### 📝 Output Files
+- **Naming**: `<IconsFolderName>_sheet.png` or `<IconsFolderName>_sheet_N.png` for multiple sheets
+- **Format**: PNG with full transparency support
+- **Multi-Sheet**: Automatic indexing (_sheet_1, _sheet_2, etc.)
 
 ### 📁 Output Formats
 
-#### Sprite Sheets Mode
-- Creates paginated spritesheets: `<folder_name>_sheet_1.png`, `<folder_name>_sheet_2.png`, etc.
-- Automatic versioning if files exist: `<folder_name>_sheet_1_v2.png`
-- JSON metadata files with grid information
+#### Icon + Background Merger
+- **Sprite Sheets Mode**: Creates paginated spritesheets: `<folder_name>_sheet_1.png`, `<folder_name>_sheet_2.png`, etc.
+- **Individual PNGs Mode**: Saves to: `Output/<IconsFolderName>/<icon_stem>.png`
+- **Both Mode**: Combines both workflows in a single operation
 
-#### Individual PNGs Mode
-- Saves to: `Output/<IconsFolderName>/<icon_stem>.png`
-- Automatic numbering for duplicates: `icon_1.png`, `icon_2.png`
-- Creates `index.json` with file list and metadata
+#### Sprite Sheet Maker
+- **Transparent Sheets**: `<IconsFolderName>_sheet.png` or `<IconsFolderName>_sheet_N.png`
+- **Pure Transparency**: No backgrounds, just transparent sprites with grid layout
+- **Bottom-Center Alignment**: Sprites positioned consistently in each cell
 
-#### Both Mode
-- Combines both workflows in a single operation
-- Optimized processing to avoid duplicate work
-- Complete asset pipeline solution
+## 🎯 Processing Workflows
 
-## 🎯 Processing Workflow
-
+### Icon + Background Merger Workflow
 1. **Folder Validation**: Ensures all required folders exist and contain valid images
 2. **Icon Sorting**: Processes icons in deterministic filename order for consistency
 3. **Batch Merge**: Each icon is randomly paired with a background
 4. **Aspect-Fit Scaling**: Icons resize to fit target size while maintaining proportions
 5. **Perfect Centering**: Icons center on backgrounds with proper alpha compositing
 6. **Smart Output**: Creates sprite sheets, individual files, or both based on selected mode
-7. **Memory Management**: Properly closes images to prevent memory leaks
-8. **Progress Logging**: Real-time feedback and error handling throughout the process
+
+### Sprite Sheet Maker Workflow
+1. **Icon Loading**: Loads all transparent icons from folder and sorts by filename
+2. **Size Validation**: Checks each sprite against cell size, scales down if needed
+3. **Grid Layout**: Calculates optimal grid positioning with spacing
+4. **Bottom-Center Placement**: Positions each sprite at bottom-center of its cell
+5. **Transparency Preservation**: Maintains full alpha channel throughout process
+6. **Auto-Pagination**: Creates multiple sheets when icon count exceeds grid capacity
+7. **Power-of-2 Expansion**: Optionally expands canvas to power-of-2 dimensions
 
 ## 🛡️ Reliability Features
 
 - **Input Validation**: Comprehensive folder and file validation before processing
-- **Deterministic Processing**: Icons sorted by filename for consistent results
+- **Deterministic Processing**: Icons sorted by filename for consistent results across both modes
 - **Memory Management**: Automatic image cleanup to prevent memory leaks
 - **Error Handling**: Graceful handling of corrupted or unsupported files
 - **Progress Tracking**: Real-time status updates and detailed result summaries
 - **File Versioning**: Smart naming prevents accidental overwrites
 - **Threading Safety**: UI remains responsive during large batch operations
+- **Dual Mode Support**: Seamless switching between merger and sprite sheet modes
+
+## 🔧 Technical Features
+
+### Icon + Background Merger
+- **Random Background Assignment**: Each icon gets unique random background
+- **RGBA Normalization**: All images converted to RGBA for consistent processing
+- **Aspect-Fit "Contain"**: Icons scale down to fit without cropping
+- **Alpha Preservation**: Transparent areas maintain full alpha channel
+
+### Sprite Sheet Maker
+- **Smart Scaling**: Only scales down oversized sprites, preserves smaller ones
+- **Bottom-Center Alignment**: Consistent sprite positioning in each cell
+- **Grid Spacing Control**: Configurable gutters between cells
+- **Bottom Margin Support**: Extra space below sprites within cells
+- **Power-of-2 Canvas**: Optional expansion for game engine compatibility
+- **Multi-Sheet Pagination**: Automatic sheet creation when grid capacity exceeded
 
 ## 🏗️ Architecture
 
@@ -125,18 +185,22 @@ src/
 - **Output**: PNG with full alpha channel support
 - **Case-insensitive** file extension matching
 
-## 🔧 Technical Features
+## 🎨 Supported Formats
 
-- **Random Background Assignment**: Each icon gets unique random background
-- **RGBA Normalization**: All images converted to RGBA for consistent processing
-- **Aspect-Fit "Contain"**: Icons scale down to fit without cropping
-- **Alpha Preservation**: Transparent areas maintain full alpha channel
-- **Power-of-2 Canvas**: Optional expansion for game engine compatibility
-- **Deterministic Ordering**: Icons processed in sorted filename order
+- **Icons & Backgrounds**: PNG, JPG, JPEG, WebP
+- **Output**: PNG with full alpha channel support
+- **Case-insensitive** file extension matching
+- **Transparency**: Full RGBA support in both processing modes
 
-## � Perfect For
+## 🎯 Perfect For
 
-- **Game Development**: Creating character/item sprite sheets
-- **UI Design**: Batch processing icon sets with consistent backgrounds
+### Icon + Background Merger
+- **Game Development**: Creating character/item sprites with consistent backgrounds
+- **UI Design**: Batch processing icon sets with uniform styling
 - **Asset Pipelines**: Automated sprite generation for large projects
-- **Texture Creation**: Combining elements for procedural textures
+
+### Sprite Sheet Maker  
+- **Game Development**: Creating transparent sprite atlases for characters, items, animations
+- **Mobile Apps**: Optimized sprite sheets for memory-efficient rendering
+- **Web Development**: Transparent icon sets with consistent grid layout
+- **Animation**: Frame-based animation sheets with precise positioning

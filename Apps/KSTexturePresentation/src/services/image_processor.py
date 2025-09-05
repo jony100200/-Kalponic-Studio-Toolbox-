@@ -345,6 +345,215 @@ class ImageProcessor:
         
         return min(power, max_value)
     
+    def create_sprite_sheets_from_folder(self, icons_folder, output_folder, cell_size, 
+                                       grid_spacing, bottom_margin, rows, cols, 
+                                       power_of_two=False, folder_base_name=None):
+        """
+        Create sprite sheets from transparent icons in a folder
+        
+        Args:
+            icons_folder (str): Path to folder containing transparent icons
+            output_folder (str): Path to output folder
+            cell_size (int): Size of each cell in pixels
+            grid_spacing (int): Spacing between cells in pixels
+            bottom_margin (int): Extra space below sprite in cell
+            rows (int): Number of rows per sheet
+            cols (int): Number of columns per sheet
+            power_of_two (bool): Whether to expand canvas to power of two
+            folder_base_name (str): Base name for output files
+            
+        Returns:
+            tuple: (success_status, list_of_created_files)
+        """
+        try:
+            # Get all image files from the folder
+            icon_files = self.get_image_files(icons_folder)
+            
+            if not icon_files:
+                print("No icon files found in the specified folder")
+                return False, []
+            
+            if not folder_base_name:
+                folder_base_name = os.path.basename(icons_folder.rstrip(os.sep))
+            
+            print(f"Processing {len(icon_files)} icons from '{folder_base_name}' folder...")
+            
+            # Load and prepare all images
+            prepared_images = []
+            for icon_path in icon_files:
+                try:
+                    # Load icon and convert to RGBA
+                    icon = Image.open(icon_path).convert('RGBA')
+                    
+                    # Scale down if larger than cell size
+                    if icon.width > cell_size or icon.height > cell_size:
+                        icon = self._scale_to_fit_cell(icon, cell_size)
+                    
+                    prepared_images.append(icon)
+                    
+                except Exception as e:
+                    print(f"Error loading {icon_path}: {e}")
+                    continue
+            
+            if not prepared_images:
+                print("No valid images could be loaded")
+                return False, []
+            
+            # Calculate cells per sheet
+            cells_per_sheet = rows * cols
+            total_images = len(prepared_images)
+            
+            # Calculate number of sheets needed
+            num_sheets = math.ceil(total_images / cells_per_sheet)
+            
+            created_files = []
+            
+            print(f"Creating {num_sheets} sprite sheet(s) for {total_images} images...")
+            
+            # Create each sheet
+            for sheet_num in range(num_sheets):
+                # Calculate image range for this sheet
+                start_idx = sheet_num * cells_per_sheet
+                end_idx = min(start_idx + cells_per_sheet, total_images)
+                sheet_images = prepared_images[start_idx:end_idx]
+                
+                # Generate sheet filename
+                if num_sheets == 1:
+                    sheet_filename = f"{folder_base_name}_sheet.png"
+                else:
+                    sheet_filename = f"{folder_base_name}_sheet_{sheet_num + 1}.png"
+                
+                sheet_path = os.path.join(output_folder, sheet_filename)
+                
+                # Make sure output folder exists
+                os.makedirs(output_folder, exist_ok=True)
+                
+                print(f"Creating sheet {sheet_num + 1}/{num_sheets}: {len(sheet_images)} images -> {sheet_filename}")
+                
+                # Create this sheet
+                success = self._create_transparent_sprite_sheet(
+                    sheet_images, sheet_path, cell_size, grid_spacing, 
+                    bottom_margin, rows, cols, power_of_two
+                )
+                
+                if success:
+                    created_files.append(sheet_path)
+                    print(f"✓ Sheet {sheet_num + 1} created successfully")
+                else:
+                    print(f"✗ Failed to create sheet {sheet_num + 1}")
+                    # Clean up prepared images
+                    for img in prepared_images:
+                        img.close()
+                    return False, created_files
+            
+            # Clean up prepared images
+            for img in prepared_images:
+                img.close()
+            
+            print(f"All {num_sheets} sprite sheet(s) created successfully!")
+            return True, created_files
+            
+        except Exception as e:
+            print(f"Error creating sprite sheets: {e}")
+            return False, []
+    
+    def _scale_to_fit_cell(self, image, cell_size):
+        """
+        Scale image to fit within cell size while maintaining aspect ratio
+        
+        Args:
+            image (PIL.Image): Source image
+            cell_size (int): Cell size (square)
+            
+        Returns:
+            PIL.Image: Scaled image
+        """
+        # Calculate scaling factor to fit within cell
+        scale_factor = min(cell_size / image.width, cell_size / image.height)
+        
+        if scale_factor < 1.0:  # Only scale down, never scale up
+            new_width = int(image.width * scale_factor)
+            new_height = int(image.height * scale_factor)
+            return image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        
+        return image
+    
+    def _create_transparent_sprite_sheet(self, images, output_path, cell_size, 
+                                       grid_spacing, bottom_margin, rows, cols, 
+                                       power_of_two=False):
+        """
+        Create a single transparent sprite sheet from images
+        
+        Args:
+            images (list): List of PIL.Image objects (up to rows*cols)
+            output_path (str): Output path for this sheet
+            cell_size (int): Size of each cell in pixels
+            grid_spacing (int): Spacing between cells in pixels
+            bottom_margin (int): Extra space below sprite in cell
+            rows (int): Number of rows
+            cols (int): Number of columns
+            power_of_two (bool): Whether to expand canvas to power of two
+            
+        Returns:
+            bool: Success status
+        """
+        try:
+            # Calculate effective cell area (cell size minus bottom margin)
+            effective_cell_height = cell_size - bottom_margin
+            
+            # Calculate base sheet dimensions
+            sheet_width = (cols * cell_size) + ((cols - 1) * grid_spacing)
+            sheet_height = (rows * cell_size) + ((rows - 1) * grid_spacing)
+            
+            # Expand to power of two if requested
+            if power_of_two:
+                sheet_width = self._next_power_of_two(sheet_width, 4096)
+                sheet_height = self._next_power_of_two(sheet_height, 4096)
+            
+            # Create transparent sprite sheet canvas
+            spritesheet = Image.new("RGBA", (sheet_width, sheet_height), (0, 0, 0, 0))
+            
+            # Place images in grid (only up to rows*cols images)
+            max_cells = rows * cols
+            images_to_place = images[:max_cells]
+            
+            for i, img in enumerate(images_to_place):
+                row = i // cols
+                col = i % cols
+                
+                # Calculate cell position with grid spacing
+                cell_x = col * (cell_size + grid_spacing)
+                cell_y = row * (cell_size + grid_spacing)
+                
+                # Calculate sprite position within cell (bottom-center aligned)
+                sprite_x = cell_x + (cell_size - img.width) // 2
+                sprite_y = cell_y + (effective_cell_height - img.height)
+                
+                # Ensure sprite doesn't go outside cell bounds
+                sprite_x = max(cell_x, min(sprite_x, cell_x + cell_size - img.width))
+                sprite_y = max(cell_y, min(sprite_y, cell_y + effective_cell_height - img.height))
+                
+                # Paste image with alpha compositing
+                if img.mode == 'RGBA':
+                    spritesheet.paste(img, (sprite_x, sprite_y), img)
+                else:
+                    spritesheet.paste(img, (sprite_x, sprite_y))
+            
+            # Ensure output directory exists
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            
+            # Save sprite sheet
+            spritesheet.save(output_path, 'PNG')
+            
+            # Close sprite sheet to free memory
+            spritesheet.close()
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error creating transparent sprite sheet: {e}")
+            return False
+    
     # Legacy methods for backwards compatibility
     def merge_sprite_with_background(self, sprite_path, background_path, output_path):
         """Legacy method - merge single sprite with background"""
