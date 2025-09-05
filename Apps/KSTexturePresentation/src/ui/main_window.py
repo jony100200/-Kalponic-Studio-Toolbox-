@@ -107,11 +107,32 @@ class MainWindow:
         status_label.pack(expand=True)
     
     def _build_main_content(self):
-        """Build main content area"""
-        # Create main scrollable frame
-        main_frame = ctk.CTkScrollableFrame(self.root, corner_radius=15)
-        main_frame.grid(row=1, column=0, sticky="nsew", padx=20, pady=10)
+        """Build main content area with tabs"""
+        # Create tabview for different modes
+        self.tabview = ctk.CTkTabview(self.root, corner_radius=15)
+        self.tabview.grid(row=1, column=0, sticky="nsew", padx=20, pady=10)
+        
+        # Add tabs
+        tab1 = self.tabview.add("🔀 Icon + Background Merger")
+        tab2 = self.tabview.add("📋 Sprite Sheet Maker")
+        
+        # Configure tab grids
+        tab1.grid_columnconfigure(0, weight=1)
+        tab2.grid_columnconfigure(0, weight=1)
+        
+        # Build Tab 1 - Existing functionality
+        self._build_merger_tab(tab1)
+        
+        # Build Tab 2 - New sprite sheet maker
+        self._build_spritesheet_tab(tab2)
+    
+    def _build_merger_tab(self, parent):
+        """Build the icon + background merger tab (existing functionality)"""
+        # Create scrollable frame for the tab content
+        main_frame = ctk.CTkScrollableFrame(parent, corner_radius=15)
+        main_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
         main_frame.grid_columnconfigure(0, weight=1)
+        parent.grid_rowconfigure(0, weight=1)
         
         # Input folders section
         self._build_folder_selection(main_frame)
@@ -124,6 +145,285 @@ class MainWindow:
         
         # Action buttons section
         self._build_action_buttons(main_frame)
+    
+    def _build_spritesheet_tab(self, parent):
+        """Build the sprite sheet maker tab (new functionality)"""
+        # Create scrollable frame for the tab content
+        sprite_frame = ctk.CTkScrollableFrame(parent, corner_radius=15)
+        sprite_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        sprite_frame.grid_columnconfigure(0, weight=1)
+        parent.grid_rowconfigure(0, weight=1)
+        
+        # Sprite sheet folder selection
+        self._build_sprite_folder_selection(sprite_frame)
+        
+        # Sprite sheet settings
+        self._build_sprite_settings(sprite_frame)
+        
+        # Sprite sheet action buttons
+        self._build_sprite_action_buttons(sprite_frame)
+    
+    def _build_sprite_folder_selection(self, parent):
+        """Build folder selection for sprite sheet maker"""
+        folder_frame = ctk.CTkFrame(parent, corner_radius=15)
+        folder_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
+        folder_frame.grid_columnconfigure(1, weight=1)
+        
+        # Section title
+        ctk.CTkLabel(
+            folder_frame,
+            text="📁 SPRITE SHEET DIRECTORIES",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color=self.colors["secondary"]
+        ).grid(row=0, column=0, columnspan=3, padx=20, pady=(20, 15), sticky="w")
+        
+        # Icons folder
+        ctk.CTkLabel(
+            folder_frame,
+            text="Icons Folder:",
+            font=ctk.CTkFont(size=12, weight="bold")
+        ).grid(row=1, column=0, padx=20, pady=5, sticky="w")
+        
+        self.sprite_icons_folder_var = ctk.StringVar()
+        self.sprite_icons_folder_entry = ctk.CTkEntry(
+            folder_frame,
+            textvariable=self.sprite_icons_folder_var,
+            placeholder_text="Select folder containing icon images...",
+            height=35,
+            corner_radius=8
+        )
+        self.sprite_icons_folder_entry.grid(row=1, column=1, padx=10, pady=5, sticky="ew")
+        
+        ctk.CTkButton(
+            folder_frame,
+            text="🎯 SELECT",
+            command=self._select_sprite_icons_folder,
+            width=100,
+            height=35,
+            corner_radius=8,
+            fg_color=self.colors["accent"],
+            hover_color=self.colors["primary"]
+        ).grid(row=1, column=2, padx=20, pady=5)
+        
+        # Output folder
+        ctk.CTkLabel(
+            folder_frame,
+            text="Output Folder:",
+            font=ctk.CTkFont(size=12, weight="bold")
+        ).grid(row=2, column=0, padx=20, pady=5, sticky="w")
+        
+        self.sprite_output_folder_var = ctk.StringVar()
+        self.sprite_output_folder_entry = ctk.CTkEntry(
+            folder_frame,
+            textvariable=self.sprite_output_folder_var,
+            placeholder_text="Select output folder for sprite sheets...",
+            height=35,
+            corner_radius=8
+        )
+        self.sprite_output_folder_entry.grid(row=2, column=1, padx=10, pady=(5, 20), sticky="ew")
+        
+        ctk.CTkButton(
+            folder_frame,
+            text="💾 SELECT",
+            command=self._select_sprite_output_folder,
+            width=100,
+            height=35,
+            corner_radius=8,
+            fg_color=self.colors["accent"],
+            hover_color=self.colors["primary"]
+        ).grid(row=2, column=2, padx=20, pady=(5, 20))
+    
+    def _build_sprite_settings(self, parent):
+        """Build sprite sheet settings"""
+        settings_frame = ctk.CTkFrame(parent, corner_radius=15)
+        settings_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=10)
+        settings_frame.grid_columnconfigure((0, 1, 2), weight=1)
+        
+        # Section title
+        ctk.CTkLabel(
+            settings_frame,
+            text="⚙️ SPRITE SHEET CONFIGURATION",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color=self.colors["secondary"]
+        ).grid(row=0, column=0, columnspan=3, padx=20, pady=(20, 15), sticky="w")
+        
+        # Cell Size
+        cell_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
+        cell_frame.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
+        
+        ctk.CTkLabel(
+            cell_frame,
+            text="Cell Size (px):",
+            font=ctk.CTkFont(size=11, weight="bold")
+        ).pack(anchor="w", padx=5)
+        
+        self.sprite_cell_size_var = ctk.StringVar(value="256")
+        self.sprite_cell_size_entry = ctk.CTkEntry(
+            cell_frame,
+            textvariable=self.sprite_cell_size_var,
+            width=80,
+            height=30,
+            placeholder_text="256"
+        )
+        self.sprite_cell_size_entry.pack(padx=5, pady=2)
+        self.sprite_cell_size_entry.bind('<KeyRelease>', self._on_sprite_settings_change)
+        
+        # Grid Spacing
+        spacing_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
+        spacing_frame.grid(row=1, column=1, padx=10, pady=10, sticky="ew")
+        
+        ctk.CTkLabel(
+            spacing_frame,
+            text="Grid Spacing (px):",
+            font=ctk.CTkFont(size=11, weight="bold")
+        ).pack(anchor="w", padx=5)
+        
+        self.sprite_grid_spacing_var = ctk.StringVar(value="2")
+        self.sprite_grid_spacing_entry = ctk.CTkEntry(
+            spacing_frame,
+            textvariable=self.sprite_grid_spacing_var,
+            width=80,
+            height=30,
+            placeholder_text="2"
+        )
+        self.sprite_grid_spacing_entry.pack(padx=5, pady=2)
+        self.sprite_grid_spacing_entry.bind('<KeyRelease>', self._on_sprite_settings_change)
+        
+        # Bottom Margin
+        margin_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
+        margin_frame.grid(row=1, column=2, padx=10, pady=10, sticky="ew")
+        
+        ctk.CTkLabel(
+            margin_frame,
+            text="Bottom Margin (px):",
+            font=ctk.CTkFont(size=11, weight="bold")
+        ).pack(anchor="w", padx=5)
+        
+        self.sprite_bottom_margin_var = ctk.StringVar(value="0")
+        self.sprite_bottom_margin_entry = ctk.CTkEntry(
+            margin_frame,
+            textvariable=self.sprite_bottom_margin_var,
+            width=80,
+            height=30,
+            placeholder_text="0"
+        )
+        self.sprite_bottom_margin_entry.pack(padx=5, pady=2)
+        self.sprite_bottom_margin_entry.bind('<KeyRelease>', self._on_sprite_settings_change)
+        
+        # Second row - Grid dimensions and options
+        # Rows
+        rows_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
+        rows_frame.grid(row=2, column=0, padx=10, pady=10, sticky="ew")
+        
+        ctk.CTkLabel(
+            rows_frame,
+            text="Grid Rows:",
+            font=ctk.CTkFont(size=11, weight="bold")
+        ).pack(anchor="w", padx=5)
+        
+        self.sprite_rows_var = ctk.StringVar(value="8")
+        self.sprite_rows_entry = ctk.CTkEntry(
+            rows_frame,
+            textvariable=self.sprite_rows_var,
+            width=80,
+            height=30,
+            placeholder_text="8"
+        )
+        self.sprite_rows_entry.pack(padx=5, pady=2)
+        self.sprite_rows_entry.bind('<KeyRelease>', self._on_sprite_settings_change)
+        
+        # Columns
+        cols_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
+        cols_frame.grid(row=2, column=1, padx=10, pady=10, sticky="ew")
+        
+        ctk.CTkLabel(
+            cols_frame,
+            text="Grid Columns:",
+            font=ctk.CTkFont(size=11, weight="bold")
+        ).pack(anchor="w", padx=5)
+        
+        self.sprite_cols_var = ctk.StringVar(value="8")
+        self.sprite_cols_entry = ctk.CTkEntry(
+            cols_frame,
+            textvariable=self.sprite_cols_var,
+            width=80,
+            height=30,
+            placeholder_text="8"
+        )
+        self.sprite_cols_entry.pack(padx=5, pady=2)
+        self.sprite_cols_entry.bind('<KeyRelease>', self._on_sprite_settings_change)
+        
+        # Options
+        sprite_options_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
+        sprite_options_frame.grid(row=2, column=2, padx=10, pady=10, sticky="ew")
+        
+        ctk.CTkLabel(
+            sprite_options_frame,
+            text="Options:",
+            font=ctk.CTkFont(size=11, weight="bold")
+        ).pack(anchor="w", padx=5)
+        
+        # Power of two option
+        self.sprite_power_of_two_var = ctk.BooleanVar(value=False)
+        self.sprite_power_of_two_check = ctk.CTkCheckBox(
+            sprite_options_frame,
+            text="Power of 2 Canvas",
+            variable=self.sprite_power_of_two_var,
+            font=ctk.CTkFont(size=10)
+        )
+        self.sprite_power_of_two_check.pack(anchor="w", padx=5, pady=2)
+        
+        # Info display
+        info_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
+        info_frame.grid(row=3, column=0, columnspan=3, padx=10, pady=10, sticky="ew")
+        
+        # File count display
+        self.sprite_file_count_label = ctk.CTkLabel(
+            info_frame,
+            text="📊 Ready to scan icons folder...",
+            font=ctk.CTkFont(size=10),
+            text_color=self.colors["primary"]
+        )
+        self.sprite_file_count_label.pack(anchor="w", padx=10, pady=5)
+        
+        # Grid info
+        self.sprite_grid_info_label = ctk.CTkLabel(
+            info_frame,
+            text="Grid: 8×8 = 64 cells/sheet",
+            font=ctk.CTkFont(size=9),
+            text_color=self.colors["primary"]
+        )
+        self.sprite_grid_info_label.pack(anchor="w", padx=10, pady=2)
+    
+    def _build_sprite_action_buttons(self, parent):
+        """Build action buttons for sprite sheet maker"""
+        action_frame = ctk.CTkFrame(parent, corner_radius=15)
+        action_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=20)
+        action_frame.grid_columnconfigure((0, 1), weight=1)
+        
+        # Scan button
+        ctk.CTkButton(
+            action_frame,
+            text="🔍 SCAN ICONS",
+            command=self._scan_sprite_icons,
+            height=45,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color=self.colors["accent"],
+            hover_color=self.colors["primary"],
+            corner_radius=15
+        ).grid(row=0, column=0, padx=10, pady=15, sticky="ew")
+        
+        # Build button
+        ctk.CTkButton(
+            action_frame,
+            text="📋 BUILD SPRITE SHEET",
+            command=self._build_sprite_sheet,
+            height=45,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color=self.colors["primary"],
+            hover_color=self.colors["secondary"],
+            corner_radius=15
+        ).grid(row=0, column=1, padx=10, pady=15, sticky="ew")
     
     def _build_folder_selection(self, parent):
         """Build folder selection section"""
@@ -483,7 +783,7 @@ class MainWindow:
         # Version info
         version_label = ctk.CTkLabel(
             footer_frame,
-            text="Sprite Nexus v3.0 | Batch Processing | KISS + SOLID",
+            text="Sprite Nexus v4.0 | Dual Mode Processing | KISS + SOLID",
             font=ctk.CTkFont(size=10),
             text_color=self.colors["text"]
         )
@@ -502,6 +802,183 @@ class MainWindow:
         if folder:
             self.bg_folder_var.set(folder)
             self._scan_folders()
+    
+    def _select_sprite_output_folder(self):
+        """Select output folder for sprite sheets"""
+        folder = filedialog.askdirectory(title="💾 Select Sprite Sheet Output Folder")
+        if folder:
+            self.sprite_output_folder_var.set(folder)
+    
+    def _scan_sprite_icons(self):
+        """Scan sprite icons folder and update file counts"""
+        icons_folder = self.sprite_icons_folder_var.get()
+        
+        if not icons_folder:
+            self.sprite_file_count_label.configure(text="📊 Select icons folder to scan...")
+            self._update_sprite_grid_info()
+            return
+        
+        try:
+            icon_files = self.image_processor.get_image_files(icons_folder)
+            
+            self.sprite_file_count_label.configure(
+                text=f"📊 Found: {len(icon_files)} transparent icons"
+            )
+            
+            # Update grid info to show sheet count
+            self._update_sprite_grid_info()
+            
+            if len(icon_files) == 0:
+                self._show_error_dialog("Scan Error", "No valid icon files found in selected folder.")
+            else:
+                self.status_label.configure(text="🟡 Ready to Build Sprite Sheets")
+                
+        except Exception as e:
+            self.sprite_file_count_label.configure(text=f"❌ Scan error: {str(e)}")
+            self._update_sprite_grid_info()
+    
+    def _on_sprite_settings_change(self, event=None):
+        """Handle sprite settings changes"""
+        self._update_sprite_grid_info()
+    
+    def _update_sprite_grid_info(self):
+        """Update sprite grid information labels"""
+        try:
+            rows_text = self.sprite_rows_var.get()
+            cols_text = self.sprite_cols_var.get()
+            
+            # Validate and convert to integers
+            rows = int(rows_text) if rows_text.isdigit() and int(rows_text) > 0 else 8
+            cols = int(cols_text) if cols_text.isdigit() and int(cols_text) > 0 else 8
+            
+            # Clamp to reasonable ranges
+            rows = max(1, min(50, rows))
+            cols = max(1, min(50, cols))
+            
+            total_cells = rows * cols
+        except (ValueError, AttributeError):
+            # Use defaults if there's any issue
+            rows, cols = 8, 8
+            total_cells = 64
+        
+        # Calculate number of sheets based on current file count
+        file_count_text = self.sprite_file_count_label.cget("text")
+        if "Found:" in file_count_text:
+            try:
+                # Extract icon count from the text
+                parts = file_count_text.split("Found:")[1].split("transparent icons")[0].strip()
+                icon_count = int(parts)
+                
+                if icon_count > 0:
+                    num_sheets = math.ceil(icon_count / total_cells)
+                    if num_sheets > 1:
+                        self.sprite_grid_info_label.configure(
+                            text=f"Grid: {rows}×{cols} = {total_cells} cells/sheet\n{num_sheets} sheets needed"
+                        )
+                    else:
+                        self.sprite_grid_info_label.configure(text=f"Grid: {rows}×{cols} = {total_cells} cells/sheet")
+                else:
+                    self.sprite_grid_info_label.configure(text=f"Grid: {rows}×{cols} = {total_cells} cells/sheet")
+            except:
+                self.sprite_grid_info_label.configure(text=f"Grid: {rows}×{cols} = {total_cells} cells/sheet")
+        else:
+            self.sprite_grid_info_label.configure(text=f"Grid: {rows}×{cols} = {total_cells} cells/sheet")
+    
+    def _build_sprite_sheet(self):
+        """Build sprite sheets from transparent icons"""
+        icons_folder = self.sprite_icons_folder_var.get()
+        output_folder = self.sprite_output_folder_var.get()
+        
+        # Validate inputs
+        if not icons_folder:
+            self._show_error_dialog("Input Error", "Please select icons folder.")
+            return
+        
+        if not output_folder:
+            self._show_error_dialog("Input Error", "Please select output folder.")
+            return
+        
+        try:
+            self.status_label.configure(text="🔄 Building Sprite Sheets...")
+            self.root.update()
+            
+            # Get settings
+            try:
+                cell_size = int(self.sprite_cell_size_var.get()) if self.sprite_cell_size_var.get().isdigit() else 256
+                grid_spacing = int(self.sprite_grid_spacing_var.get()) if self.sprite_grid_spacing_var.get().isdigit() else 2
+                bottom_margin = int(self.sprite_bottom_margin_var.get()) if self.sprite_bottom_margin_var.get().isdigit() else 0
+                rows = int(self.sprite_rows_var.get()) if self.sprite_rows_var.get().isdigit() else 8
+                cols = int(self.sprite_cols_var.get()) if self.sprite_cols_var.get().isdigit() else 8
+                
+                # Clamp values to reasonable ranges
+                cell_size = max(16, min(1024, cell_size))
+                grid_spacing = max(0, min(50, grid_spacing))
+                bottom_margin = max(0, min(cell_size//2, bottom_margin))
+                rows = max(1, min(50, rows))
+                cols = max(1, min(50, cols))
+                
+            except (ValueError, AttributeError):
+                cell_size, grid_spacing, bottom_margin = 256, 2, 0
+                rows, cols = 8, 8
+            
+            power_of_two = self.sprite_power_of_two_var.get()
+            
+            # Get folder name for output naming
+            folder_base_name = os.path.basename(icons_folder.rstrip(os.sep))
+            
+            # Build sprite sheets using the new method
+            success, created_files = self.image_processor.create_sprite_sheets_from_folder(
+                icons_folder=icons_folder,
+                output_folder=output_folder,
+                cell_size=cell_size,
+                grid_spacing=grid_spacing,
+                bottom_margin=bottom_margin,
+                rows=rows,
+                cols=cols,
+                power_of_two=power_of_two,
+                folder_base_name=folder_base_name
+            )
+            
+            if success and created_files:
+                # Show results
+                self._show_sprite_results(created_files, rows, cols, cell_size, grid_spacing, bottom_margin, folder_base_name)
+                self.status_label.configure(text="✅ Sprite Sheets Created")
+            else:
+                self._show_error_dialog("Build Error", "Failed to create sprite sheets. Check the logs for details.")
+                self.status_label.configure(text="❌ Build Failed")
+            
+        except Exception as e:
+            self._show_error_dialog("Build Error", f"An error occurred: {str(e)}")
+            self.status_label.configure(text="❌ Build Failed")
+    
+    def _show_sprite_results(self, created_files, rows, cols, cell_size, grid_spacing, bottom_margin, folder_name):
+        """Show sprite sheet creation results"""
+        summary_parts = []
+        
+        summary_parts.append(f"• Created {len(created_files)} sprite sheet(s)")
+        summary_parts.append(f"• Grid: {rows}×{cols} cells per sheet")
+        summary_parts.append(f"• Cell size: {cell_size}×{cell_size}px")
+        summary_parts.append(f"• Grid spacing: {grid_spacing}px")
+        summary_parts.append(f"• Bottom margin: {bottom_margin}px")
+        summary_parts.append("• Created files:")
+        
+        for sheet in created_files:
+            summary_parts.append(f"  - {os.path.basename(sheet)}")
+        
+        summary_parts.append(f"• Source folder: {folder_name}")
+        
+        self._show_success_dialog(
+            "Sprite Sheets Created",
+            f"Successfully created transparent sprite sheets!\n\n"
+            f"📊 Summary:\n" + "\n".join(summary_parts)
+        )
+    
+    def _select_sprite_icons_folder(self):
+        """Select icons folder for sprite sheets"""
+        folder = filedialog.askdirectory(title="🎯 Select Icons Folder")
+        if folder:
+            self.sprite_icons_folder_var.set(folder)
+            self._scan_sprite_icons()
     
     def _select_output_folder(self):
         """Select output folder"""
