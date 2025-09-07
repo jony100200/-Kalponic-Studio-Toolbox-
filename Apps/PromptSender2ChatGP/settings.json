@@ -1,0 +1,17 @@
+{
+  "target_window": "Kalponic Village overview",
+  "initial_delay": 10,
+  "text_paste_enter_grace": 900,
+  "text_generation_wait": 120,
+  "text_jitter_percent": 15,
+  "text_auto_enter": true,
+  "image_intra_delay": 300,
+  "image_paste_enter_grace": 400,
+  "image_generation_wait": 60,
+  "image_jitter_percent": 15,
+  "image_auto_enter": true,
+  "image_repeat_prompt": true,
+  "text_input_folder": "D:/Assets For Sale/__Kalponic Realms Asset Series/2D K Village/PromptSender2ChatGP/sample_prompts",
+  "image_input_folder": "",
+  "global_prompt_file": ""
+}

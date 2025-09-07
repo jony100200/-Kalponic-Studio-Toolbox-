@@ -1,0 +1,36 @@
+
+# Props & Utilities – Master Prompts
+# Format: ### name: Asset
+# Each block has a PROMPT field ready for automation
+
+### name: Market Table with Cloth & Goods
+PROMPT:
+2D side-scroller sprite of a rustic market table covered with a cloth canopy, painterly hand-painted style blended with anime cel shading. The wooden table has simple beams, with cloth draped over the top in warm earthy tones. On the table are arranged fruits, clay jars, and bread loaves, painted with soft gradients and clear cel-shaded highlights. Stylized, Ghibli-inspired, flat side-on angle, transparent background, 1024x1024.
+
+### name: Rugs / Mats (Flat, Patterned)
+PROMPT:
+2D sprite of a flat woven rug, painterly hand-painted style mixed with anime cel shading. Rectangular mat with simple geometric patterns in warm reds and golds. Subtle woven texture, clean outline, flat side-on perspective. Stylized Ghibli-inspired colors, transparent background, 1024x1024.
+
+### name: Crates, Barrels, Baskets
+PROMPT:
+2D side-view sprite set of rustic storage props: a wooden crate with visible planks, a round barrel with metal bands, and a woven wicker basket. Painterly style blended with anime cel shading, showing light wear, scratches, and subtle shading. Flat side-scroller angle, transparent background, 1024x1024.
+
+### name: Pots & Clay Jars
+PROMPT:
+2D sprite of traditional clay pots and jars, arranged in a small cluster. Painterly hand-painted style mixed with anime cel shading, warm terracotta and earthen colors with subtle mossy highlights. Rounded silhouettes with cel-shaded shadow bands. Flat side-on view, transparent background, 1024x1024.
+
+### name: Lantern (Lit)
+PROMPT:
+2D sprite of a rustic hanging lantern, glowing warmly with soft orange light. Painterly hand-painted style with anime cel shading highlights. The lantern has metal framing and glass panels, casting a soft glow with subtle cel-shaded rim light. Side-scroller angle, transparent background, 1024x1024.
+
+### name: Lantern (Unlit)
+PROMPT:
+2D sprite of a rustic lantern without glow. Metal framing and glass panels with painterly shading and cel-shaded highlights. Stylized, flat side-on perspective, transparent background, 1024x1024.
+
+### name: Prayer Mat / Ritual Rug
+PROMPT:
+2D sprite of a prayer mat laid flat on the ground, stylized painterly + anime cel shading mix. The mat has intricate geometric borders, soft fabric folds, and a warm color palette (green, red, or saffron). Flat side-on side-scroller view, transparent background, 1024x1024.
+
+### name: Banner / Hanging Cloth
+PROMPT:
+2D sprite of a hanging village banner, painterly hand-painted style blended with anime cel shading. Cloth banner suspended from a horizontal wooden pole, edges slightly tattered, swaying gently. Bright warm color with simple pattern, clean outline, side-scroller flat view. Transparent background, 1024x1024.

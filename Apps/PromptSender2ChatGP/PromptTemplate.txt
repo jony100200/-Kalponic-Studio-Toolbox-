@@ -1,0 +1,6 @@
+2D side-scroller sprite of [ASSET NAME / DESCRIPTION], painterly hand-painted style blended with anime cel shading. 
+Soft Ghibli-inspired colors and textures with subtle brush strokes. 
+Shadows and highlights rendered in 1–2 clean cel-shaded bands for clarity. 
+Flat side-on camera angle (side-scroller view), no perspective tilt. 
+Clean outline, vibrant but natural colors, slight wear/grime for realism. 
+Transparent background, game-ready, 1024x1024 resolution.

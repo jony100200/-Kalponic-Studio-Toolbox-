@@ -1,0 +1,23 @@
+🎨 2D Asset Prompts – Doors & Windows
+
+1. Arched Wooden Door (Plain)
+
+Prompt:"2D hand-painted sprite of a simple arched wooden door, stylized in Ghibli-inspired painterly style. Warm brown wood planks with subtle grain, metal hinges, and a curved top. Soft shading, minimal grime around edges, earthy tone. Transparent background, game-ready sprite, side-scroller angle. 1024x1024 resolution."
+
+2. Ornate Carved Wooden Door
+
+Prompt:"2D hand-painted sprite of an ornate carved wooden door with Islamic-inspired geometric and floral patterns. Rich brown wood with golden bronze highlights, arched frame. Intricate carvings along the panels, subtle moss and grime in crevices. Stylized, painterly, Ghibli-inspired. Transparent background, game-ready sprite, 1024x1024."
+
+3. Lattice Window (Jali Style)
+
+Prompt:"2D stylized sprite of a wooden lattice window (jali style) with hexagonal and floral cutouts. Warm wood tones, soft painterly shading, subtle grime in corners. Decorative frame with simple carvings. Ghibli-inspired fantasy style, hand-painted look. Transparent background, sprite-ready, 1024x1024."
+
+4. Cloth-Curtain Shutter
+
+Prompt:"2D painterly sprite of a cloth-curtain shutter hanging from a wooden frame. Fabric in saffron or indigo color, slightly tattered edges, soft folds and shading. Breeze effect with subtle wave. Wooden bar across top. Stylized, hand-painted, transparent background, side-scroller angle, 1024x1024."
+
+5. Wooden Shutter (Open/Closed)
+
+Prompt (Closed):"2D sprite of a closed wooden window shutter, simple planks with metal hinges. Warm earthy tones, painterly texture, light wear and scratches. Stylized, Ghibli-inspired, 1024x1024, transparent background."
+
+Prompt (Open):"2D sprite of an open wooden window shutter, simple plank design, one side angled outward. Warm earthy wood tones, painterly grain, subtle shadows. Stylized, transparent background, game-ready, 1024x1024."
