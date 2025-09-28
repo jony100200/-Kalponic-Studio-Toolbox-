@@ -1,0 +1,21 @@
+{
+  "api_keys": [
+    "test_key_1234567890abcdef"
+  ],
+  "cors_origins": [
+    "*"
+  ],
+  "audit_log_enabled": true,
+  "rate_limits": {
+    "default": {
+      "requests_per_minute": 60,
+      "requests_per_hour": 1000,
+      "burst_limit": 10
+    },
+    "premium": {
+      "requests_per_minute": 120,
+      "requests_per_hour": 5000,
+      "burst_limit": 20
+    }
+  }
+}
