@@ -73,5 +73,8 @@ whisper_models/
 outputs/
 output/
 Apps/PromptSender2ChatGP/sent_images/
-# Ignore large reference folders for Universal Model Launcher
-Apps/Universal Model Launcher/
+
+# Ignore private development content for Universal Model Launcher
+Apps/Universal Model Launcher/References/
+Apps/Universal Model Launcher/Testing/
+Apps/Universal Model Launcher/loader/
