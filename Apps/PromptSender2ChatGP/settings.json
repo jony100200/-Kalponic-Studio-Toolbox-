@@ -1,5 +1,5 @@
 {
-  "target_window": "ChatGPT - 2D HD Game Assets",
+  "target_window": "2D stylized asset creation",
   "initial_delay": 10,
   "text_paste_enter_grace": 900,
   "text_generation_wait": 120,
@@ -7,13 +7,19 @@
   "text_auto_enter": true,
   "image_intra_delay": 2000,
   "image_paste_enter_grace": 600,
-  "image_generation_wait": 200,
+  "image_generation_wait": 180,
   "image_jitter_percent": 15,
   "image_auto_enter": true,
   "image_repeat_prompt": true,
   "text_input_folder": "D:/Assets For Sale/__Kalponic Realms Asset Series/2D K Village/PromptSender2ChatGP/sample_prompts",
-  "image_input_folder": "D:/Assets For Sale/Vector Fantasy Sidescrolls/Side Scroll Assets to be mAde with AI/Thumbnails/3D Assets/Fantastic Village Pack/prefabs/props/Side",
+  "image_input_folder": "D:/Assets For Sale/Vector Fantasy Sidescrolls/Side Scroll Assets to be mAde with AI/Thumbnails/3D Assets/Multistory Dungeons 2/Props 2",
   "global_prompt_file": "D:/Assets For Sale/Vector Fantasy Sidescrolls/Side Scroll Assets to be mAde with AI/Universal Image-to-Asset Prompt - Same Mood - Painterly.txt",
   "image_queue_mode": false,
-  "image_queue_items": []
+  "image_queue_items": [
+    {
+      "image_folder": "D:/Assets For Sale/Vector Fantasy Sidescrolls/Side Scroll Assets to be mAde with AI/Thumbnails/3D Assets/Multistory Dungeons 2/Props 2",
+      "prompt_file": "D:/Assets For Sale/Vector Fantasy Sidescrolls/Side Scroll Assets to be mAde with AI/Universal Image-to-Asset Prompt - Same Mood - Painterly.txt",
+      "name": "Props 2"
+    }
+  ]
 }
