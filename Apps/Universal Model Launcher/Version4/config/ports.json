@@ -1,0 +1,34 @@
+{
+  "allocated_ports": {
+    "main_api": 8000,
+    "model_server": 8100,
+    "llm_service": 8101,
+    "utility_monitor": 8200,
+    "backup_api": 8001
+  },
+  "reserved_ports": [
+    993,
+    995,
+    110,
+    143,
+    80,
+    53,
+    22,
+    25,
+    443
+  ],
+  "default_ranges": {
+    "main_api": [
+      8000,
+      8100
+    ],
+    "model_servers": [
+      8100,
+      8200
+    ],
+    "utility_services": [
+      8200,
+      8300
+    ]
+  }
+}
