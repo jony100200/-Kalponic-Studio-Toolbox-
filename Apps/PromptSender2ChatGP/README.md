@@ -13,6 +13,8 @@ A powerful GUI application for automating prompt sequences to AI applications li
 ### 📋 **Two Operating Modes:**
 - Text Mode: Process folders of .txt files with multiple prompts
 - Image + Text Mode: Process image folders with optional global text prompts
+  - **Single Folder Mode:** Process one folder at a time (classic behavior)
+  - **Queue Mode:** Add multiple folders to a queue for batch processing
 
 ### 🔒 **Reliable Automation:**
 - Enhanced window detection and focusing with keyboard sequences
@@ -63,9 +65,28 @@ run.bat
 5. Enable/disable auto-Enter after pasting
 
 ### Image + Text Mode
+
+#### Single Folder Mode (Classic)
 1. Select folder containing images (jpg, png, bmp, gif, webp)
 2. Optionally select a global prompt .txt file
 3. Configure timing and behavior settings
+
+#### Queue Mode (New!)
+1. Select "Queue Mode (Multiple Folders)" radio button
+2. Click "Add Folder" to add image folders to the queue:
+   - Choose an image folder
+   - Optionally choose a prompt file for that folder
+3. Use queue management buttons:
+   - **Remove:** Delete selected queue item
+   - **Clear All:** Empty the entire queue
+   - **Move Up/Down:** Reorder queue items
+4. Click "Start" to process all folders sequentially
+
+**Queue Benefits:**
+- Set up overnight batch jobs across multiple themed folders
+- Different prompts for different image categories
+- Example: Nature → nature_prompts.txt, Medieval → medieval_prompts.txt
+- Process hundreds of images across multiple themes automatically
 4. Images are pasted first, followed by text (if enabled)
 
 ## Enhanced Window Focus System

@@ -409,7 +409,7 @@ class TextModeTab(ctk.CTkScrollableFrame):
         self.config.text_auto_enter = self.auto_enter_var.get()
 
 class ImageModeTab(ctk.CTkScrollableFrame):
-    """Image + text mode configuration tab with scrolling"""
+    """Image + text mode configuration tab with scrolling and queue support"""
     
     def __init__(self, parent, config):
         super().__init__(parent, orientation="vertical")
@@ -419,34 +419,83 @@ class ImageModeTab(ctk.CTkScrollableFrame):
     
     def setup_ui(self):
         """Setup image mode UI"""
-        # Input folder selection
-        folder_frame = ctk.CTkFrame(self)
-        folder_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
-        folder_frame.grid_columnconfigure(1, weight=1)
+        # Mode selection
+        mode_frame = ctk.CTkFrame(self)
+        mode_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
+        mode_frame.grid_columnconfigure(1, weight=1)
+        
+        mode_label = ctk.CTkLabel(mode_frame, text="Processing Mode:", font=ctk.CTkFont(size=14, weight="bold"))
+        mode_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=5, pady=(5, 10))
+        
+        self.mode_var = tk.StringVar(value="single")
+        single_radio = ctk.CTkRadioButton(mode_frame, text="Single Folder", variable=self.mode_var, 
+                                         value="single", command=self._on_mode_change)
+        single_radio.grid(row=1, column=0, sticky="w", padx=5, pady=2)
+        
+        queue_radio = ctk.CTkRadioButton(mode_frame, text="Queue Mode (Multiple Folders)", 
+                                        variable=self.mode_var, value="queue", command=self._on_mode_change)
+        queue_radio.grid(row=1, column=1, sticky="w", padx=5, pady=2)
+        
+        # Single folder mode UI
+        self.single_frame = ctk.CTkFrame(self)
+        self.single_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=10)
+        self.single_frame.grid_columnconfigure(1, weight=1)
         
         # Image folder
-        img_folder_label = ctk.CTkLabel(folder_frame, text="Image Files Folder:")
+        img_folder_label = ctk.CTkLabel(self.single_frame, text="Image Files Folder:")
         img_folder_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=5, pady=2)
         
-        self.img_folder_entry = ctk.CTkEntry(folder_frame, placeholder_text="Select folder containing images")
+        self.img_folder_entry = ctk.CTkEntry(self.single_frame, placeholder_text="Select folder containing images")
         self.img_folder_entry.grid(row=1, column=0, sticky="ew", padx=5, pady=2)
         
-        img_folder_button = ctk.CTkButton(folder_frame, text="Browse", command=self._select_image_folder, width=80)
+        img_folder_button = ctk.CTkButton(self.single_frame, text="Browse", command=self._select_image_folder, width=80)
         img_folder_button.grid(row=1, column=1, padx=2, pady=2)
         
         # Global prompt file
-        prompt_label = ctk.CTkLabel(folder_frame, text="Global Prompt File (optional):")
+        prompt_label = ctk.CTkLabel(self.single_frame, text="Global Prompt File (optional):")
         prompt_label.grid(row=2, column=0, columnspan=2, sticky="w", padx=5, pady=(10, 2))
         
-        self.prompt_entry = ctk.CTkEntry(folder_frame, placeholder_text="Select .txt file with global prompt")
+        self.prompt_entry = ctk.CTkEntry(self.single_frame, placeholder_text="Select .txt file with global prompt")
         self.prompt_entry.grid(row=3, column=0, sticky="ew", padx=5, pady=2)
         
-        prompt_button = ctk.CTkButton(folder_frame, text="Browse", command=self._select_prompt_file, width=80)
+        prompt_button = ctk.CTkButton(self.single_frame, text="Browse", command=self._select_prompt_file, width=80)
         prompt_button.grid(row=3, column=1, padx=2, pady=2)
         
-        # Settings frame
+        # Queue mode UI
+        self.queue_frame = ctk.CTkFrame(self)
+        self.queue_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=10)
+        self.queue_frame.grid_columnconfigure(0, weight=1)
+        
+        queue_label = ctk.CTkLabel(self.queue_frame, text="Folder Queue:", font=ctk.CTkFont(size=14, weight="bold"))
+        queue_label.grid(row=0, column=0, sticky="w", padx=5, pady=(5, 10))
+        
+        # Queue controls
+        queue_controls = ctk.CTkFrame(self.queue_frame)
+        queue_controls.grid(row=1, column=0, sticky="ew", padx=5, pady=2)
+        queue_controls.grid_columnconfigure(4, weight=1)
+        
+        add_button = ctk.CTkButton(queue_controls, text="Add Folder", command=self._add_to_queue, width=80)
+        add_button.grid(row=0, column=0, padx=2, pady=2)
+        
+        remove_button = ctk.CTkButton(queue_controls, text="Remove", command=self._remove_from_queue, width=80)
+        remove_button.grid(row=0, column=1, padx=2, pady=2)
+        
+        clear_button = ctk.CTkButton(queue_controls, text="Clear All", command=self._clear_queue, width=80)
+        clear_button.grid(row=0, column=2, padx=2, pady=2)
+        
+        up_button = ctk.CTkButton(queue_controls, text="Move Up", command=self._move_up, width=80)
+        up_button.grid(row=0, column=3, padx=2, pady=2)
+        
+        down_button = ctk.CTkButton(queue_controls, text="Move Down", command=self._move_down, width=80)
+        down_button.grid(row=0, column=4, padx=2, pady=2)
+        
+        # Queue list
+        self.queue_listbox = tk.Listbox(self.queue_frame, height=8)
+        self.queue_listbox.grid(row=2, column=0, sticky="ew", padx=5, pady=5)
+        
+        # Settings frame (shared by both modes)
         settings_frame = ctk.CTkFrame(self)
-        settings_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=10)
+        settings_frame.grid(row=3, column=0, sticky="ew", padx=10, pady=10)
         settings_frame.grid_columnconfigure(1, weight=1)
         
         settings_label = ctk.CTkLabel(settings_frame, text="Image Mode Settings:", font=ctk.CTkFont(size=14, weight="bold"))
@@ -485,6 +534,109 @@ class ImageModeTab(ctk.CTkScrollableFrame):
         
         self.repeat_prompt_var = tk.BooleanVar(value=True)
         ctk.CTkCheckBox(settings_frame, text="Repeat prompt per image", variable=self.repeat_prompt_var).grid(row=row, column=1, sticky="w", padx=5, pady=5)
+        
+        # Initialize UI state
+        self._on_mode_change()
+    
+    def _on_mode_change(self):
+        """Handle mode change between single and queue"""
+        is_single = self.mode_var.get() == "single"
+        
+        if is_single:
+            self.single_frame.grid()
+            self.queue_frame.grid_remove()
+        else:
+            self.single_frame.grid_remove()
+            self.queue_frame.grid()
+    
+    def _add_to_queue(self):
+        """Add folder and prompt pair to queue"""
+        # Select image folder
+        folder = filedialog.askdirectory(title="Select Image Folder for Queue")
+        if not folder:
+            return
+        
+        # Select prompt file (optional)
+        prompt_file = filedialog.askopenfilename(
+            title="Select Prompt File (Optional)",
+            filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
+        )
+        
+        # Create queue item
+        folder_name = os.path.basename(folder.rstrip('/\\'))
+        prompt_name = os.path.basename(prompt_file) if prompt_file else "No prompt"
+        
+        queue_item = {
+            "image_folder": folder,
+            "prompt_file": prompt_file or "",
+            "name": folder_name
+        }
+        
+        # Add to config queue
+        if not hasattr(self.config, 'image_queue_items') or self.config.image_queue_items is None:
+            self.config.image_queue_items = []
+        
+        self.config.image_queue_items.append(queue_item)
+        
+        # Update listbox
+        display_text = f"{folder_name} → {prompt_name}"
+        self.queue_listbox.insert(tk.END, display_text)
+    
+    def _remove_from_queue(self):
+        """Remove selected item from queue"""
+        selection = self.queue_listbox.curselection()
+        if not selection:
+            return
+        
+        index = selection[0]
+        self.queue_listbox.delete(index)
+        
+        if hasattr(self.config, 'image_queue_items') and self.config.image_queue_items:
+            self.config.image_queue_items.pop(index)
+    
+    def _clear_queue(self):
+        """Clear all items from queue"""
+        self.queue_listbox.delete(0, tk.END)
+        if hasattr(self.config, 'image_queue_items'):
+            self.config.image_queue_items = []
+    
+    def _move_up(self):
+        """Move selected item up in queue"""
+        selection = self.queue_listbox.curselection()
+        if not selection or selection[0] == 0:
+            return
+        
+        index = selection[0]
+        
+        # Move in listbox
+        item = self.queue_listbox.get(index)
+        self.queue_listbox.delete(index)
+        self.queue_listbox.insert(index - 1, item)
+        self.queue_listbox.selection_set(index - 1)
+        
+        # Move in config
+        if hasattr(self.config, 'image_queue_items') and self.config.image_queue_items:
+            self.config.image_queue_items[index], self.config.image_queue_items[index - 1] = \
+                self.config.image_queue_items[index - 1], self.config.image_queue_items[index]
+    
+    def _move_down(self):
+        """Move selected item down in queue"""
+        selection = self.queue_listbox.curselection()
+        if not selection or selection[0] >= self.queue_listbox.size() - 1:
+            return
+        
+        index = selection[0]
+        
+        # Move in listbox
+        item = self.queue_listbox.get(index)
+        self.queue_listbox.delete(index)
+        self.queue_listbox.insert(index + 1, item)
+        self.queue_listbox.selection_set(index + 1)
+        
+        # Move in config
+        if hasattr(self.config, 'image_queue_items') and self.config.image_queue_items:
+            self.config.image_queue_items[index], self.config.image_queue_items[index + 1] = \
+                self.config.image_queue_items[index + 1], self.config.image_queue_items[index]
     
     def _select_image_folder(self):
         """Select image folder"""
@@ -505,10 +657,26 @@ class ImageModeTab(ctk.CTkScrollableFrame):
     
     def load_settings(self):
         """Load settings from config"""
+        # Single folder mode settings
         self.img_folder_entry.delete(0, 'end')
         self.img_folder_entry.insert(0, self.config.image_input_folder)
         self.prompt_entry.delete(0, 'end')
         self.prompt_entry.insert(0, self.config.global_prompt_file)
+        
+        # Queue mode settings
+        self.mode_var.set("queue" if getattr(self.config, 'image_queue_mode', False) else "single")
+        self._on_mode_change()
+        
+        # Load queue items
+        if hasattr(self.config, 'image_queue_items') and self.config.image_queue_items:
+            self.queue_listbox.delete(0, tk.END)
+            for item in self.config.image_queue_items:
+                folder_name = item.get('name', 'Unknown')
+                prompt_name = os.path.basename(item.get('prompt_file', '')) or "No prompt"
+                display_text = f"{folder_name} → {prompt_name}"
+                self.queue_listbox.insert(tk.END, display_text)
+        
+        # Other settings
         self.intra_var.set(str(self.config.image_intra_delay))
         self.grace_var.set(str(self.config.image_paste_enter_grace))
         self.wait_var.set(str(self.config.image_generation_wait))
@@ -518,8 +686,14 @@ class ImageModeTab(ctk.CTkScrollableFrame):
     
     def save_settings(self):
         """Save settings to config"""
+        # Mode selection
+        self.config.image_queue_mode = (self.mode_var.get() == "queue")
+        
+        # Single folder mode settings
         self.config.image_input_folder = self.img_folder_entry.get().strip()
         self.config.global_prompt_file = self.prompt_entry.get().strip()
+        
+        # Other settings
         try:
             self.config.image_intra_delay = int(self.intra_var.get())
             self.config.image_paste_enter_grace = int(self.grace_var.get())

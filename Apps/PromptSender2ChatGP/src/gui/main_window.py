@@ -218,17 +218,30 @@ class PromptSequencerGUI:
                 daemon=True
             )
         else:  # Image mode
-            if not self.config.image_input_folder:
-                messagebox.showerror("Error", "Please select an image input folder")
-                return
-            
-            self.sequencer_thread = threading.Thread(
-                target=self._run_with_initial_delay,
-                args=(self.sequencer.start_image_mode, 
-                      self.config.image_input_folder, 
-                      self.config.global_prompt_file),
-                daemon=True
-            )
+            if self.config.image_queue_mode and self.config.image_queue_items:
+                # Queue mode
+                if not self.config.image_queue_items:
+                    messagebox.showerror("Error", "Please add folders to the queue")
+                    return
+                
+                self.sequencer_thread = threading.Thread(
+                    target=self._run_with_initial_delay,
+                    args=(self.sequencer.start_image_queue_mode, self.config.image_queue_items),
+                    daemon=True
+                )
+            else:
+                # Single folder mode
+                if not self.config.image_input_folder:
+                    messagebox.showerror("Error", "Please select an image input folder")
+                    return
+                
+                self.sequencer_thread = threading.Thread(
+                    target=self._run_with_initial_delay,
+                    args=(self.sequencer.start_image_mode, 
+                          self.config.image_input_folder, 
+                          self.config.global_prompt_file),
+                    daemon=True
+                )
         
         self.sequencer_thread.start()
     

@@ -508,6 +508,92 @@ class PromptSequencer:
             self._log_message(f"Error in image mode: {e}", "error")
             self._change_state(SequencerState.ERROR)
     
+    def start_image_queue_mode(self, queue_items: List[Dict[str, str]]):
+        """Start image+text mode with queue processing"""
+        if self.state != SequencerState.IDLE:
+            self._log_message("Sequencer is already running", "warning")
+            return
+        
+        if not queue_items:
+            self._log_message("No items in queue", "warning")
+            return
+        
+        try:
+            self._change_state(SequencerState.RUNNING)
+            self._log_message(f"Starting image queue mode with {len(queue_items)} folders")
+            
+            # Calculate total items across all folders
+            total_images = 0
+            image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp'}
+            
+            for item in queue_items:
+                folder = item.get('image_folder', '')
+                if os.path.exists(folder):
+                    folder_images = [f for f in os.listdir(folder) 
+                                   if Path(f).suffix.lower() in image_extensions]
+                    total_images += len(folder_images)
+            
+            self.total_items = total_images
+            processed_images = 0
+            
+            # Process each folder in the queue
+            for queue_idx, queue_item in enumerate(queue_items):
+                if self.state == SequencerState.STOPPING:
+                    break
+                
+                folder = queue_item.get('image_folder', '')
+                prompt_file = queue_item.get('prompt_file', '')
+                folder_name = queue_item.get('name', f"Folder {queue_idx + 1}")
+                
+                if not os.path.exists(folder):
+                    self._log_message(f"Folder not found: {folder}", "warning")
+                    continue
+                
+                self._log_message(f"Processing queue item {queue_idx + 1}/{len(queue_items)}: {folder_name}")
+                
+                # Load prompt for this folder
+                folder_prompt = ""
+                if prompt_file and os.path.exists(prompt_file):
+                    with open(prompt_file, 'r', encoding='utf-8') as f:
+                        folder_prompt = f.read().strip()
+                
+                # Get images in this folder
+                folder_images = [f for f in os.listdir(folder) 
+                               if Path(f).suffix.lower() in image_extensions]
+                
+                if not folder_images:
+                    self._log_message(f"No images found in: {folder_name}", "warning")
+                    continue
+                
+                # Process each image in this folder
+                for img_idx, image_file in enumerate(folder_images):
+                    if self.state == SequencerState.STOPPING:
+                        break
+                    
+                    # Handle pause
+                    while self.state == SequencerState.PAUSED:
+                        time.sleep(0.1)
+                    
+                    processed_images += 1
+                    self.current_item = processed_images
+                    self.current_file = f"{folder_name}/{image_file}"
+                    self._update_progress()
+                    
+                    image_path = os.path.join(folder, image_file)
+                    success = self._send_image_prompt(image_path, folder_prompt, processed_images)
+                    
+                    if success:
+                        self._move_file_to_sent(image_path, is_image=True, failed=False)
+                    else:
+                        self._move_file_to_sent(image_path, is_image=True, failed=True)
+            
+            self._log_message("Image queue mode processing completed")
+            self._change_state(SequencerState.IDLE)
+            
+        except Exception as e:
+            self._log_message(f"Error in image queue mode: {e}", "error")
+            self._change_state(SequencerState.ERROR)
+    
     def _send_image_prompt(self, image_path: str, global_prompt: str, image_index: int) -> bool:
         """Send image + text prompt"""
         try:

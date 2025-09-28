@@ -36,10 +36,16 @@ class AppConfig:
     image_input_folder: str = ""
     global_prompt_file: str = ""
     
+    # Queue system
+    image_queue_mode: bool = False
+    image_queue_items: list = None
+    
     _config_file: str = "settings.json"
     
     def __post_init__(self):
         """Load configuration after initialization"""
+        if self.image_queue_items is None:
+            self.image_queue_items = []
         self.load()
     
     def load(self) -> None:

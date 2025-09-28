@@ -72,3 +72,4 @@ whisper_models/
 # ===== OUTPUT/GENERATED FOLDERS =====
 outputs/
 output/
+Apps/PromptSender2ChatGP/sent_images/
