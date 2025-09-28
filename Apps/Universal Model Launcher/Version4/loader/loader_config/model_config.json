@@ -1,0 +1,32 @@
+{
+    "models": {},
+    "backends": {
+        "llama.cpp": {
+            "priority": 1,
+            "path": null
+        },
+        "transformers": {
+            "priority": 2,
+            "path": null
+        },
+        "exllama": {
+            "priority": 3,
+            "path": null
+        }
+    },
+    "default_settings": {
+        "context_length": 4096,
+        "temperature": 0.7,
+        "max_tokens": 2048,
+        "auto_port": true,
+        "quantization": "auto",
+        "gpu_layers": -1,
+        "cuda_paths": [],
+        "venv_activate": null
+    },
+    "monitoring": {
+        "health_check_interval": 30,
+        "memory_threshold": 0.85,
+        "gpu_memory_threshold": 0.9
+    }
+}
