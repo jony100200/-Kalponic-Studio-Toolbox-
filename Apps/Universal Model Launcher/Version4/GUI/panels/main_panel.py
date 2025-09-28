@@ -975,15 +975,18 @@ The image appears to show [simulated analysis]. The optimal vision model was aut
         
     def _load_model(self, model):
         """Load selected model"""
-        self.log_message.emit(f"Loading model: {model['name']}", "info")
-        # Emit signal to parent window to handle loading
+        self.log_message.emit(f"🚀 Loading model: {model['name']}", "info")
+        
+        # Create model configuration
         model_config = {
             'path': model['path'],
             'name': model['name'],
             'type': model.get('type', 'text'),
             'backend': model.get('backend', 'llama.cpp')
         }
-        # This will be connected to the main window's model loading logic
+        
+        # Emit signal to trigger actual model loading in main window
+        self.model_launch_requested.emit(model_config)
         
     def refresh_models(self):
         """🔄 Refresh model discovery"""
