@@ -18,6 +18,7 @@
 - Modify existing files vs creating new
 - Use existing patterns/structures  
 - Build on working code
+```
 
 ### **STEP 3: CLEANUP SAME SESSION**
 ```
