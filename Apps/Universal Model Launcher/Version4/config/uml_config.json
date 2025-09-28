@@ -1,0 +1,164 @@
+{
+  "model_discovery": {
+    "scan_directories": [
+      "./models",
+      "~/Downloads",
+      "C:/Users/{username}/Documents/AI Models",
+      "/opt/models",
+      "~/ai-models",
+      "O:/AI Models",
+      "./test_models"
+    ],
+    "file_extensions": [
+      ".gguf",
+      ".ggml",
+      ".bin",
+      ".safetensors"
+    ],
+    "recursive_scan": true,
+    "scan_depth": 3,
+    "ignore_directories": [
+      "__pycache__",
+      ".git",
+      "node_modules"
+    ]
+  },
+  "model_paths": {
+    "custom_locations": {
+      "mistral-7b-instruct-v0.2": "./models/mistral/mistral-7b-instruct-v0.2.Q4_K_M.gguf",
+      "llama-2-13b-chat": "./models/llama/llama-2-13b-chat.Q4_K_M.gguf",
+      "codellama-7b-instruct": "./models/codellama/codellama-7b-instruct.Q4_K_M.gguf",
+      "whisper-large-v3": "transformers:openai/whisper-large-v3",
+      "clip-vit-large-patch14": "transformers:openai/clip-vit-large-patch14",
+      "bakllava-1-7b": "./models/bakllava/bakllava-1.5-7b.Q4_K_M.gguf",
+      "phi-3-mini-128k": "./models/phi3/phi-3-mini-128k-instruct.Q4_K_M.gguf",
+      "gemma-2b-it": "./models/gemma/gemma-2b-it.Q4_K_M.gguf"
+    },
+    "fallback_directories": [
+      "./models/{model_type}",
+      "~/ai-models/{model_type}",
+      "/opt/ai-models/{model_type}"
+    ]
+  },
+  "backend_configurations": {
+    "llama.cpp": {
+      "executable_paths": [
+        "./References/koboldcpp-1.96.1/koboldcpp.py",
+        "C:/Program Files/LlamaCpp/llama-server.exe",
+        "/usr/local/bin/llama-server",
+        "~/llama.cpp/llama-server"
+      ],
+      "default_args": {
+        "context_size": 4096,
+        "gpu_layers": "auto",
+        "threads": "auto",
+        "batch_size": 512
+      }
+    },
+    "transformers": {
+      "cache_directory": "./models/transformers_cache",
+      "torch_dtype": "auto",
+      "device_map": "auto",
+      "trust_remote_code": false
+    },
+    "whisper.cpp": {
+      "executable_paths": [
+        "./References/whisper.cpp/main",
+        "C:/Program Files/WhisperCpp/main.exe",
+        "/usr/local/bin/whisper"
+      ]
+    }
+  },
+  "system_settings": {
+    "server": {
+      "host": "127.0.0.1",
+      "port_range": {
+        "start": 8080,
+        "end": 8100
+      },
+      "max_concurrent_models": 4,
+      "timeout_seconds": 300
+    },
+    "performance": {
+      "auto_gpu_detection": true,
+      "memory_optimization": true,
+      "cpu_threads": "auto",
+      "gpu_split": "auto"
+    },
+    "logging": {
+      "level": "INFO",
+      "file": "./logs/uml.log",
+      "max_size_mb": 10,
+      "backup_count": 5
+    }
+  },
+  "ui_settings": {
+    "theme": {
+      "name": "sci-fi-dark",
+      "customizable": true,
+      "colors": {
+        "bg_primary": "#0d1117",
+        "bg_secondary": "#161b22",
+        "accent_primary": "#00d4aa",
+        "accent_secondary": "#7c3aed",
+        "text_primary": "#f0f6fc"
+      }
+    },
+    "layout": {
+      "left_panel_width": 280,
+      "right_panel_width": 320,
+      "window_size": [
+        1400,
+        900
+      ],
+      "animations_enabled": true
+    },
+    "model_browser": {
+      "cards_per_row": 2,
+      "show_model_details": true,
+      "show_file_paths": false,
+      "auto_refresh_interval": 30
+    }
+  },
+  "external_tools": {
+    "registry_file": "./model_registry.json",
+    "openai_compatibility": true,
+    "supported_clients": [
+      "continue",
+      "cline",
+      "roocode",
+      "chatgpt-desktop",
+      "gpt4all"
+    ],
+    "api_keys": {
+      "enabled": false,
+      "require_auth": false
+    }
+  },
+  "smart_loading": {
+    "input_analysis": {
+      "enabled": true,
+      "confidence_threshold": 0.8,
+      "fallback_model": "mistral-7b-instruct-v0.2"
+    },
+    "model_selection": {
+      "prefer_quality": false,
+      "prefer_speed": true,
+      "memory_aware": true,
+      "task_specific": true
+    },
+    "auto_unload": {
+      "enabled": true,
+      "idle_timeout_minutes": 15,
+      "memory_threshold_percent": 85
+    }
+  },
+  "user_preferences": {
+    "first_run": true,
+    "model_scan_on_startup": true,
+    "auto_start_server": true,
+    "minimize_to_tray": false,
+    "check_updates": true,
+    "telemetry": false
+  }
+}

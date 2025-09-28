@@ -73,3 +73,5 @@ whisper_models/
 outputs/
 output/
 Apps/PromptSender2ChatGP/sent_images/
+# Ignore large reference folders for Universal Model Launcher
+Apps/Universal Model Launcher/References/
