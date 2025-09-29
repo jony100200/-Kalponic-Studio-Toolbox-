@@ -1,4 +1,7 @@
 customtkinter
 Pillow
-rembg
+transparent-background
+torch
+numpy
+tqdm
 pytest
