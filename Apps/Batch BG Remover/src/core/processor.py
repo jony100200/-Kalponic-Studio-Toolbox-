@@ -8,7 +8,8 @@ import logging
 import threading
 from pathlib import Path
 from typing import Callable, Optional, List, Tuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List
 
 from .factory import RemoverManager, RemoverType
 from ..config.settings import config
@@ -21,6 +22,8 @@ class ProcessingStats:
     processed_files: int = 0
     failed_files: int = 0
     skipped_files: int = 0
+    failed_paths: List[str] = field(default_factory=list)
+    skipped_paths: List[str] = field(default_factory=list)
     
     @property
     def success_rate(self) -> float:
@@ -109,7 +112,7 @@ class ProcessingEngine:
         self,
         input_folder: Path,
         output_folder: Path,
-        progress_callback: Optional[Callable[[int, int], None]] = None,
+        progress_callback: Optional[Callable[[int, int, str], None]] = None,
         preview_callback: Optional[Callable[[bytes], None]] = None,
         show_preview: bool = False,
     ) -> ProcessingStats:
@@ -163,6 +166,7 @@ class ProcessingEngine:
             if output_path.exists():
                 self._logger.debug(f"Skipping existing file: {output_filename}")
                 folder_stats.skipped_files += 1
+                folder_stats.skipped_paths.append(str(input_path))
                 continue
             
             # Process the image
@@ -180,11 +184,12 @@ class ProcessingEngine:
                         self._logger.warning(f"Preview callback failed: {e}")
             else:
                 folder_stats.failed_files += 1
+                folder_stats.failed_paths.append(str(input_path))
             
-            # Update progress
+            # Update progress (include filename as info)
             if progress_callback:
                 try:
-                    progress_callback(idx, len(image_files))
+                    progress_callback(idx, len(image_files), input_path.name)
                 except Exception as e:
                     self._logger.warning(f"Progress callback failed: {e}")
         
@@ -257,6 +262,9 @@ class ProcessingEngine:
                 self._stats.processed_files += folder_stats.processed_files
                 self._stats.failed_files += folder_stats.failed_files
                 self._stats.skipped_files += folder_stats.skipped_files
+                # Merge path lists
+                self._stats.failed_paths.extend(folder_stats.failed_paths)
+                self._stats.skipped_paths.extend(folder_stats.skipped_paths)
                 
                 # Update file counter
                 current_file += folder_stats.total_files
