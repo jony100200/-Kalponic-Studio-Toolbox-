@@ -1,5 +1,5 @@
 """
-Professional CustomTkinter GUI for the Batch Image Cleanup Tool.
+Professional CustomTkinter GUI for KS Image Cleanup — professional quality fringe removal and edge enhancement.
 Cyberpunk-themed interface with muted colors for comfortable viewing.
 """
 
@@ -52,7 +52,7 @@ class AppUI:
         
         # Initialize main window with cyberpunk styling
         self.root = ctk.CTk()
-        self.root.title("Professional Image Cleanup Tool - Photoshop Quality")
+        self.root.title("KS Image Cleanup")
         self.root.geometry("900x900")
         
         # Configure cyberpunk theme colors
@@ -125,119 +125,366 @@ class AppUI:
         # Bind UI events to controller
         self.bind_events()
         
-    def setup_folder_selection(self):
-        """Setup folder selection section."""
-        # Folder Selection Frame
-        folder_frame = ctk.CTkFrame(self.main_frame)
-        folder_frame.pack(fill="x", pady=(0, 10))
+    def setup_header(self):
+        """Setup cyberpunk-styled header section."""
+        header_frame = ctk.CTkFrame(
+            self.main_frame,
+            fg_color=CYBERPUNK_COLORS['bg_secondary'],
+            border_width=2,
+            border_color=CYBERPUNK_COLORS['accent_cyan']
+        )
+        header_frame.pack(fill="x", pady=(0, 15))
         
-        ctk.CTkLabel(folder_frame, text="Folder Selection", 
-                    font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(10, 5))
+        # Title with cyberpunk styling
+        title_label = ctk.CTkLabel(
+            header_frame,
+            text="KS Image Cleanup",
+            font=ctk.CTkFont(size=24, weight="bold"),
+            text_color=CYBERPUNK_COLORS['accent_cyan']
+        )
+        title_label.pack(pady=(15, 5))
+        
+        subtitle_label = ctk.CTkLabel(
+            header_frame,
+            text="Professional Edge Cleanup & Fringe Removal",
+            font=ctk.CTkFont(size=12),
+            text_color=CYBERPUNK_COLORS['text_secondary']
+        )
+        subtitle_label.pack(pady=(0, 15))
+    
+    def setup_processor_selection(self):
+        """Setup processor type selection with professional options."""
+        processor_frame = ctk.CTkFrame(
+            self.main_frame,
+            fg_color=CYBERPUNK_COLORS['bg_secondary'],
+            border_width=1,
+            border_color=CYBERPUNK_COLORS['border']
+        )
+        processor_frame.pack(fill="x", pady=(0, 15))
+        
+        ctk.CTkLabel(
+            processor_frame,
+            text="⚙ Processing Engine",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color=CYBERPUNK_COLORS['accent_purple']
+        ).pack(pady=(15, 10))
+        
+        # Processor type selection
+        processor_row = ctk.CTkFrame(processor_frame, fg_color="transparent")
+        processor_row.pack(fill="x", padx=15, pady=(0, 10))
+        
+        ctk.CTkLabel(
+            processor_row,
+            text="Engine:",
+            text_color=CYBERPUNK_COLORS['text_primary']
+        ).pack(side="left", padx=(0, 10))
+        
+        processor_options = ["Professional", "OpenCV Enhanced", "Basic"]
+        if ProcessorType:
+            processor_options = [p.value for p in ProcessorType]
+        
+        self.processor_dropdown = ctk.CTkOptionMenu(
+            processor_row,
+            variable=self.processor_type_var,
+            values=processor_options,
+            button_color=CYBERPUNK_COLORS['accent_purple'],
+            button_hover_color=CYBERPUNK_COLORS['hover'],
+            dropdown_hover_color=CYBERPUNK_COLORS['hover']
+        )
+        self.processor_dropdown.pack(side="left", padx=(0, 20))
+        
+        # Material type selection
+        ctk.CTkLabel(
+            processor_row,
+            text="Material:",
+            text_color=CYBERPUNK_COLORS['text_primary']
+        ).pack(side="left", padx=(0, 10))
+        
+        material_options = ["Auto Detect", "Standard", "Hair/Fur", "Glass/Transparent", "Complex Edges"]
+        if MaterialType:
+            material_options = [m.value for m in MaterialType]
+        
+        self.material_dropdown = ctk.CTkOptionMenu(
+            processor_row,
+            variable=self.material_type_var,
+            values=material_options,
+            button_color=CYBERPUNK_COLORS['accent_cyan'],
+            button_hover_color=CYBERPUNK_COLORS['hover'],
+            dropdown_hover_color=CYBERPUNK_COLORS['hover']
+        )
+        self.material_dropdown.pack(side="left")
+    
+    def setup_processing_presets(self):
+        """Setup Photoshop-like preset selection."""
+        presets_frame = ctk.CTkFrame(
+            self.main_frame,
+            fg_color=CYBERPUNK_COLORS['bg_secondary'],
+            border_width=1,
+            border_color=CYBERPUNK_COLORS['border']
+        )
+        presets_frame.pack(fill="x", pady=(0, 15))
+        
+        ctk.CTkLabel(
+            presets_frame,
+            text="⚡ Quick Presets",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color=CYBERPUNK_COLORS['accent_orange']
+        ).pack(pady=(15, 10))
+        
+        # Preset buttons row
+        presets_row = ctk.CTkFrame(presets_frame, fg_color="transparent")
+        presets_row.pack(fill="x", padx=15, pady=(0, 15))
+        
+        preset_buttons = [
+            ("Photoshop-like", CYBERPUNK_COLORS['accent_cyan'], self.load_photoshop_preset),
+            ("Hair/Fur Specialist", CYBERPUNK_COLORS['accent_purple'], self.load_hair_preset),
+            ("Glass/Transparent", CYBERPUNK_COLORS['accent_green'], self.load_glass_preset),
+            ("Maximum Quality", CYBERPUNK_COLORS['accent_orange'], self.load_max_quality_preset)
+        ]
+        
+        for i, (text, color, command) in enumerate(preset_buttons):
+            btn = ctk.CTkButton(
+                presets_row,
+                text=text,
+                fg_color=color,
+                hover_color=CYBERPUNK_COLORS['hover'],
+                command=command,
+                width=120
+            )
+            btn.pack(side="left", padx=(0, 10) if i < 3 else (0, 0))
+    
+    def setup_folder_selection(self):
+        """Setup folder selection section with cyberpunk styling."""
+        # Folder Selection Frame
+        folder_frame = ctk.CTkFrame(
+            self.main_frame,
+            fg_color=CYBERPUNK_COLORS['bg_secondary'],
+            border_width=1,
+            border_color=CYBERPUNK_COLORS['border']
+        )
+        folder_frame.pack(fill="x", pady=(0, 15))
+        
+        ctk.CTkLabel(
+            folder_frame,
+            text="📁 Folder Selection",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color=CYBERPUNK_COLORS['accent_cyan']
+        ).pack(pady=(15, 10))
         
         # Input folder
-        input_frame = ctk.CTkFrame(folder_frame)
-        input_frame.pack(fill="x", padx=10, pady=5)
+        input_frame = ctk.CTkFrame(
+            folder_frame,
+            fg_color=CYBERPUNK_COLORS['bg_accent'],
+            border_width=1,
+            border_color=CYBERPUNK_COLORS['border']
+        )
+        input_frame.pack(fill="x", padx=15, pady=5)
         
-        ctk.CTkLabel(input_frame, text="Input Folder:").pack(anchor="w", padx=10, pady=(10, 0))
+        ctk.CTkLabel(
+            input_frame,
+            text="Input Folder:",
+            text_color=CYBERPUNK_COLORS['text_primary']
+        ).pack(anchor="w", padx=15, pady=(15, 0))
         
-        input_row = ctk.CTkFrame(input_frame)
-        input_row.pack(fill="x", padx=10, pady=(5, 10))
+        input_row = ctk.CTkFrame(input_frame, fg_color="transparent")
+        input_row.pack(fill="x", padx=15, pady=(8, 15))
         
-        self.input_entry = ctk.CTkEntry(input_row, textvariable=self.input_folder_var, 
-                                       placeholder_text="Select input folder...")
-        self.input_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
+        self.input_entry = ctk.CTkEntry(
+            input_row,
+            textvariable=self.input_folder_var,
+            placeholder_text="Select input folder...",
+            border_color=CYBERPUNK_COLORS['border'],
+            fg_color=CYBERPUNK_COLORS['bg_primary']
+        )
+        self.input_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
         
-        ctk.CTkButton(input_row, text="Browse", width=80,
-                     command=self.browse_input_folder).pack(side="right")
+        ctk.CTkButton(
+            input_row,
+            text="Browse",
+            width=80,
+            fg_color=CYBERPUNK_COLORS['accent_cyan'],
+            hover_color=CYBERPUNK_COLORS['hover'],
+            command=self.browse_input_folder
+        ).pack(side="right")
         
         # Output folder
-        output_frame = ctk.CTkFrame(folder_frame)
-        output_frame.pack(fill="x", padx=10, pady=(0, 10))
+        output_frame = ctk.CTkFrame(
+            folder_frame,
+            fg_color=CYBERPUNK_COLORS['bg_accent'],
+            border_width=1,
+            border_color=CYBERPUNK_COLORS['border']
+        )
+        output_frame.pack(fill="x", padx=15, pady=(5, 15))
         
-        ctk.CTkLabel(output_frame, text="Output Folder:").pack(anchor="w", padx=10, pady=(10, 0))
+        ctk.CTkLabel(
+            output_frame,
+            text="Output Folder:",
+            text_color=CYBERPUNK_COLORS['text_primary']
+        ).pack(anchor="w", padx=15, pady=(15, 0))
         
-        output_row = ctk.CTkFrame(output_frame)
-        output_row.pack(fill="x", padx=10, pady=(5, 10))
+        output_row = ctk.CTkFrame(output_frame, fg_color="transparent")
+        output_row.pack(fill="x", padx=15, pady=(8, 15))
         
-        self.output_entry = ctk.CTkEntry(output_row, textvariable=self.output_folder_var,
-                                        placeholder_text="Select output folder...")
-        self.output_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
+        self.output_entry = ctk.CTkEntry(
+            output_row,
+            textvariable=self.output_folder_var,
+            placeholder_text="Select output folder...",
+            border_color=CYBERPUNK_COLORS['border'],
+            fg_color=CYBERPUNK_COLORS['bg_primary']
+        )
+        self.output_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
         
-        ctk.CTkButton(output_row, text="Browse", width=80,
-                     command=self.browse_output_folder).pack(side="right")
+        ctk.CTkButton(
+            output_row,
+            text="Browse",
+            width=80,
+            fg_color=CYBERPUNK_COLORS['accent_cyan'],
+            hover_color=CYBERPUNK_COLORS['hover'],
+            command=self.browse_output_folder
+        ).pack(side="right")
     
     def setup_processing_options(self):
-        """Setup processing options section."""
+        """Setup processing options section with enhanced ranges and cyberpunk styling."""
         # Processing Options Frame
-        options_frame = ctk.CTkFrame(self.main_frame)
-        options_frame.pack(fill="x", pady=(0, 10))
+        options_frame = ctk.CTkFrame(
+            self.main_frame,
+            fg_color=CYBERPUNK_COLORS['bg_secondary'],
+            border_width=1,
+            border_color=CYBERPUNK_COLORS['border']
+        )
+        options_frame.pack(fill="x", pady=(0, 15))
         
-        ctk.CTkLabel(options_frame, text="Processing Options", 
-                    font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(10, 5))
+        ctk.CTkLabel(
+            options_frame,
+            text="⚙ Processing Options",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color=CYBERPUNK_COLORS['accent_cyan']
+        ).pack(pady=(15, 10))
         
         # Matte preset
-        matte_frame = ctk.CTkFrame(options_frame)
-        matte_frame.pack(fill="x", padx=10, pady=5)
+        matte_frame = ctk.CTkFrame(
+            options_frame,
+            fg_color=CYBERPUNK_COLORS['bg_accent'],
+            border_width=1,
+            border_color=CYBERPUNK_COLORS['border']
+        )
+        matte_frame.pack(fill="x", padx=15, pady=8)
         
-        ctk.CTkLabel(matte_frame, text="Matte Preset:").pack(anchor="w", padx=10, pady=(10, 0))
+        ctk.CTkLabel(
+            matte_frame,
+            text="Matte Preset:",
+            text_color=CYBERPUNK_COLORS['text_primary']
+        ).pack(anchor="w", padx=15, pady=(15, 0))
         
         self.matte_dropdown = ctk.CTkOptionMenu(
-            matte_frame, 
+            matte_frame,
             variable=self.matte_preset_var,
-            values=[preset.value for preset in MattePreset]
+            values=[preset.value for preset in MattePreset],
+            button_color=CYBERPUNK_COLORS['accent_cyan'],
+            button_hover_color=CYBERPUNK_COLORS['hover'],
+            dropdown_hover_color=CYBERPUNK_COLORS['hover']
         )
-        self.matte_dropdown.pack(anchor="w", padx=10, pady=(5, 10))
+        self.matte_dropdown.pack(anchor="w", padx=15, pady=(8, 15))
         
-        # Alpha refinement controls
-        alpha_frame = ctk.CTkFrame(options_frame)
-        alpha_frame.pack(fill="x", padx=10, pady=5)
+        # Alpha refinement controls with enhanced ranges
+        alpha_frame = ctk.CTkFrame(
+            options_frame,
+            fg_color=CYBERPUNK_COLORS['bg_accent'],
+            border_width=1,
+            border_color=CYBERPUNK_COLORS['border']
+        )
+        alpha_frame.pack(fill="x", padx=15, pady=8)
         
-        ctk.CTkLabel(alpha_frame, text="Alpha Refinement", 
-                    font=ctk.CTkFont(size=14, weight="bold")).pack(pady=(10, 5))
+        ctk.CTkLabel(
+            alpha_frame,
+            text="Alpha Refinement",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=CYBERPUNK_COLORS['text_primary']
+        ).pack(pady=(15, 10))
         
-        # Smooth control
-        smooth_frame = ctk.CTkFrame(alpha_frame)
-        smooth_frame.pack(fill="x", padx=10, pady=2)
+        # Enhanced Smooth control (0-5 range)
+        smooth_frame = ctk.CTkFrame(alpha_frame, fg_color="transparent")
+        smooth_frame.pack(fill="x", padx=15, pady=5)
         
-        ctk.CTkLabel(smooth_frame, text="Smooth (0-3):").pack(side="left", padx=(10, 5))
-        self.smooth_slider = ctk.CTkSlider(smooth_frame, from_=0, to=3, number_of_steps=3,
-                                          variable=self.smooth_var)
+        ctk.CTkLabel(
+            smooth_frame,
+            text="Smooth (0-5):",
+            text_color=CYBERPUNK_COLORS['text_secondary']
+        ).pack(side="left", padx=(0, 10))
+        
+        self.smooth_slider = ctk.CTkSlider(
+            smooth_frame,
+            from_=0, to=5, number_of_steps=5,
+            variable=self.smooth_var,
+            button_color=CYBERPUNK_COLORS['accent_cyan'],
+            button_hover_color=CYBERPUNK_COLORS['hover']
+        )
         self.smooth_slider.pack(side="left", fill="x", expand=True, padx=5)
         self.smooth_label = ctk.CTkLabel(smooth_frame, text="2", width=30)
-        self.smooth_label.pack(side="right", padx=(5, 10))
+        self.smooth_label.pack(side="right", padx=(5, 0))
         
-        # Feather control
-        feather_frame = ctk.CTkFrame(alpha_frame)
-        feather_frame.pack(fill="x", padx=10, pady=2)
+        # Enhanced Feather control (0-5 range)
+        feather_frame = ctk.CTkFrame(alpha_frame, fg_color="transparent")
+        feather_frame.pack(fill="x", padx=15, pady=5)
         
-        ctk.CTkLabel(feather_frame, text="Feather (0-3):").pack(side="left", padx=(10, 5))
-        self.feather_slider = ctk.CTkSlider(feather_frame, from_=0, to=3, number_of_steps=3,
-                                           variable=self.feather_var)
+        ctk.CTkLabel(
+            feather_frame,
+            text="Feather (0-5):",
+            text_color=CYBERPUNK_COLORS['text_secondary']
+        ).pack(side="left", padx=(0, 10))
+        
+        self.feather_slider = ctk.CTkSlider(
+            feather_frame,
+            from_=0, to=5, number_of_steps=5,
+            variable=self.feather_var,
+            button_color=CYBERPUNK_COLORS['accent_purple'],
+            button_hover_color=CYBERPUNK_COLORS['hover']
+        )
         self.feather_slider.pack(side="left", fill="x", expand=True, padx=5)
         self.feather_label = ctk.CTkLabel(feather_frame, text="1", width=30)
-        self.feather_label.pack(side="right", padx=(5, 10))
+        self.feather_label.pack(side="right", padx=(5, 0))
         
-        # Contrast control
-        contrast_frame = ctk.CTkFrame(alpha_frame)
-        contrast_frame.pack(fill="x", padx=10, pady=2)
+        # Enhanced Contrast control (0.5-5.0 range)
+        contrast_frame = ctk.CTkFrame(alpha_frame, fg_color="transparent")
+        contrast_frame.pack(fill="x", padx=15, pady=5)
         
-        ctk.CTkLabel(contrast_frame, text="Contrast (1.0-4.0):").pack(side="left", padx=(10, 5))
-        self.contrast_slider = ctk.CTkSlider(contrast_frame, from_=1.0, to=4.0, 
-                                            variable=self.contrast_var)
+        ctk.CTkLabel(
+            contrast_frame,
+            text="Contrast (0.5-5.0):",
+            text_color=CYBERPUNK_COLORS['text_secondary']
+        ).pack(side="left", padx=(0, 10))
+        
+        self.contrast_slider = ctk.CTkSlider(
+            contrast_frame,
+            from_=0.5, to=5.0,
+            variable=self.contrast_var,
+            button_color=CYBERPUNK_COLORS['accent_green'],
+            button_hover_color=CYBERPUNK_COLORS['hover']
+        )
         self.contrast_slider.pack(side="left", fill="x", expand=True, padx=5)
         self.contrast_label = ctk.CTkLabel(contrast_frame, text="3.0", width=30)
-        self.contrast_label.pack(side="right", padx=(5, 10))
+        self.contrast_label.pack(side="right", padx=(5, 0))
         
-        # Shift Edge control
-        shift_frame = ctk.CTkFrame(alpha_frame)
-        shift_frame.pack(fill="x", padx=10, pady=(2, 10))
+        # Enhanced Shift Edge control (-5 to +5 range)
+        shift_frame = ctk.CTkFrame(alpha_frame, fg_color="transparent")
+        shift_frame.pack(fill="x", padx=15, pady=(5, 15))
         
-        ctk.CTkLabel(shift_frame, text="Shift Edge (-2 to +2):").pack(side="left", padx=(10, 5))
-        self.shift_slider = ctk.CTkSlider(shift_frame, from_=-2, to=2, number_of_steps=4,
-                                         variable=self.shift_edge_var)
+        ctk.CTkLabel(
+            shift_frame,
+            text="Shift Edge (-5 to +5):",
+            text_color=CYBERPUNK_COLORS['text_secondary']
+        ).pack(side="left", padx=(0, 10))
+        
+        self.shift_slider = ctk.CTkSlider(
+            shift_frame,
+            from_=-5, to=5, number_of_steps=10,
+            variable=self.shift_edge_var,
+            button_color=CYBERPUNK_COLORS['accent_orange'],
+            button_hover_color=CYBERPUNK_COLORS['hover']
+        )
         self.shift_slider.pack(side="left", fill="x", expand=True, padx=5)
         self.shift_label = ctk.CTkLabel(shift_frame, text="-1", width=30)
-        self.shift_label.pack(side="right", padx=(5, 10))
+        self.shift_label.pack(side="right", padx=(5, 0))
     
     def setup_fringe_fix(self):
         """Setup fringe fix section."""
@@ -578,3 +825,175 @@ class AppUI:
             # Cleanup
             if self.controller.is_processing():
                 self.controller.stop_processing()
+    
+    def setup_professional_options(self):
+        """Setup professional processing options with cyberpunk styling."""
+        # Professional Options Frame
+        pro_frame = ctk.CTkFrame(
+            self.main_frame,
+            fg_color=CYBERPUNK_COLORS['bg_secondary'],
+            border_width=1,
+            border_color=CYBERPUNK_COLORS['accent_purple']
+        )
+        pro_frame.pack(fill="x", pady=(0, 15))
+        
+        ctk.CTkLabel(
+            pro_frame,
+            text="⚙ Professional Features (Photoshop-like)",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color=CYBERPUNK_COLORS['accent_purple']
+        ).pack(pady=(15, 10))
+        
+        # Professional toggles in a grid
+        toggles_frame = ctk.CTkFrame(pro_frame, fg_color="transparent")
+        toggles_frame.pack(fill="x", padx=15, pady=(0, 15))
+        
+        # Row 1
+        row1 = ctk.CTkFrame(toggles_frame, fg_color="transparent")
+        row1.pack(fill="x", pady=(0, 8))
+        
+        self.surgical_toggle = ctk.CTkSwitch(
+            row1,
+            text="Surgical Processing (PS Local Fix)",
+            variable=self.surgical_processing_var,
+            button_color=CYBERPUNK_COLORS['accent_purple'],
+            button_hover_color=CYBERPUNK_COLORS['hover'],
+            text_color=CYBERPUNK_COLORS['text_primary']
+        )
+        self.surgical_toggle.pack(side="left", padx=(0, 30))
+        
+        self.pyramid_toggle = ctk.CTkSwitch(
+            row1,
+            text="Alpha Pyramid (Glass/Transparency)",
+            variable=self.use_alpha_pyramid_var,
+            button_color=CYBERPUNK_COLORS['accent_cyan'],
+            button_hover_color=CYBERPUNK_COLORS['hover'],
+            text_color=CYBERPUNK_COLORS['text_primary']
+        )
+        self.pyramid_toggle.pack(side="left")
+        
+        # Row 2
+        row2 = ctk.CTkFrame(toggles_frame, fg_color="transparent")
+        row2.pack(fill="x")
+        
+        self.legacy_toggle = ctk.CTkSwitch(
+            row2,
+            text="Legacy Contrast (PS Re-harden)",
+            variable=self.legacy_contrast_var,
+            button_color=CYBERPUNK_COLORS['accent_green'],
+            button_hover_color=CYBERPUNK_COLORS['hover'],
+            text_color=CYBERPUNK_COLORS['text_primary']
+        )
+        self.legacy_toggle.pack(side="left", padx=(0, 30))
+        
+        self.details_toggle = ctk.CTkSwitch(
+            row2,
+            text="Preserve Fine Details (Hair/Fur)",
+            variable=self.preserve_details_var,
+            button_color=CYBERPUNK_COLORS['accent_orange'],
+            button_hover_color=CYBERPUNK_COLORS['hover'],
+            text_color=CYBERPUNK_COLORS['text_primary']
+        )
+        self.details_toggle.pack(side="left")
+    
+    # Preset loading methods
+    def load_photoshop_preset(self):
+        """Load Photoshop-like preset configuration."""
+        if PresetConfigs:
+            config = PresetConfigs.photoshop_like()
+            self.apply_preset_config(config)
+        else:
+            # Fallback manual configuration
+            self.matte_preset_var.set("White Matte")
+            self.smooth_var.set(1)
+            self.feather_var.set(1)
+            self.contrast_var.set(3.5)
+            self.shift_edge_var.set(-1)
+            self.fringe_fix_var.set(True)
+            self.fringe_band_var.set(2)
+            self.fringe_strength_var.set(3)
+            self.surgical_processing_var.set(True)
+            self.legacy_contrast_var.set(True)
+        self.update_all_labels()
+
+    def load_hair_preset(self):
+        """Load hair/fur specialist preset."""
+        if PresetConfigs:
+            config = PresetConfigs.hair_fur_specialist()
+            self.apply_preset_config(config)
+        else:
+            self.material_type_var.set("Hair/Fur")
+            self.smooth_var.set(1)
+            self.feather_var.set(0)
+            self.contrast_var.set(2.5)
+            self.shift_edge_var.set(0)
+            self.preserve_details_var.set(True)
+            self.surgical_processing_var.set(True)
+        self.update_all_labels()
+
+    def load_glass_preset(self):
+        """Load glass/transparent preset."""
+        if PresetConfigs:
+            config = PresetConfigs.glass_transparent()
+            self.apply_preset_config(config)
+        else:
+            self.material_type_var.set("Glass/Transparent")
+            self.smooth_var.set(3)
+            self.feather_var.set(2)
+            self.contrast_var.set(2.0)
+            self.shift_edge_var.set(0)
+            self.use_alpha_pyramid_var.set(True)
+        self.update_all_labels()
+
+    def load_max_quality_preset(self):
+        """Load maximum quality preset."""
+        if PresetConfigs:
+            config = PresetConfigs.maximum_quality()
+            self.apply_preset_config(config)
+        else:
+            self.processor_type_var.set("Professional")
+            self.material_type_var.set("Auto Detect")
+            self.smooth_var.set(2)
+            self.feather_var.set(2)
+            self.contrast_var.set(3.0)
+            self.shift_edge_var.set(-1)
+            self.surgical_processing_var.set(True)
+            self.use_alpha_pyramid_var.set(True)
+            self.legacy_contrast_var.set(True)
+            self.preserve_details_var.set(True)
+        self.update_all_labels()
+
+    def apply_preset_config(self, config):
+        """Apply a preset configuration to the UI."""
+        self.matte_preset_var.set(config.matte_preset.value)
+        self.smooth_var.set(config.smooth)
+        self.feather_var.set(config.feather)
+        self.contrast_var.set(config.contrast)
+        self.shift_edge_var.set(config.shift_edge)
+        self.fringe_fix_var.set(config.fringe_fix_enabled)
+        self.fringe_band_var.set(config.fringe_band)
+        self.fringe_strength_var.set(config.fringe_strength)
+        
+        if hasattr(config, 'professional') and config.professional:
+            prof = config.professional
+            if hasattr(prof, 'processor_type'):
+                self.processor_type_var.set(prof.processor_type.value)
+            if hasattr(prof, 'material_type'):
+                self.material_type_var.set(prof.material_type.value)
+            self.surgical_processing_var.set(prof.surgical_processing)
+            self.use_alpha_pyramid_var.set(prof.use_alpha_pyramid)
+            self.legacy_contrast_var.set(prof.legacy_contrast_mode)
+            self.preserve_details_var.set(prof.preserve_fine_details)
+    
+    def update_all_labels(self):
+        """Update all slider labels with current values."""
+        try:
+            self.smooth_label.configure(text=str(self.smooth_var.get()))
+            self.feather_label.configure(text=str(self.feather_var.get()))
+            self.contrast_label.configure(text=f"{self.contrast_var.get():.1f}")
+            self.shift_label.configure(text=str(self.shift_edge_var.get()))
+            self.band_label.configure(text=str(self.fringe_band_var.get()))
+            self.strength_label.configure(text=str(self.fringe_strength_var.get()))
+        except AttributeError:
+            # Labels might not be created yet
+            pass

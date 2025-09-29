@@ -1,4 +1,4 @@
-# Batch Image Cleanup Tool - Dependencies
+# KS Image Cleanup - Dependencies
 
 # GUI Framework
 customtkinter>=5.2.0

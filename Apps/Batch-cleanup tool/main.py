@@ -1,6 +1,6 @@
 """
-Batch Image Cleanup Tool - Main Entry Point
-Removes white fringes/halos from AI background-removed images.
+KS Image Cleanup - Main Entry Point
+Professional quality fringe removal and edge enhancement for AI-removed backgrounds.
 """
 
 import sys
@@ -34,10 +34,10 @@ def main():
         # Create controller and UI
         controller = Controller()
         app = AppUI(controller)
-        
-        logger.info("Starting Batch Image Cleanup Tool")
+
+        logger.info("Starting KS Image Cleanup — professional quality fringe removal and edge enhancement")
         app.run()
-        
+
     except Exception as e:
         logger.error(f"Application error: {e}")
         raise

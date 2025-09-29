@@ -1,6 +1,9 @@
-# Batch Image Cleanup Tool
+# KS Image Cleanup — professional quality fringe removal and edge enhancement
 
-A professional-grade Python application for removing white fringes and halos from AI background-removed images. Built with CustomTkinter, OpenCV, and NumPy for superior image processing results.
+KS Image Cleanup is a professional-grade Python application for removing white fringes/halos and enhancing edges on AI background-removed images. Built with CustomTkinter, OpenCV, and NumPy for precise, production-ready results.
+
+Main heading: KS Image Cleanup
+Subheading: Professional Edge Cleanup & Fringe Removal
 
 ## Features
 
@@ -55,12 +58,7 @@ pip install customtkinter>=5.2.0 Pillow>=10.0.0 opencv-python>=4.8.0 numpy>=1.24
 .\run_app.ps1
 ```
 
-**Option 3: Quick Launch (Windows)**
-```batch
-.\quick_run.bat
-```
-
-**Option 4: Direct Python**
+**Option 3: Direct Python**
 ```bash
 python main.py
 ```
@@ -110,11 +108,10 @@ For each image:
 
 ## Launcher Files
 
-The project includes several convenient launcher files:
+The project includes these recommended launcher files:
 
-- **`run_app.bat`**: Full-featured Windows batch launcher with dependency checking
-- **`run_app.ps1`**: PowerShell script with colored output and error handling  
-- **`quick_run.bat`**: Simple one-click launcher for quick testing
+- **`run_app.bat`**: Primary Windows batch launcher that starts the app from the project folder
+- **`run_app.ps1`**: PowerShell launcher with user-friendly colored output
 - **`test_components.py`**: Component test script to verify installation
 
 ## Troubleshooting
