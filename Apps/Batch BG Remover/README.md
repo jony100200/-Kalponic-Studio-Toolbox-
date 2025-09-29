@@ -148,10 +148,12 @@ provide a `RELEASE.md` with PyInstaller steps and a sample spec file.
 
 ## License 📜
 
-This repository contains code you can license as you wish. A common approach is:
+The KS BG Eraser code in this folder is released under the **MIT License**. You can find the
+full license text in the repository `LICENSE` file at the project root.
 
-- Keep the core tools free (MIT or similar).
-- Sell the convenience orchestrator/UI as a small paid product (optional license file approach).
+Summary: you are free to use, modify, and redistribute this code under the terms of the MIT
+license. If you later build other tools or paid wrappers that call this code, keep those
+distributions separate — the core project here remains MIT.
 
 ---
 
