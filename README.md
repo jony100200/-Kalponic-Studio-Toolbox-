@@ -46,7 +46,7 @@ Below is a quick, auto-generated table of contents linking to each app or plugin
 - [Apps/KSTexturePresentation](Apps/KSTexturePresentation/README.md) — SPRITE NEXUS: icon+background merger and sprite-sheet maker with multi-sheet pagination and power-of-2 canvas support.
 - [Apps/Local AI Model Laucher](Apps/Local%20AI%20Model%20Laucher/code_analyzer.py) — Local AI Model Laucher: utilities for probing and interacting with local model servers (summary generator / code analyzer helper).
 - [Apps/Model Launcher](Apps/Model%20Launcher/readme.md) — Model Picker UI: one-click model launcher with compatibility checks and server controls.
-- [Apps/PromptSender2ChatGP](Apps/PromptSender2ChatGP/README.md) — Prompt Sequencer: automation GUI for sending prompt sequences to ChatGPT/ComfyUI/SD with queueing and robust focus strategies.
+- [Apps/PromptSender2ChatGP](Apps/PromptSender2ChatGP/README.md) — Prompt Sequencer: automation GUI for sending prompt sequences to ChatGPT/Grok/similar with queueing and robust focus strategies.
 - [Apps/TranscriptMaker](Apps/TranscriptMaker/BatchTranscribe.py) — Transcript Maker: batch audio/video transcriber using faster-whisper for high-speed local transcription.
 - [Apps/Universal Model Launcher (V4)](Apps/Universal%20Model%20Launcher/Version4/README.md) — Universal Model Launcher V4: model discovery, backend selection and GUI for launching local AI models.
 
