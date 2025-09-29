@@ -20,6 +20,13 @@ Quick overview
 - The window provides a queue-based workflow for batch runs, drag-and-drop folders, presets,
   multi-angle capture, adjustable resolution, and safe output options.
 
+Recent additions
+----------------
+- Queue header controls: you can now quickly add multiple blank queue entries using the numeric "Add entries:" field (enter a number and press Add). There are also quick actions for "Clear Disabled", "Select All" and "Clear All" (Clear All shows a confirmation dialog).
+- Drag-and-drop parent folder -> auto-create entries: drop a parent folder onto the main *Input Folder* drag area and the window will detect subfolders and offer to create one queue entry per subfolder (Create Entries / Use as Input Folder Only / Cancel). Newly-created entries are enabled by default and will use the subfolder name as the entry name. If you have a global Output Folder set, each entry will by default use a sibling output subfolder.
+- Safety: the auto-create flow prompts before creating very large numbers of entries and will not touch your project unless you confirm.
+
+
 Supported workflow highlights
 - Queue entries: add input/output pairs to build batch jobs. Each queue entry can be
   individually edited, reordered, and run.
