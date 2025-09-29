@@ -18,6 +18,7 @@ namespace KalponicGames
         private ThumbnailConfig config;
         private bool showAdvanced = false;
         private bool showPresets = false;
+    private int newEntryCount = 1; // number of entries to add when requested
         private float progress = 0f;
         private string statusText = "Idle";
         private bool isRunning = false;
@@ -120,14 +121,24 @@ namespace KalponicGames
 
                     using (new EditorGUILayout.HorizontalScope())
                     {
-                        if (GUILayout.Button("Add Entry", GUILayout.Width(100)))
+                        // Numeric input to add multiple entries quickly
+                        GUILayout.Label("Add entries:", GUILayout.Width(80));
+                        newEntryCount = EditorGUILayout.IntField(newEntryCount, GUILayout.Width(60));
+                        newEntryCount = Mathf.Clamp(newEntryCount, 1, 1000);
+
+                        if (GUILayout.Button("Add", GUILayout.Width(64)))
                         {
-                            config.inputQueue.Add(new ThumbnailConfig.QueueEntry());
+                            for (int k = 0; k < newEntryCount; k++)
+                            {
+                                config.inputQueue.Add(new ThumbnailConfig.QueueEntry());
+                            }
                         }
+
                         if (GUILayout.Button("Clear Disabled", GUILayout.Width(120)))
                         {
                             config.inputQueue.RemoveAll(e => !e.enabled);
                         }
+
                         if (GUILayout.Button("Select All", GUILayout.Width(90)))
                         {
                             for (int si = 0; si < config.inputQueue.Count; si++)
@@ -135,6 +146,7 @@ namespace KalponicGames
                                 config.inputQueue[si].enabled = true;
                             }
                         }
+
                         if (GUILayout.Button("Clear All", GUILayout.Width(90)))
                         {
                             if (EditorUtility.DisplayDialog("Clear All Queue Entries", "Remove all queue entries? This cannot be undone.", "Yes", "No"))
@@ -142,6 +154,7 @@ namespace KalponicGames
                                 config.inputQueue.Clear();
                             }
                         }
+
                         GUILayout.FlexibleSpace();
                     }
 
