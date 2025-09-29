@@ -275,8 +275,8 @@ namespace KalponicGames
                     
                     // Drag and drop area for input folder
                     var inputRect = GUILayoutUtility.GetRect(0, 20);
-                    DrawDragDropArea(inputRect, "Drag folder here or click Pick...", 
-                        (path) => config.inputFolder = path, true);
+                    DrawDragDropArea(inputRect, "Drag folder here or click Pick...",
+                        OnInputFolderDropped, true);
                     
                     using (new EditorGUILayout.HorizontalScope())
                     {
@@ -765,6 +765,86 @@ namespace KalponicGames
             catch
             {
                 return 0;
+            }
+        }
+
+        // Handle a folder dropped onto the main Input Folder area.
+        // If the folder contains subfolders, offer to create queue entries for each.
+        private void OnInputFolderDropped(string path)
+        {
+            if (string.IsNullOrEmpty(path) || !Directory.Exists(path)) return;
+
+            // Set the main input folder by default
+            config.inputFolder = path;
+
+            try
+            {
+                var subs = Directory.GetDirectories(path);
+                if (subs == null || subs.Length == 0)
+                {
+                    // no subfolders, just set the input folder
+                    Repaint();
+                    return;
+                }
+
+                // Ask user what to do
+                int count = subs.Length;
+                string msg = $"Detected {count} subfolder{(count==1?"":"s")} in the dropped folder.\n\nCreate a queue entry for each subfolder?";
+                int choice = EditorUtility.DisplayDialogComplex("Add Subfolders to Queue", msg, "Create Entries", "Cancel", "Use as Input Folder Only");
+
+                // DisplayDialogComplex returns 0 = OK (first), 1 = Cancel (second), 2 = alt (third)
+                if (choice == 1)
+                {
+                    // Cancel
+                    return;
+                }
+
+                if (choice == 2)
+                {
+                    // Use as input folder only, already set above
+                    Repaint();
+                    return;
+                }
+
+                // choice == 0 -> Create Entries
+                const int MAX_AUTOCREATE = 1000;
+                if (subs.Length > MAX_AUTOCREATE)
+                {
+                    if (!EditorUtility.DisplayDialog("Too many subfolders", $"Found {subs.Length} subfolders — creating that many entries may be slow. Continue?", "Yes", "No"))
+                    {
+                        return;
+                    }
+                }
+
+                // Create entries for each subfolder
+                foreach (var d in subs)
+                {
+                    var name = Path.GetFileName(d.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                    var entry = new ThumbnailConfig.QueueEntry();
+                    entry.inputFolder = d;
+                    entry.name = name;
+                    // If an output folder is set, create a sibling output subfolder by default
+                    if (!string.IsNullOrEmpty(config.outputFolder))
+                    {
+                        try
+                        {
+                            entry.outputFolder = Path.Combine(config.outputFolder, name);
+                        }
+                        catch
+                        {
+                            entry.outputFolder = config.outputFolder;
+                        }
+                    }
+                    entry.enabled = true;
+                    config.inputQueue.Add(entry);
+                }
+
+                statusText = $"Added {subs.Length} queue entries from '{Path.GetFileName(path)}'.";
+                Repaint();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("Error processing dropped folder: " + ex);
             }
         }
 
