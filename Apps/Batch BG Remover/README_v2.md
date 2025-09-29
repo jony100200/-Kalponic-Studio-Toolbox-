@@ -1,188 +1,163 @@
-# Enhanced Batch Background Remover v2.0
+﻿# KS BG Eraser — Enhanced (Batch Background Remover) v2.0
 
-## Architecture Overview
+Polished, maintainable, and user-friendly batch background removal tool. This repo contains
+an enhanced version of the Batch Background Remover with a modular architecture (processing,
+UI and configuration separated), robust error handling, progress reporting and easy integration
+points for pipelines (for example the KS Auto Pipeline orchestrator).
 
-This enhanced version follows **KISS (Keep It Simple, Stupid)** and **SOLID** principles for better maintainability, debugging, and feature addition.
-
-### Key Improvements
-
-#### 🏗️ **Modular Architecture**
-- **Separation of Concerns**: Core processing, UI, and configuration are separate modules
-- **Interface-based Design**: Easy to add new background removal methods
-- **Factory Pattern**: Simple remover creation and management
-- **Dependency Inversion**: High-level modules don't depend on low-level implementations
-
-#### 🚀 **Dual-Mode System**
-- **Primary/Fallback**: Automatic fallback between different AI models
-- **Extensible**: Easy to add LayerDiffuse and other advanced methods
-- **Robust**: Graceful error handling and recovery
-
-#### 🔧 **Enhanced Debugging**
-- **Comprehensive Logging**: Detailed logging at all levels
-- **Diagnostic Tools**: Built-in system diagnostics (`debug.py`)
-- **Error Isolation**: Clear error boundaries and reporting
-- **Configuration Validation**: Automatic config validation and repair
-
-### Directory Structure
-
-```
-src/
-├── __init__.py                 # Package initialization
-├── config/
-│   ├── __init__.py            # Config module exports
-│   └── settings.py            # Configuration management (SOLID)
-├── core/
-│   ├── __init__.py            # Core module exports
-│   ├── interfaces.py          # Abstract interfaces (SOLID)
-│   ├── removers.py            # Remover implementations
-│   ├── factory.py             # Remover factory and manager
-│   └── processor.py           # Processing engine
-└── ui/
-    ├── __init__.py            # UI module exports
-    ├── controller.py          # UI controller (SOLID)
-    └── main_window.py         # Main application window
-```
-
-### SOLID Principles Applied
-
-#### **S** - Single Responsibility Principle
-- Each class has one reason to change
-- `ConfigManager` only handles configuration
-- `ProcessingEngine` only handles image processing workflow
-- `UIController` only coordinates UI and business logic
-
-#### **O** - Open/Closed Principle
-- Easy to add new background removal methods without modifying existing code
-- `LayerDiffuseRemover` can be added without changing `InspyrenetRemover`
-
-#### **L** - Liskov Substitution Principle
-- All removers implement the same `BackgroundRemover` interface
-- Can substitute any remover without breaking the system
-
-#### **I** - Interface Segregation Principle
-- Basic `BackgroundRemover` interface for simple operations
-- Extended `AdvancedBackgroundRemover` interface for advanced features
-- UI components have minimal, focused interfaces
-
-#### **D** - Dependency Inversion Principle
-- High-level `ProcessingEngine` depends on `BackgroundRemover` interface
-- Low-level implementations (`InspyrenetRemover`) implement the interface
-- Easy to swap implementations
-
-### KISS Principles Applied
-
-#### **Simple Configuration**
-```python
-# Single source of truth
-from src.config import config
-
-# Easy to use
-config.removal_settings.threshold = 0.7
-config.save_config()
-```
-
-#### **Simple Remover Creation**
-```python
-# Factory pattern keeps it simple
-from src.core import RemoverFactory, RemoverType
-
-remover = RemoverFactory.create_remover(RemoverType.INSPYRENET)
-result = remover.remove_background(image_data)
-```
-
-#### **Simple Processing**
-```python
-# Clean API for processing
-engine = ProcessingEngine()
-stats = engine.process_folder_queue(folder_pairs)
-```
-
-### Getting Started
-
-#### **Run the Enhanced Version**
-```bash
-python main_v2.py
-```
-
-#### **Run Diagnostics**
-```bash
-python debug.py
-```
-
-#### **Run the Original Version** (for comparison)
-```bash
-python BatchBGRemover.py
-```
-
-### Future Enhancements
-
-#### 🤖 **LayerDiffuse Integration** (Coming Soon)
-The system is designed to easily integrate LayerDiffuse for advanced transparency handling:
-
-```python
-# Future LayerDiffuse implementation
-class LayerDiffuseRemover(AdvancedBackgroundRemover):
-    def remove_with_material_type(self, image_data: bytes, material_hint: str = "glass"):
-        # LayerDiffuse implementation for glass/transparent materials
-        pass
-```
-
-#### 🎯 **Advanced Features Ready**
-- Material-specific processing (glass, transparent, solid)
-- Batch processing with different algorithms per folder
-- Quality assessment and automatic algorithm selection
-- Integration with LayerDiffuse transparent VAE encoder/decoder
-
-### Key Benefits
-
-#### **For Developers**
-1. **Easy to Debug**: Clear separation makes issues easy to isolate
-2. **Easy to Extend**: Adding new features doesn't break existing code
-3. **Easy to Test**: Each component can be tested independently
-4. **Easy to Maintain**: SOLID principles make changes predictable
-
-#### **For Users**
-1. **More Reliable**: Automatic fallback and error recovery
-2. **Better Performance**: Optimized processing pipeline
-3. **More Features**: Foundation for advanced AI models
-4. **Better UX**: Responsive UI with proper progress reporting
-
-### Configuration
-
-The system automatically creates and manages a `config.json` file with all settings:
-
-```json
-{
-  "removal": {
-    "threshold": 0.5,
-    "use_jit": false,
-    "model_path": null
-  },
-  "ui": {
-    "theme": "dark",
-    "show_preview": false,
-    "preview_size": [128, 128],
-    "window_geometry": "950x700"
-  },
-  "processing": {
-    "output_format": "PNG",
-    "suffix": "_cleaned",
-    "create_subfolders": true,
-    "max_workers": 1,
-    "batch_size": 10
-  }
-}
-```
-
-### Dependencies
-
-Same as the original version, plus enhanced architecture:
-- `customtkinter` >= 5.2.2
-- `transparent-background` >= 1.3.4
-- `PIL` (Pillow)
-- `numpy`
-- `tqdm`
+This README explains what the app does, how to run it, how to integrate it into a pipeline, and
+how to contribute.
 
 ---
 
-**Ready for LayerDiffuse integration and advanced transparent material handling! 🚀**
+## Quick overview
+
+- Purpose: Batch remove image backgrounds (producing PNGs with transparency) from folders.
+- Modes: GUI (CustomTkinter) and CLI entrypoints are available (see `main_v2.py`).
+- Output: PNG with alpha channel; keeps relative folder structure when used in pipelines.
+- Design: SOLID + KISS — the implementation is modular so removers, processors and the UI are
+  separated and testable.
+
+## Features
+
+- Batch processing of PNG / JPG / WebP files
+- GUI with progress bar, live preview, and folder queue
+- CLI-friendly for automation and pipelines
+- Collects processing stats and failed-file lists for retries
+- Configurable threshold and JIT options via `config` module
+- Safe defaults and sensible minimum window size, responsive layout
+
+## Directory layout (high-level)
+
+```
+Apps/Batch BG Remover/
+├─ main_v2.py            # GUI/entrypoint for the enhanced app
+├─ run_main_v2.bat       # Windows launcher (uses system Python)
+├─ README_v2.md          # This file
+└─ src/
+   ├─ config/            # configuration management
+   ├─ core/              # processing engine, remover factory, removers
+   └─ ui/                # controller and main window
+```
+
+## Installation
+
+Prerequisites: Python 3.10+ and pip. On Windows, the repository includes `run_main_v2.bat` for
+convenient launching using the system Python.
+
+Recommended: install the required packages (you may already have some installed):
+
+```powershell
+python -m pip install -r "Apps/Batch BG Remover/requirements.txt"
+```
+
+If you prefer not to install globally, create a virtual environment (optional):
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r "Apps/Batch BG Remover/requirements.txt"
+```
+
+## Run the GUI (quick)
+
+From the `Apps/Batch BG Remover` folder:
+
+```powershell
+python main_v2.py
+```
+
+Or double-click `run_main_v2.bat` (uses system Python by default).
+
+## Run from CLI (headless usage)
+
+The application exposes a `main_v2.py` entrypoint that the GUI uses. If you want to run
+headless operations or wire the app into a pipeline, prefer the `ks_auto_pipeline.py`
+or the simple CLI-style wrappers (see `Apps/KS-Auto-Pipeline` if added).
+
+Usage example (pipeline-level orchestrator recommended):
+
+```powershell
+# Example: run the GUI app (interactive)
+python main_v2.py
+
+# The orchestrator (ks_auto_pipeline.py) is recommended for end-to-end automation
+python ..\KS-Auto-Pipeline\ks_auto_pipeline.py --in "D:\Assets\Raw" --work "D:\Assets\_temp" --out "D:\Assets\Final" --threads 4
+```
+
+## Configuration
+
+Configuration is stored and managed by the `src/config` module. The app will create a
+`config.json` (or similar) the first time it runs — you can change thresholds, UI defaults,
+and processing options via the GUI or by editing the configuration file.
+
+Default configuration values include:
+
+```json
+{
+  "removal": { "threshold": 0.5, "use_jit": false },
+  "ui": { "theme": "dark", "show_preview": false, "window_geometry": "1200x700" },
+  "processing": { "output_format": "PNG", "suffix": "_cleaned", "max_workers": 1 }
+}
+```
+
+## Integration & Orchestration
+
+This app is intentionally modular so it can be used from the KS Auto Pipeline orchestrator
+(recommended for paid workflow packaging). Integration options, in preferred order:
+
+1. Call a dedicated file-level wrapper that accepts `src_path` and `dst_path` and returns
+   a status code (best: implement small wrappers if not present).
+2. Import and call the processor from Python directly (if you need tighter integration).
+3. Subprocess call to `python main_v2.py <src> <dst>` (fallback).
+
+If you plan to build a paid pipeline product, keep the orchestrator UI small and let it call
+the pieces here — avoid duplicating core logic.
+
+## Troubleshooting
+
+- If the GUI exits immediately: check for missing dependencies (e.g., `transparent-background`) and
+  run `pip install -r requirements.txt`.
+- If processing stalls on certain images: check logs (GUI shows errors) and try `--sample 5` to
+  reproduce locally.
+- If you see torch-related warnings about meshgrid/indexing, they’re warnings only — ensure
+  your installed `torch` version is compatible with other optional libs.
+
+## Logs, Failed Files & Retry
+
+The app and orchestrator (if used) collect processing statistics and failed-file lists. Use the
+UI to export failed lists and retry them; the orchestrator writes a CSV manifest for auditing.
+
+## Contributing
+
+- Keep changes small and focused: follow the KISS & SOLID intent in code reviews.
+- Add tests for the core `src/core/processor.py` flow where possible (unit test the engine with
+  a dummy remover implementation).
+- If adding a new remover implementation, implement the `BackgroundRemover` interface and
+  register it in the factory.
+
+## Packaging & Distribution
+
+For distribution of a paid orchestrator, recommended packaging approach:
+
+- Build a Windows executable using PyInstaller for the orchestrator UI and include this
+  app as a dependency in the release zip.
+- Deliver through Gumroad/Itch/Gumroad for instant downloads and license handling.
+
+## License
+
+This repository includes components that you can license however you wish. If you plan to
+distribute the orchestrator as a paid product, consider shipping the core tools as free
+and the orchestrator as the paid convenience wrapper.
+
+---
+
+If you want, I can:
+
+- Add a small `ks_pipeline_tab` in the KS BG Eraser UI that calls the orchestrator in the
+  background and shows per-file progress (quick integration).
+- Create lightweight file-level wrapper scripts for the remover and cleanup tools so the
+  pipeline can call them simply as `bg_wrapper.py <src> <dst>` and `cleanup_wrapper.py <src> <dst>`.
+- Draft a short `RELEASE.md` with packaging/pyinstaller steps for Windows builds.
+
+Tell me which of those you'd like me to implement next and I will proceed.
