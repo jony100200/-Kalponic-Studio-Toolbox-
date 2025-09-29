@@ -426,17 +426,39 @@ namespace KalponicGames
         /// </summary>
         private string ComputeOutputPathWithAngle(ThumbnailRunConfig rc, string assetPath, CaptureAngle angle)
         {
-            // Get the base output path without angle
-            string baseOutputPath = ComputeOutputPath(rc, assetPath);
-            
-            // Get directory and filename parts
-            string baseDir = Path.GetDirectoryName(baseOutputPath);
-            string fileName = Path.GetFileName(baseOutputPath);
-            
-            // Insert angle folder into the path
-            string angleDir = Path.Combine(baseDir, angle.FolderName);
+            // Compute filename using existing logic
+            string fileName = Path.GetFileName(ComputeOutputPath(rc, assetPath));
+
+            // Determine relative subdirectory to mirror (same logic as ComputeOutputPath)
+            string relativeSubdir = "";
+            if (rc.Config.mirrorFolders)
+            {
+                // Prefer mirroring relative to the configured input folder so dropping a main folder
+                // creates an output tree that matches the source subtree.
+                var prefabDir = Path.GetDirectoryName(assetPath)?.Replace('\\', '/');
+                var inputProjectRel = AbsoluteToProjectPath(rc.InputPathAbs); // e.g. "Assets/MyFolder/Sub"
+
+                if (!string.IsNullOrEmpty(prefabDir) && !string.IsNullOrEmpty(inputProjectRel) &&
+                    prefabDir.StartsWith(inputProjectRel, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Strip the input root prefix so we mirror only the subtree under the dropped folder
+                    relativeSubdir = prefabDir.Substring(inputProjectRel.Length).TrimStart('/');
+                }
+                else if (!string.IsNullOrEmpty(prefabDir))
+                {
+                    // Fallback to previous behavior: strip leading "Assets/" if present
+                    relativeSubdir = prefabDir.StartsWith("Assets/") ? prefabDir.Substring("Assets/".Length) : prefabDir;
+                    relativeSubdir = relativeSubdir.TrimStart('/');
+                }
+            }
+
+            // Build final path: OutputRoot / (mirrored subdir) / AngleFolder / filename
+            // This mirrors the source structure first, then places the angle folder inside
+            string angleDir = string.IsNullOrEmpty(relativeSubdir)
+                ? Path.Combine(rc.OutputPathAbs, angle.FolderName)
+                : Path.Combine(rc.OutputPathAbs, relativeSubdir, angle.FolderName);
+
             string finalPath = Path.Combine(angleDir, fileName);
-            
             return finalPath;
         }
 
@@ -703,13 +725,22 @@ namespace KalponicGames
             string relativeSubdir = "";
             if (rc.Config.mirrorFolders)
             {
-                // Mirror structure under the chosen output root
-                // e.g., Assets/MyPrefabs/Props/Chair.prefab -> Thumbnails/MyPrefabs/Props/Chair_thumb_512.png
-                var dir = Path.GetDirectoryName(prefabAssetPath)?.Replace('\\', '/');
-                // Strip leading "Assets/" if present to keep it clean
-                if (!string.IsNullOrEmpty(dir))
+                // Mirror structure under the chosen output root. Prefer to mirror the subtree
+                // starting at the configured input folder so dragging a main folder results
+                // in an output layout matching that folder's internal structure.
+                var prefabDir = Path.GetDirectoryName(prefabAssetPath)?.Replace('\\', '/');
+                var inputProjectRel = AbsoluteToProjectPath(rc.InputPathAbs);
+
+                if (!string.IsNullOrEmpty(prefabDir) && !string.IsNullOrEmpty(inputProjectRel) &&
+                    prefabDir.StartsWith(inputProjectRel, StringComparison.OrdinalIgnoreCase))
                 {
-                    relativeSubdir = dir.StartsWith("Assets/") ? dir.Substring("Assets/".Length) : dir;
+                    relativeSubdir = prefabDir.Substring(inputProjectRel.Length).TrimStart('/');
+                }
+                else if (!string.IsNullOrEmpty(prefabDir))
+                {
+                    // Fallback: keep same behavior as before (strip leading "Assets/")
+                    relativeSubdir = prefabDir.StartsWith("Assets/") ? prefabDir.Substring("Assets/".Length) : prefabDir;
+                    relativeSubdir = relativeSubdir.TrimStart('/');
                 }
             }
 

@@ -256,6 +256,10 @@ namespace KalponicGames
                         {
                             StartQueueRun();
                         }
+                        if (GUILayout.Button("Preview Paths", GUILayout.Height(22), GUILayout.Width(110)))
+                        {
+                            PreviewSelectedPaths();
+                        }
                         GUI.enabled = isRunning;
                         if (GUILayout.Button("Cancel Queue", GUILayout.Height(22)))
                         {
@@ -672,6 +676,16 @@ namespace KalponicGames
             }
         }
 
+        private void PreviewSelectedPaths()
+        {
+            // Collect enabled queue entries (or all if none enabled)
+            var enabled = config.inputQueue.FindAll(e => e.enabled);
+            if (enabled.Count == 0) enabled = new System.Collections.Generic.List<ThumbnailConfig.QueueEntry>(config.inputQueue);
+
+            var preview = PreviewPathsWindow.OpenWindow(config, enabled);
+            preview.Show();
+        }
+
         // --------------------- UI Helper Methods ---------------------
 
         private void DrawDragDropArea(Rect rect, string label, Action<string> onPathDropped, bool acceptFolders)
@@ -765,6 +779,134 @@ namespace KalponicGames
             catch
             {
                 return 0;
+            }
+        }
+
+        // -------------------- Preview Paths Window --------------------
+        private class PreviewPathsWindow : EditorWindow
+        {
+            private ThumbnailConfig config;
+            private System.Collections.Generic.List<ThumbnailConfig.QueueEntry> entries;
+            private Vector2 scroll;
+
+            public static PreviewPathsWindow OpenWindow(ThumbnailConfig cfg, System.Collections.Generic.List<ThumbnailConfig.QueueEntry> entries)
+            {
+                var w = CreateInstance<PreviewPathsWindow>();
+                w.titleContent = new GUIContent("Preview Paths");
+                w.config = cfg;
+                w.entries = entries;
+                w.minSize = new Vector2(480, 300);
+                return w;
+            }
+
+            private void OnGUI()
+            {
+                GUILayout.Label("Planned output paths (no files will be written):", EditorStyles.boldLabel);
+                EditorGUILayout.Space(4);
+
+                if (entries == null || entries.Count == 0)
+                {
+                    EditorGUILayout.LabelField("No queue entries selected.");
+                    return;
+                }
+
+                scroll = EditorGUILayout.BeginScrollView(scroll);
+
+                foreach (var e in entries)
+                {
+                    EditorGUILayout.BeginVertical("box");
+                    EditorGUILayout.LabelField(e.name ?? Path.GetFileName(e.inputFolder ?? string.Empty), EditorStyles.boldLabel);
+
+                    var input = string.IsNullOrEmpty(e.inputFolder) ? config.inputFolder : e.inputFolder;
+                    var output = string.IsNullOrEmpty(e.outputFolder) ? config.outputFolder : e.outputFolder;
+
+                    EditorGUILayout.LabelField("Input:", input);
+                    EditorGUILayout.LabelField("Output Root:", output);
+
+                    // Try to find some prefabs under this input (just demonstrate with one example path per entry)
+                    string samplePrefab = "";
+                    try
+                    {
+                        if (!string.IsNullOrEmpty(input) && Directory.Exists(input))
+                        {
+                            var files = Directory.GetFiles(input, "*.prefab", SearchOption.AllDirectories);
+                            if (files.Length > 0)
+                            {
+                                // Convert to AssetDatabase-style path if possible
+                                var proj = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+                                var full = Path.GetFullPath(files[0]);
+                                if (full.StartsWith(proj))
+                                {
+                                    samplePrefab = full.Substring(proj.Length + 1).Replace('\\', '/');
+                                }
+                                else
+                                {
+                                    samplePrefab = Path.GetFileName(files[0]);
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+
+                    var selectedAngles = config.GetSelectedAngles();
+                    if (selectedAngles.Length == 0)
+                    {
+                        EditorGUILayout.LabelField("No angles selected.");
+                    }
+                    else if (string.IsNullOrEmpty(samplePrefab))
+                    {
+                        EditorGUILayout.LabelField("No prefabs found under this input to preview.");
+                    }
+                    else
+                    {
+                        // Compute paths using same logic as controller
+                        foreach (var a in selectedAngles)
+                        {
+                            string path = ComputePreviewPath(config, input, output, samplePrefab, a);
+                            EditorGUILayout.LabelField(a.Name + ":", path);
+                        }
+                    }
+
+                    EditorGUILayout.EndVertical();
+                    EditorGUILayout.Space(4);
+                }
+
+                EditorGUILayout.EndScrollView();
+
+                GUILayout.FlexibleSpace();
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button("Close", GUILayout.Width(100))) Close();
+                }
+            }
+
+            private string ComputePreviewPath(ThumbnailConfig cfg, string inputFolder, string outputFolder, string prefabAssetPath, ThumbnailConfig.CaptureAngle a)
+            {
+                // Mirror logic: compute prefab dir relative to inputFolder if possible
+                var prefabDir = Path.GetDirectoryName(prefabAssetPath)?.Replace('\\', '/');
+                var inputProjectRel = ThumbnailerWindow.AbsoluteToProjectPath(ResolveAbsolutePath(inputFolder));
+
+                string relativeSubdir = string.Empty;
+                if (cfg.mirrorFolders && !string.IsNullOrEmpty(prefabDir))
+                {
+                    if (!string.IsNullOrEmpty(inputProjectRel) && prefabDir.StartsWith(inputProjectRel, StringComparison.OrdinalIgnoreCase))
+                    {
+                        relativeSubdir = prefabDir.Substring(inputProjectRel.Length).TrimStart('/');
+                    }
+                    else if (prefabDir.StartsWith("Assets/"))
+                    {
+                        relativeSubdir = prefabDir.Substring("Assets/".Length).TrimStart('/');
+                    }
+                }
+
+                string fileName = Path.GetFileNameWithoutExtension(prefabAssetPath) + (cfg.filenameSuffix ?? "_thumb") + "_" + cfg.outputResolution + ".png";
+
+                string angleDir = string.IsNullOrEmpty(relativeSubdir)
+                    ? Path.Combine(ResolveAbsolutePath(outputFolder), a.FolderName)
+                    : Path.Combine(ResolveAbsolutePath(outputFolder), relativeSubdir, a.FolderName);
+
+                return Path.Combine(angleDir, fileName);
             }
         }
 
