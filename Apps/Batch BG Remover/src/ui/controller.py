@@ -180,7 +180,6 @@ class UIController:
         """Handle processing completion."""
         self.is_processing = False
         self.app.set_processing_state(False)
-        
         if error:
             if "No supported image files" in str(error):
                 messagebox.showwarning("No Images", str(error))
@@ -189,10 +188,91 @@ class UIController:
                 messagebox.showerror("Processing Error", f"Processing failed:\n{error}")
                 self.app.set_status("Processing failed")
         else:
-            messagebox.showinfo("Processing Complete", 
-                f"Processing completed successfully!\n\n{stats}")
-            self.app.set_status(f"Complete: {stats.processed_files}/{stats.total_files} processed")
-        
+            # If there are failed files, offer to save the list and/or retry
+            if getattr(stats, 'failed_files', 0) > 0 and getattr(stats, 'failed_paths', None):
+                failed_count = stats.failed_files
+                total = stats.total_files
+                msg = f"Processing completed with {failed_count} failed out of {total} files.\n\nWould you like to save the failed file list for retry or re-run failed files now?"
+                res = messagebox.askyesnocancel("Processing Complete - Failures", msg, default=messagebox.YES)
+
+                # Yes -> Save failed list and offer retry
+                if res is True:
+                    # Save failed list to file
+                    save_path = filedialog.asksaveasfilename(title="Save failed list as...", defaultextension=".txt", filetypes=[("Text Files","*.txt")])
+                    if save_path:
+                        try:
+                            with open(save_path, 'w', encoding='utf-8') as f:
+                                for p in stats.failed_paths:
+                                    f.write(p + "\n")
+                            messagebox.showinfo("Saved", f"Saved failed list to {save_path}")
+                        except Exception as e:
+                            messagebox.showerror("Save Error", f"Could not save failed list: {e}")
+
+                    # Ask to retry now
+                    retry_now = messagebox.askyesno("Retry Failed", "Retry failed files now? (Recommended if transient errors)")
+                    if retry_now:
+                        try:
+                            # Build folder_pairs from failed paths mapping to same output folder structure
+                            folder_pairs = []
+                            base_output = Path(self.app.output_folder.get()) if self.app.output_folder.get() else None
+                            if not base_output:
+                                messagebox.showerror("Output Missing", "Please select an output folder before retrying failed files.")
+                            else:
+                                # Group failed files by their parent folder
+                                from collections import defaultdict
+                                groups = defaultdict(list)
+                                for p in stats.failed_paths:
+                                    groups[Path(p).parent].append(Path(p))
+
+                                # Create temporary input folders by reusing original folders and set output paths
+                                for parent_folder, files in groups.items():
+                                    folder_name = parent_folder.name
+                                    if config.processing_settings.create_subfolders:
+                                        outp = base_output / f"{folder_name}_cleaned"
+                                    else:
+                                        outp = base_output
+                                    folder_pairs.append((parent_folder, outp))
+
+                                # Start processing only those folders (engine will skip already processed files)
+                                def retry_worker():
+                                    try:
+                                        self.is_processing = True
+                                        self.app.set_processing_state(True)
+                                        stats2 = self.engine.process_folder_queue(
+                                            folder_pairs,
+                                            progress_callback=self._on_progress,
+                                            preview_callback=self._on_preview,
+                                            show_preview=self.app.show_preview.get()
+                                        )
+                                        self.app.root.after(0, lambda: self._on_processing_complete(stats2, None))
+                                    except Exception as e:
+                                        self.app.root.after(0, lambda: self._on_processing_complete(None, e))
+
+                                self.worker_thread = threading.Thread(target=retry_worker, daemon=True)
+                                self.worker_thread.start()
+
+                        except Exception as e:
+                            messagebox.showerror("Retry Error", f"Could not retry failed files: {e}")
+
+                elif res is False:
+                    # Save failed list without retry
+                    save_path = filedialog.asksaveasfilename(title="Save failed list as...", defaultextension=".txt", filetypes=[("Text Files","*.txt")])
+                    if save_path:
+                        try:
+                            with open(save_path, 'w', encoding='utf-8') as f:
+                                for p in stats.failed_paths:
+                                    f.write(p + "\n")
+                            messagebox.showinfo("Saved", f"Saved failed list to {save_path}")
+                        except Exception as e:
+                            messagebox.showerror("Save Error", f"Could not save failed list: {e}")
+                else:
+                    # Cancel - do nothing
+                    pass
+            else:
+                messagebox.showinfo("Processing Complete", 
+                    f"Processing completed successfully!\n\n{stats}")
+                self.app.set_status(f"Complete: {stats.processed_files}/{stats.total_files} processed")
+
         self._logger.info(f"Processing completed. Stats: {stats}")
     
     def get_remover_info(self) -> dict:

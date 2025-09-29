@@ -32,8 +32,9 @@ class MainWindow:
         
         # Create main window
         self.root = ctk.CTk()
-        self.root.title("⚡ InSPyReNet AI Background Remover v2.0 ⚡")
-        self.root.geometry(config.ui_settings.window_geometry)
+        self.root.title("KS BG Eraser v2.0")
+        self.root.geometry("1200x700")
+        self.root.minsize(880, 540)
         self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
         
         # Initialize controller
@@ -45,7 +46,7 @@ class MainWindow:
         self.use_jit = ctk.BooleanVar(value=config.removal_settings.use_jit)
         self.threshold = ctk.DoubleVar(value=config.removal_settings.threshold)
         
-        # UI elements (created in _create_widgets)
+    # UI elements (created in _create_main_content)
         self.folder_listbox: Optional[ctk.CTkTextbox] = None
         self.start_btn: Optional[ctk.CTkButton] = None
         self.cancel_btn: Optional[ctk.CTkButton] = None
@@ -54,8 +55,8 @@ class MainWindow:
         self.preview_label: Optional[ctk.CTkLabel] = None
         self.threshold_label: Optional[ctk.CTkLabel] = None
         
-        # Create all widgets
-        self._create_widgets()
+        # Create main scrollable content and widgets
+        self._create_main_content()
         
         # Set up variable tracing to update config
         self._setup_variable_tracing()
@@ -63,53 +64,97 @@ class MainWindow:
         self._logger = logging.getLogger(self.__class__.__name__)
         self._logger.info("MainWindow initialized")
     
-    def _create_widgets(self):
-        """Create all UI widgets."""
-        self._create_header()
-        self._create_input_section()
-        self._create_output_section()
-        self._create_settings_section()
-        self._create_controls_section()
-        self._create_progress_section()
-        self._create_preview_section()
-        
-        # Configure grid weights
+    def _create_main_content(self):
+        """Create all UI widgets with fixed header/buttons and scrollable middle content."""
+        # Configure main grid
         self.root.columnconfigure(0, weight=1)
+        self.root.rowconfigure(1, weight=1)  # Middle scrollable area gets all extra space
+        
+        # Fixed header section
+        header_frame = ctk.CTkFrame(self.root, fg_color="transparent")
+        header_frame.grid(row=0, column=0, sticky="ew", padx=8, pady=(8, 4))
+        header_frame.columnconfigure(0, weight=1)
+        self._create_header_content(header_frame)
+        
+        # Scrollable middle content
+        self.scrollable = ctk.CTkScrollableFrame(self.root, corner_radius=10)
+        self.scrollable.grid(row=1, column=0, sticky="nsew", padx=8, pady=4)
+        self.scrollable.grid_columnconfigure(0, weight=1)
+        self._create_middle_content()
+        
+        # Fixed bottom controls
+        controls_frame = ctk.CTkFrame(self.root, fg_color="transparent")
+        controls_frame.grid(row=2, column=0, sticky="ew", padx=8, pady=(4, 8))
+        self._create_controls_content(controls_frame)
     
-    def _create_header(self):
-        """Create the header section."""
+    def _create_header_content(self, parent):
+        """Create the fixed header section."""
         # Main title
         title_label = ctk.CTkLabel(
-            self.root,
-            text="⚡ InSPyReNet AI Background Remover v2.0 ⚡",
+            parent,
+            text="KS BG Eraser",
             font=CyberpunkTheme.get_title_font(),
             text_color=CyberpunkTheme.ACCENT
         )
-        title_label.grid(row=0, column=0, pady=(15, 10), sticky="ew")
+        title_label.grid(row=0, column=0, pady=(10, 5), sticky="ew")
         
         # Subtitle
         subtitle_label = ctk.CTkLabel(
-            self.root,
-            text="🔥 DUAL-MODE ENHANCED SYSTEM | KISS + SOLID ARCHITECTURE 🔥",
+            parent,
+            text="Batch background removal — simple and reliable",
             font=CyberpunkTheme.get_subtitle_font(),
             text_color=CyberpunkTheme.SECONDARY
         )
-        subtitle_label.grid(row=1, column=0, pady=(0, 20), sticky="ew")
+        subtitle_label.grid(row=1, column=0, pady=(0, 10), sticky="ew")
+
+    def _create_middle_content(self):
+        """Create the scrollable middle sections."""
+        self._create_input_section()
+        self._create_output_section()
+        self._create_settings_section()
+        self._create_progress_section()
+        self._create_preview_section()
+
+    def _create_controls_content(self, parent):
+        """Create the fixed bottom controls section."""
+        self.start_btn = ctk.CTkButton(
+            parent,
+            text="Start Processing",
+            command=self._start_processing,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color=CyberpunkTheme.ACCENT,
+            text_color="black",
+            hover_color=CyberpunkTheme.SUCCESS,
+            height=40
+        )
+        self.start_btn.pack(side="left", padx=10, pady=10)
+        
+        self.cancel_btn = ctk.CTkButton(
+            parent,
+            text="Cancel",
+            command=self._cancel_processing,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color=CyberpunkTheme.ERROR,
+            hover_color="#cc2020",
+            height=40,
+            state="disabled"
+        )
+        self.cancel_btn.pack(side="left", padx=10, pady=10)
     
     def _create_input_section(self):
         """Create the input folders section."""
         input_frame = ctk.CTkFrame(
-            self.root,
+            self.scrollable,
             fg_color=CyberpunkTheme.FRAME,
             border_width=2,
             border_color=CyberpunkTheme.ACCENT
         )
-        input_frame.grid(row=2, column=0, padx=20, pady=10, sticky="ew")
+        input_frame.grid(row=0, column=0, padx=20, pady=10, sticky="ew")
         
         # Section title
         ctk.CTkLabel(
             input_frame,
-            text="📁 INPUT FOLDERS QUEUE",
+            text="Input Folders",
             font=CyberpunkTheme.get_section_font(),
             text_color=CyberpunkTheme.ACCENT
         ).pack(pady=(15, 10))
@@ -119,6 +164,7 @@ class MainWindow:
         list_frame.pack(pady=10, padx=15, fill="both", expand=True)
         
         # Folder list display
+        # Add textbox with vertical scrollbar behavior handled by CTkTextbox
         self.folder_listbox = ctk.CTkTextbox(
             list_frame,
             height=100,
@@ -134,7 +180,7 @@ class MainWindow:
         
         ctk.CTkButton(
             button_frame,
-            text="➕ ADD FOLDER",
+            text="Add Folder",
             command=self._add_input_folder,
             font=CyberpunkTheme.get_bold_font(),
             fg_color=CyberpunkTheme.ACCENT,
@@ -144,7 +190,7 @@ class MainWindow:
         
         ctk.CTkButton(
             button_frame,
-            text="🗑️ CLEAR ALL",
+            text="Clear All",
             command=self._clear_folders,
             font=CyberpunkTheme.get_bold_font(),
             fg_color=CyberpunkTheme.ERROR,
@@ -154,12 +200,12 @@ class MainWindow:
     def _create_output_section(self):
         """Create the output folder section."""
         output_frame = ctk.CTkFrame(
-            self.root,
+            self.scrollable,
             fg_color=CyberpunkTheme.FRAME,
             border_width=2,
             border_color=CyberpunkTheme.SECONDARY
         )
-        output_frame.grid(row=3, column=0, padx=20, pady=10, sticky="ew")
+        output_frame.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
         
         # Configure grid
         output_frame.columnconfigure(1, weight=1)
@@ -174,7 +220,6 @@ class MainWindow:
         ctk.CTkEntry(
             output_frame,
             textvariable=self.output_folder,
-            width=500,
             font=CyberpunkTheme.get_body_font(),
             border_width=1,
             border_color=CyberpunkTheme.ACCENT
@@ -192,12 +237,12 @@ class MainWindow:
     def _create_settings_section(self):
         """Create the settings section."""
         settings_frame = ctk.CTkFrame(
-            self.root,
+            self.scrollable,
             fg_color=CyberpunkTheme.FRAME,
             border_width=2,
             border_color=CyberpunkTheme.ACCENT
         )
-        settings_frame.grid(row=4, column=0, padx=20, pady=10, sticky="ew")
+        settings_frame.grid(row=2, column=0, padx=20, pady=10, sticky="ew")
         
         # Configure grid
         settings_frame.columnconfigure(1, weight=1)
@@ -314,46 +359,15 @@ class MainWindow:
         self.material_combo.set(material_options[0])
         self.material_combo.pack(side="left", padx=5)
     
-    def _create_controls_section(self):
-        """Create the control buttons section."""
-        button_frame = ctk.CTkFrame(self.root, fg_color="transparent")
-        button_frame.grid(row=5, column=0, pady=20)
-        
-        self.start_btn = ctk.CTkButton(
-            button_frame,
-            text="🚀 START AI PROCESSING",
-            command=self._start_processing,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            fg_color=CyberpunkTheme.ACCENT,
-            text_color="black",
-            hover_color=CyberpunkTheme.SUCCESS,
-            height=50,
-            width=200
-        )
-        self.start_btn.pack(side="left", padx=15)
-        
-        self.cancel_btn = ctk.CTkButton(
-            button_frame,
-            text="⛔ CANCEL",
-            command=self._cancel_processing,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            fg_color=CyberpunkTheme.ERROR,
-            hover_color="#cc2020",
-            height=50,
-            width=120,
-            state="disabled"
-        )
-        self.cancel_btn.pack(side="left", padx=15)
-    
     def _create_progress_section(self):
         """Create the progress section."""
         progress_frame = ctk.CTkFrame(
-            self.root,
+            self.scrollable,
             fg_color=CyberpunkTheme.FRAME,
             border_width=2,
             border_color=CyberpunkTheme.SECONDARY
         )
-        progress_frame.grid(row=6, column=0, padx=20, pady=15, sticky="ew")
+        progress_frame.grid(row=3, column=0, padx=20, pady=15, sticky="ew")
         
         ctk.CTkLabel(
             progress_frame,
@@ -364,15 +378,15 @@ class MainWindow:
         
         self.progress_bar = ctk.CTkProgressBar(
             progress_frame,
-            width=650,
             height=25,
             progress_color=CyberpunkTheme.ACCENT,
             border_width=1,
             border_color=CyberpunkTheme.SECONDARY
         )
-        self.progress_bar.pack(pady=10)
+        self.progress_bar.pack(pady=10, padx=15, fill="x")
         self.progress_bar.set(0)
         
+        # Status label shows detailed info including filename
         self.status_label = ctk.CTkLabel(
             progress_frame,
             text="⚡ READY FOR AI PROCESSING ⚡",
@@ -384,12 +398,12 @@ class MainWindow:
     def _create_preview_section(self):
         """Create the preview section."""
         preview_frame = ctk.CTkFrame(
-            self.root,
+            self.scrollable,
             fg_color=CyberpunkTheme.FRAME,
             border_width=1,
             border_color=CyberpunkTheme.ACCENT
         )
-        preview_frame.grid(row=7, column=0, padx=20, pady=10)
+        preview_frame.grid(row=4, column=0, padx=20, pady=10)
         
         ctk.CTkLabel(
             preview_frame,
