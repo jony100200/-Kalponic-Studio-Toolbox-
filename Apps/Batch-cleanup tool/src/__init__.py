@@ -1,9 +1,9 @@
 """
-Batch Image Cleanup Tool
+KS Image Cleanup
 
-A Python application for removing white fringes and halos from AI background-removed images.
+Professional quality fringe removal and edge enhancement for AI-removed backgrounds.
 """
 
 __version__ = "1.0.0"
-__author__ = "Batch Cleanup Tool"
-__description__ = "Remove white fringes/halos from AI background-removed images"
+__author__ = "KS Image Cleanup"
+__description__ = "Professional fringe removal and edge enhancement"
