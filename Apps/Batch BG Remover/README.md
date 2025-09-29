@@ -1,49 +1,63 @@
-﻿# KS BG Eraser — Enhanced (Batch Background Remover) v2.0
+﻿---
 
-Polished, maintainable, and user-friendly batch background removal tool. This repo contains
-an enhanced version of the Batch Background Remover with a modular architecture (processing,
-UI and configuration separated), robust error handling, progress reporting and easy integration
-points for pipelines (for example the KS Auto Pipeline orchestrator).
+# KS BG Eraser — Enhanced (Batch Background Remover) v2.0
 
-This README explains what the app does, how to run it, how to integrate it into a pipeline, and
-how to contribute.
+🚀 Polished, maintainable, and user-friendly batch background removal tool. This folder
+contains an enhanced version of the Batch Background Remover with a modular architecture
+(processing, UI and configuration separated), robust error handling, progress reporting,
+and a responsive GUI for interactive batch jobs.
 
 ---
 
-## Quick overview
+## Table of contents 📚
 
-- Purpose: Batch remove image backgrounds (producing PNGs with transparency) from folders.
-- Modes: GUI (CustomTkinter) and CLI entrypoints are available (see `main_v2.py`).
-- Output: PNG with alpha channel; keeps relative folder structure when used in pipelines.
-- Design: SOLID + KISS — the implementation is modular so removers, processors and the UI are
-  separated and testable.
+- [Quick overview](#quick-overview)
+- [Features](#features)
+- [Directory layout](#directory-layout-high-level)
+- [Installation](#installation)
+- [Run (GUI / CLI)](#run-gui--cli)
+- [Configuration](#configuration)
+- [Integration & Orchestration](#integration--orchestration)
+- [Troubleshooting](#troubleshooting)
+- [Logs, Failed Files & Retry](#logs-failed-files--retry)
+- [Contributing](#contributing)
+- [Packaging & Distribution](#packaging--distribution)
+- [License](#license)
 
-## Features
+---
 
-- Batch processing of PNG / JPG / WebP files
-- GUI with progress bar, live preview, and folder queue
-- CLI-friendly for automation and pipelines
-- Collects processing stats and failed-file lists for retries
-- Configurable threshold and JIT options via `config` module
-- Safe defaults and sensible minimum window size, responsive layout
+## Quick overview ✨
 
-## Directory layout (high-level)
+- **Purpose:** Batch remove image backgrounds and output PNGs with transparency.
+- **Modes:** GUI (CustomTkinter) and CLI-friendly entrypoints (see `main_v2.py`).
+- **Output:** Clean PNGs (alpha channel preserved); relative folder structure is preserved when scripting batch runs.
+- **Design:** SOLID + KISS — modular so removers, processors and the UI are separated and testable.
+
+## Features ✅
+
+- Batch processing: PNG / JPG / WebP input
+- Responsive GUI: progress bar, current file status, and live preview (optional)
+- CLI-friendly: designed to be called from scripts/orchestrators
+- Retry and manifest: failed-file lists and CSV manifest for auditing
+- Configurable: threshold, JIT and other options via `src/config`
+- Safe defaults: sensible window size, minimum dimensions, and responsive layout
+
+## Directory layout (high-level) 📁
 
 ```
 Apps/Batch BG Remover/
 ├─ main_v2.py            # GUI/entrypoint for the enhanced app
 ├─ run_main_v2.bat       # Windows launcher (uses system Python)
-├─ README_v2.md          # This file
+├─ README.md             # User-friendly README (this file)
 └─ src/
-   ├─ config/            # configuration management
-   ├─ core/              # processing engine, remover factory, removers
-   └─ ui/                # controller and main window
+  ├─ config/            # configuration management
+  ├─ core/              # processing engine, remover factory, removers
+  └─ ui/                # controller and main window
 ```
 
-## Installation
+## Installation ⚙️
 
-Prerequisites: Python 3.10+ and pip. On Windows, the repository includes `run_main_v2.bat` for
-convenient launching using the system Python.
+Prerequisites: Python 3.10+ and pip.
 
 Recommended: install the required packages (you may already have some installed):
 
@@ -51,7 +65,7 @@ Recommended: install the required packages (you may already have some installed)
 python -m pip install -r "Apps/Batch BG Remover/requirements.txt"
 ```
 
-If you prefer not to install globally, create a virtual environment (optional):
+Optional: use a virtual environment (recommended for clean installs):
 
 ```powershell
 python -m venv .venv
@@ -59,7 +73,9 @@ python -m venv .venv
 python -m pip install -r "Apps/Batch BG Remover/requirements.txt"
 ```
 
-## Run the GUI (quick)
+## Run (GUI / CLI) ▶️
+
+### GUI (quick)
 
 From the `Apps/Batch BG Remover` folder:
 
@@ -67,31 +83,28 @@ From the `Apps/Batch BG Remover` folder:
 python main_v2.py
 ```
 
-Or double-click `run_main_v2.bat` (uses system Python by default).
+Or double-click `run_main_v2.bat` (invokes system Python).
 
-## Run from CLI (headless usage)
+### CLI / Headless
 
-The application exposes a `main_v2.py` entrypoint that the GUI uses. If you want to run
-headless operations or wire the app into a pipeline, prefer the `ks_auto_pipeline.py`
-or the simple CLI-style wrappers (see `Apps/KS-Auto-Pipeline` if added).
+The app exposes a `main_v2.py` entrypoint for interactive use. For scripted or headless
+workflows you can either call `main_v2.py` from a script or import the processing engine from
+`src/core/processor.py` and call it directly. Importing the processor gives the cleanest API for
+automation and lets you handle manifests, retries and other workflow features in your own script.
 
-Usage example (pipeline-level orchestrator recommended):
+Example: simple invocation (interactive)
 
 ```powershell
-# Example: run the GUI app (interactive)
 python main_v2.py
-
-# The orchestrator (ks_auto_pipeline.py) is recommended for end-to-end automation
-python ..\KS-Auto-Pipeline\ks_auto_pipeline.py --in "D:\Assets\Raw" --work "D:\Assets\_temp" --out "D:\Assets\Final" --threads 4
 ```
 
-## Configuration
+## Configuration 🧭
 
-Configuration is stored and managed by the `src/config` module. The app will create a
-`config.json` (or similar) the first time it runs — you can change thresholds, UI defaults,
-and processing options via the GUI or by editing the configuration file.
+Configuration is handled by `src/config`. The app will create a `config.json` the first time it runs.
+You can change thresholds, UI defaults, and processing options via the GUI (preferred) or by editing
+the config file directly.
 
-Default configuration values include:
+Sample configuration:
 
 ```json
 {
@@ -101,63 +114,53 @@ Default configuration values include:
 }
 ```
 
-## Integration & Orchestration
+## Automation notes �
 
-This app is intentionally modular so it can be used from the KS Auto Pipeline orchestrator
-(recommended for paid workflow packaging). Integration options, in preferred order:
+This repository provides the core background removal application and a GUI entrypoint. It does not
+include a folder-level orchestrator. If you want end-to-end automation (manifests, resume/retry,
+sampling), implement that separately and call this app's processor or `main_v2.py` as needed.
 
-1. Call a dedicated file-level wrapper that accepts `src_path` and `dst_path` and returns
-   a status code (best: implement small wrappers if not present).
-2. Import and call the processor from Python directly (if you need tighter integration).
-3. Subprocess call to `python main_v2.py <src> <dst>` (fallback).
+Recommended: import and use `src/core/processor.py` from your automation script for best control.
 
-If you plan to build a paid pipeline product, keep the orchestrator UI small and let it call
-the pieces here — avoid duplicating core logic.
+## Troubleshooting 🐞
 
-## Troubleshooting
+- GUI exits immediately: missing dependencies. Run `pip install -r requirements.txt`.
+- Stuck processing: inspect logs in the UI or run with `--sample 5` to reproduce locally.
+- Torch warnings (meshgrid/indexing): informational. If necessary, align `torch` version with other libs.
 
-- If the GUI exits immediately: check for missing dependencies (e.g., `transparent-background`) and
-  run `pip install -r requirements.txt`.
-- If processing stalls on certain images: check logs (GUI shows errors) and try `--sample 5` to
-  reproduce locally.
-- If you see torch-related warnings about meshgrid/indexing, they’re warnings only — ensure
-  your installed `torch` version is compatible with other optional libs.
+## Logs, Failed Files & Retry 🔁
 
-## Logs, Failed Files & Retry
+The system writes a CSV manifest (when used with the orchestrator) and collects failed-file lists.
+Use the UI to export failed lists and retry them. Files left in the `work` folder indicate
+`NEEDS_REVIEW` status after cleanup failure.
 
-The app and orchestrator (if used) collect processing statistics and failed-file lists. Use the
-UI to export failed lists and retry them; the orchestrator writes a CSV manifest for auditing.
+## Contributing 🤝
 
-## Contributing
+- Follow KISS & SOLID: keep changes small and focused.
+- Add unit tests for `src/core/processor.py` flow when possible (use dummy removers).
+- New remover? Implement the `BackgroundRemover` interface and register it with the factory.
 
-- Keep changes small and focused: follow the KISS & SOLID intent in code reviews.
-- Add tests for the core `src/core/processor.py` flow where possible (unit test the engine with
-  a dummy remover implementation).
-- If adding a new remover implementation, implement the `BackgroundRemover` interface and
-  register it in the factory.
+## Packaging & Distribution 📦
 
-## Packaging & Distribution
+To distribute this app as a standalone executable on Windows, use PyInstaller to build an EXE.
+Include the executable, a short README, and the LICENSE in the release ZIP. If you'd like, I can
+provide a `RELEASE.md` with PyInstaller steps and a sample spec file.
 
-For distribution of a paid orchestrator, recommended packaging approach:
+## License 📜
 
-- Build a Windows executable using PyInstaller for the orchestrator UI and include this
-  app as a dependency in the release zip.
-- Deliver through Gumroad/Itch/Gumroad for instant downloads and license handling.
+This repository contains code you can license as you wish. A common approach is:
 
-## License
-
-This repository includes components that you can license however you wish. If you plan to
-distribute the orchestrator as a paid product, consider shipping the core tools as free
-and the orchestrator as the paid convenience wrapper.
+- Keep the core tools free (MIT or similar).
+- Sell the convenience orchestrator/UI as a small paid product (optional license file approach).
 
 ---
 
-If you want, I can:
+## Want me to help further? 💡
 
-- Add a small `ks_pipeline_tab` in the KS BG Eraser UI that calls the orchestrator in the
-  background and shows per-file progress (quick integration).
-- Create lightweight file-level wrapper scripts for the remover and cleanup tools so the
-  pipeline can call them simply as `bg_wrapper.py <src> <dst>` and `cleanup_wrapper.py <src> <dst>`.
-- Draft a short `RELEASE.md` with packaging/pyinstaller steps for Windows builds.
+I can help with any of the following as separate, optional tasks:
 
-Tell me which of those you'd like me to implement next and I will proceed.
+- Draft a `RELEASE.md` with PyInstaller steps to build a distributable EXE on Windows.
+- Add small file-level wrapper scripts if you want simple `<src> <dst>` command-line calls.
+- Help write automated scripts that import `src/core/processor.py` for folder processing.
+
+Reply with which item you want next and I'll implement it.
