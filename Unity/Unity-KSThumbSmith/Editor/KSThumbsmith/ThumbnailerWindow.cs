@@ -22,6 +22,9 @@ namespace KalponicGames
         private string statusText = "Idle";
         private bool isRunning = false;
         private string lastProcessedAsset = "";
+    private bool isQueueRunning = false;
+    private int queueIndex = -1;
+    private int queueTotal = 0;
         private DateTime batchStartTime;
         private Vector2 scrollPosition = Vector2.zero; // Scroll position for UI
 
@@ -109,7 +112,132 @@ namespace KalponicGames
             {
                 // Add some padding for better visual spacing
                 EditorGUILayout.Space(4);
-                
+
+                // Queue Editor (moved to top)
+                using (new EditorGUILayout.VerticalScope("box"))
+                {
+                    GUILayout.Label("Queue", EditorStyles.boldLabel);
+
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        if (GUILayout.Button("Add Entry", GUILayout.Width(100)))
+                        {
+                            config.inputQueue.Add(new ThumbnailConfig.QueueEntry());
+                        }
+                        if (GUILayout.Button("Clear Disabled", GUILayout.Width(120)))
+                        {
+                            config.inputQueue.RemoveAll(e => !e.enabled);
+                        }
+                        GUILayout.FlexibleSpace();
+                    }
+
+                    // List entries
+                    for (int i = 0; i < config.inputQueue.Count; i++)
+                    {
+                        var e = config.inputQueue[i];
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            e.enabled = EditorGUILayout.ToggleLeft(string.Empty, e.enabled, GUILayout.Width(18));
+                            e.name = EditorGUILayout.TextField(e.name, GUILayout.Width(110));
+
+                            // Input folder with pick and drag-drop
+                            e.inputFolder = EditorGUILayout.TextField(e.inputFolder);
+                            if (GUILayout.Button("Pick...", GUILayout.Width(64)))
+                            {
+                                var start = string.IsNullOrEmpty(e.inputFolder) ? Application.dataPath : e.inputFolder;
+                                var picked = EditorUtility.OpenFolderPanel("Select Input Folder", start, "");
+                                if (!string.IsNullOrEmpty(picked)) e.inputFolder = picked;
+                            }
+                            var dropRectIn = GUILayoutUtility.GetRect(18, 18, GUILayout.Width(80));
+                            DrawDragDropArea(dropRectIn, "Drop In", (path) => e.inputFolder = path, true);
+
+                            // Output folder with pick and drag-drop
+                            e.outputFolder = EditorGUILayout.TextField(e.outputFolder, GUILayout.Width(220));
+                            if (GUILayout.Button("Pick...", GUILayout.Width(64)))
+                            {
+                                var start = string.IsNullOrEmpty(e.outputFolder) ? Application.dataPath : e.outputFolder;
+                                var picked = EditorUtility.OpenFolderPanel("Select Output Folder", start, "");
+                                if (!string.IsNullOrEmpty(picked)) e.outputFolder = picked;
+                            }
+                            var dropRectOut = GUILayoutUtility.GetRect(18, 18, GUILayout.Width(80));
+                            DrawDragDropArea(dropRectOut, "Drop Out", (path) => e.outputFolder = path, true);
+                            // Show estimated prefab / capture count for this entry (fall back to global input folder)
+                            try
+                            {
+                                string countPath = !string.IsNullOrEmpty(e.inputFolder) ? e.inputFolder : config.inputFolder;
+                                if (!string.IsNullOrEmpty(countPath) && Directory.Exists(countPath))
+                                {
+                                    var prefabCountEntry = GetPrefabCount(countPath);
+                                    if (prefabCountEntry > 0)
+                                    {
+                                        var selectedAngles = config.GetSelectedAngles();
+                                        int totalCaptures = prefabCountEntry * Math.Max(1, selectedAngles.Length);
+                                        EditorGUILayout.LabelField($"({prefabCountEntry} prefabs, {totalCaptures} captures)", EditorStyles.miniLabel, GUILayout.Width(180));
+                                    }
+                                    else
+                                    {
+                                        EditorGUILayout.LabelField("(0 prefabs)", EditorStyles.miniLabel, GUILayout.Width(80));
+                                    }
+                                }
+                                else
+                                {
+                                    // empty placeholder to keep layout stable
+                                    EditorGUILayout.LabelField(string.Empty, GUILayout.Width(180));
+                                }
+                            }
+                            catch
+                            {
+                                EditorGUILayout.LabelField(string.Empty, GUILayout.Width(180));
+                            }
+
+                            // Reorder
+                            if (GUILayout.Button("Up", GUILayout.Width(40)) && i > 0)
+                            {
+                                var tmp = config.inputQueue[i - 1];
+                                config.inputQueue[i - 1] = config.inputQueue[i];
+                                config.inputQueue[i] = tmp;
+                            }
+                            if (GUILayout.Button("Down", GUILayout.Width(48)) && i < config.inputQueue.Count - 1)
+                            {
+                                var tmp = config.inputQueue[i + 1];
+                                config.inputQueue[i + 1] = config.inputQueue[i];
+                                config.inputQueue[i] = tmp;
+                            }
+
+                            // Run single entry
+                            GUI.enabled = !isRunning;
+                            if (GUILayout.Button("Run", GUILayout.Width(48)))
+                            {
+                                StartBatch(e);
+                            }
+                            GUI.enabled = true;
+
+                            if (GUILayout.Button("Remove", GUILayout.Width(64)))
+                            {
+                                config.inputQueue.RemoveAt(i);
+                                i--;
+                                continue;
+                            }
+                        }
+                    }
+
+                    EditorGUILayout.Space(4);
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        GUI.enabled = !isRunning && config.inputQueue.Count > 0;
+                        if (GUILayout.Button("Run Queue", GUILayout.Height(22)))
+                        {
+                            StartQueueRun();
+                        }
+                        GUI.enabled = isRunning;
+                        if (GUILayout.Button("Cancel Queue", GUILayout.Height(22)))
+                        {
+                            CancelBatch();
+                        }
+                        GUI.enabled = true;
+                    }
+                }
+
                 // Input folder with drag-and-drop support
             using (new EditorGUILayout.HorizontalScope())
             {
@@ -228,6 +356,7 @@ namespace KalponicGames
 
             EditorGUILayout.Space(6);
 
+
             // Camera & framing
             using (new EditorGUILayout.VerticalScope("box"))
             {
@@ -339,7 +468,11 @@ namespace KalponicGames
             EditorGUILayout.Space(6);
             
             // Enhanced progress display
-            if (isRunning && !string.IsNullOrEmpty(lastProcessedAsset))
+            if (isQueueRunning)
+            {
+                EditorGUILayout.LabelField($"Queue: {Mathf.Clamp(queueIndex + 1, 0, queueTotal)}/{queueTotal}", EditorStyles.miniLabel);
+            }
+            else if (isRunning && !string.IsNullOrEmpty(lastProcessedAsset))
             {
                 EditorGUILayout.LabelField("Currently Processing:", lastProcessedAsset, EditorStyles.miniLabel);
             }
@@ -399,9 +532,29 @@ namespace KalponicGames
             }
         }
 
+        private void StartBatch(ThumbnailConfig.QueueEntry entry)
+        {
+            // Apply entry-specific paths to a temporary config copy
+            var backupIn = config.inputFolder;
+            var backupOut = config.outputFolder;
+
+            config.inputFolder = string.IsNullOrWhiteSpace(entry.inputFolder) ? backupIn : entry.inputFolder;
+            config.outputFolder = string.IsNullOrWhiteSpace(entry.outputFolder) ? backupOut : entry.outputFolder;
+
+            // Start the regular batch
+            StartBatch();
+
+            // Restore UI fields will be handled when queue continues/completes
+        }
+
         private void CancelBatch()
         {
             if (!isRunning || controller == null) return;
+            // Stop the entire queue when cancelling
+            isQueueRunning = false;
+            queueIndex = -1;
+            queueTotal = 0;
+            statusText = "Cancel requested.";
             controller.Cancel();
         }
 
@@ -409,7 +562,61 @@ namespace KalponicGames
         {
             progress = p.Normalized;
             statusText = $"[{p.Index}/{p.Total}] {p.Message}";
+            lastProcessedAsset = p.CurrentAssetPath;
             Repaint();
+        }
+
+        private void StartQueueRun()
+        {
+            if (config.inputQueue == null || config.inputQueue.Count == 0) return;
+
+            // Build a list of enabled entries
+            var enabled = config.inputQueue.FindAll(e => e.enabled);
+            if (enabled.Count == 0)
+            {
+                statusText = "No enabled queue entries.";
+                Repaint();
+                return;
+            }
+
+            isQueueRunning = true;
+            queueIndex = -1;
+            queueTotal = enabled.Count;
+
+            // Kick off first item
+            StartNextQueueItem();
+        }
+
+        private void StartNextQueueItem()
+        {
+            if (!isQueueRunning)
+            {
+                queueIndex = -1;
+                queueTotal = 0;
+                return;
+            }
+
+            // Build enabled list each time to reflect any runtime changes
+            var enabled = config.inputQueue.FindAll(e => e.enabled);
+            queueIndex++;
+
+            if (queueIndex >= enabled.Count)
+            {
+                // Queue finished
+                isQueueRunning = false;
+                queueIndex = -1;
+                queueTotal = 0;
+                statusText = "Queue finished.";
+                Repaint();
+                return;
+            }
+
+            var entry = enabled[queueIndex];
+            statusText = $"Queue: {queueIndex + 1}/{enabled.Count} - {entry.name ?? entry.inputFolder}";
+            Repaint();
+
+            // Apply entry and start batch
+            StartBatch(entry);
         }
 
         private void HandleLog(string msg)
@@ -430,6 +637,12 @@ namespace KalponicGames
             progress = 1f;
             statusText = "Done.";
             Repaint();
+
+            // If we were running a queue, advance to next
+            if (isQueueRunning)
+            {
+                StartNextQueueItem();
+            }
         }
 
         // --------------------- UI Helper Methods ---------------------

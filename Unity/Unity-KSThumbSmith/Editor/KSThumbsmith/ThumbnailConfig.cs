@@ -3,6 +3,7 @@
 // Namespace + naming follow your conventions.
 
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace KalponicGames
@@ -10,6 +11,21 @@ namespace KalponicGames
     [Serializable]
     public sealed class ThumbnailConfig
     {
+        [Serializable]
+        public sealed class QueueEntry
+        {
+            [Tooltip("Optional display name for this queue entry")]
+            public string name = string.Empty;
+
+            [Tooltip("Input folder for this queue entry (absolute or project-relative)")]
+            public string inputFolder = string.Empty;
+
+            [Tooltip("Output folder for this queue entry (absolute or project-relative)")]
+            public string outputFolder = "Assets/Thumbnails";
+
+            [Tooltip("Enable or disable this entry when running the queue")]
+            public bool enabled = true;
+        }
         // ===== Enums =====
         public enum Preset
         {
@@ -141,6 +157,11 @@ namespace KalponicGames
         // ===== Preset (matte) for future color spill handling, parity with your other tool =====
         [Header("Matte Preset (Reserved)")]
         public Preset mattePreset = Preset.WhiteMatte;
+
+    // ===== Queue support =====
+    [Header("Queue")]
+    [Tooltip("List of input/output folder pairs to process as a queue")]
+    public List<QueueEntry> inputQueue = new List<QueueEntry>();
 
         // ===== Methods =====
 
