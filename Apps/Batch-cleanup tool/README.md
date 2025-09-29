@@ -2,8 +2,7 @@
 
 KS Image Cleanup is a professional-grade Python application for removing white fringes/halos and enhancing edges on AI background-removed images. Built with CustomTkinter, OpenCV, and NumPy for precise, production-ready results.
 
-Main heading: KS Image Cleanup
-Subheading: Professional Edge Cleanup & Fringe Removal
+Youtube link : https://www.youtube.com/watch?v=B81_IiHVNGc
 
 ## Features
 
