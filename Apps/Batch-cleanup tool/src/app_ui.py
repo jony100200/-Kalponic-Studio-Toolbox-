@@ -1,5 +1,6 @@
 """
-CustomTkinter GUI for the Batch Image Cleanup Tool.
+Professional CustomTkinter GUI for the Batch Image Cleanup Tool.
+Cyberpunk-themed interface with muted colors for comfortable viewing.
 """
 
 import tkinter as tk
@@ -7,33 +8,66 @@ from tkinter import filedialog, messagebox
 import customtkinter as ctk
 from PIL import Image, ImageTk
 import logging
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from .controller import Controller
 from .config import MattePreset
+try:
+    from .config_professional import ProcessorType, MaterialType, PresetConfigs, ProfessionalConfig
+except ImportError:
+    # Fallback if professional config doesn't exist yet
+    ProcessorType = None
+    MaterialType = None
+    PresetConfigs = None
+    ProfessionalConfig = None
 
 logger = logging.getLogger(__name__)
 
-# Set appearance mode and color theme
+# Set appearance mode and cyberpunk color theme
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
+# Cyberpunk color palette - muted, eye-friendly
+CYBERPUNK_COLORS = {
+    'bg_primary': '#0a0b0d',      # Very dark background
+    'bg_secondary': '#1a1d23',    # Secondary dark
+    'bg_accent': '#252831',       # Accent frames
+    'text_primary': '#e8e8e8',    # Primary text
+    'text_secondary': '#a8b2c8',  # Secondary text
+    'accent_cyan': '#4a9eff',     # Muted cyan
+    'accent_purple': '#8b5fbf',   # Muted purple
+    'accent_green': '#5fb85f',    # Muted green
+    'accent_red': '#bf5f5f',      # Muted red
+    'accent_orange': '#bf8f5f',   # Muted orange
+    'border': '#3a4054',          # Border color
+    'hover': '#2a3044'            # Hover state
+}
+
 class AppUI:
-    """Main application UI using CustomTkinter."""
+    """Professional application UI with cyberpunk theming and advanced features."""
     
     def __init__(self, controller: Controller):
         self.controller = controller
         self.controller.set_progress_callback(self.update_progress)
         
-        # Initialize main window
+        # Initialize main window with cyberpunk styling
         self.root = ctk.CTk()
-        self.root.title("Batch Image Cleanup Tool")
-        self.root.geometry("800x700")
+        self.root.title("Professional Image Cleanup Tool - Photoshop Quality")
+        self.root.geometry("900x900")
+        
+        # Configure cyberpunk theme colors
+        self.root.configure(fg_color=CYBERPUNK_COLORS['bg_primary'])
+        
+        # Set window icon and other properties
+        self.root.resizable(True, True)
+        self.root.minsize(800, 700)
         
         # Variables for UI controls
         self.input_folder_var = tk.StringVar()
         self.output_folder_var = tk.StringVar()
         self.matte_preset_var = tk.StringVar(value=MattePreset.WHITE_MATTE.value)
+        
+        # Enhanced ranges for professional processing
         self.smooth_var = tk.IntVar(value=2)
         self.feather_var = tk.IntVar(value=1)
         self.contrast_var = tk.DoubleVar(value=3.0)
@@ -42,6 +76,19 @@ class AppUI:
         self.fringe_band_var = tk.IntVar(value=2)
         self.fringe_strength_var = tk.IntVar(value=2)
         self.skip_existing_var = tk.BooleanVar(value=True)
+        
+        # Professional processing variables
+        if ProcessorType:
+            self.processor_type_var = tk.StringVar(value=ProcessorType.PROFESSIONAL.value)
+            self.material_type_var = tk.StringVar(value=MaterialType.AUTO.value)
+        else:
+            self.processor_type_var = tk.StringVar(value="Professional")
+            self.material_type_var = tk.StringVar(value="Auto Detect")
+        
+        self.surgical_processing_var = tk.BooleanVar(value=True)
+        self.use_alpha_pyramid_var = tk.BooleanVar(value=True)
+        self.legacy_contrast_var = tk.BooleanVar(value=True)
+        self.preserve_details_var = tk.BooleanVar(value=True)
         
         self.status_var = tk.StringVar(value="Ready")
         self.progress_var = tk.DoubleVar(value=0.0)
@@ -53,13 +100,23 @@ class AppUI:
         self.setup_ui()
         
     def setup_ui(self):
-        """Setup the complete UI layout."""
+        """Setup the complete professional UI layout with cyberpunk styling."""
         # Create main container with scrollable frame
-        self.main_frame = ctk.CTkScrollableFrame(self.root)
-        self.main_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        self.main_frame = ctk.CTkScrollableFrame(
+            self.root,
+            fg_color=CYBERPUNK_COLORS['bg_primary'],
+            scrollbar_button_color=CYBERPUNK_COLORS['accent_cyan'],
+            scrollbar_button_hover_color=CYBERPUNK_COLORS['hover']
+        )
+        self.main_frame.pack(fill="both", expand=True, padx=15, pady=15)
         
+        # Add cyberpunk header
+        self.setup_header()
+        self.setup_processor_selection()
         self.setup_folder_selection()
+        self.setup_processing_presets()
         self.setup_processing_options()
+        self.setup_professional_options()
         self.setup_fringe_fix()
         self.setup_control_buttons()
         self.setup_progress_section()
