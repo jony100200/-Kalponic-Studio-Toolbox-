@@ -1,0 +1,10 @@
+Inspect the reference image and recreate the object as a 2D stylised asset that combines a low-poly, faceted look with anime-style cel-shading and a soft, painterly finish.
+Preserve the subject type (e.g., a pot remains a pot, a tree remains a tree) and keep the overall mood, colours, and theme of the source.
+
+Reinterpret the form and details so the result feels like a new, original version — not an identical copy — while keeping clear, readable shapes and visible low-poly facets.
+
+Apply cel-shaded lighting with crisp but soft-edged highlights and shadows, then blend with hand-painted textures and smooth gradients for depth. Avoid harsh outlines or flat fills. Add subtle wear, weathering, or moss only if it feels natural.
+
+Keep the exact camera angle and perspective shown in the reference render (whether isometric,orthographic, 3/4, or other). Do not rotate or change the viewpoint.
+
+Final output should be game-ready at 1024×1024, rendered on a flat mid-grey background (#808080) for easy removal.
