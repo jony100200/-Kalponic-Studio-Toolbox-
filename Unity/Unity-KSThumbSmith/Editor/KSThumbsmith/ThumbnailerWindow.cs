@@ -128,6 +128,20 @@ namespace KalponicGames
                         {
                             config.inputQueue.RemoveAll(e => !e.enabled);
                         }
+                        if (GUILayout.Button("Select All", GUILayout.Width(90)))
+                        {
+                            for (int si = 0; si < config.inputQueue.Count; si++)
+                            {
+                                config.inputQueue[si].enabled = true;
+                            }
+                        }
+                        if (GUILayout.Button("Clear All", GUILayout.Width(90)))
+                        {
+                            if (EditorUtility.DisplayDialog("Clear All Queue Entries", "Remove all queue entries? This cannot be undone.", "Yes", "No"))
+                            {
+                                config.inputQueue.Clear();
+                            }
+                        }
                         GUILayout.FlexibleSpace();
                     }
 
