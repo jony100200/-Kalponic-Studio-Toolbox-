@@ -82,9 +82,9 @@ Fork, use, remix—just give credit and don’t blame me if something blows up!
 
 ## Disclaimer
 
-Please note:  
+Please note:
+This repo is a collection of my learning scripts and experiments. 
 To err is human — these tools were made by a human and may contain mistakes; use at your own risk.
-This repo is a collection of my learning scripts and experiments.  
 **I am NOT able to provide technical support or guarantees.**  
 Feel free to open issues or discussions if you have questions, but as a learner myself, I may not have all the answers.  
 If you find something useful, that’s great! Otherwise, please use at your own risk.
