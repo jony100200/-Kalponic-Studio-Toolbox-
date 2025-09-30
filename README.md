@@ -52,7 +52,7 @@ Below is a quick, auto-generated table of contents linking to each app or plugin
 
 ### Unity plugins / Editor tools
 
-- [Unity/AutoTexifyFree](/Unity/AutoTexifyFree) — Unity Editor automation for texture workflows. (no README found)
+- [Unity/AutoTexifyFree](/Unity/AutoTexifyFree) — Unity Editor automation for texture workflows.
 - [Unity/Unity-KSThumbSmith](Unity/Unity-KSThumbSmith/README.md) — KSThumbSmith: prefab thumbnailer Editor extension with queueed batch runs and presets.
 
 If you'd like, I can turn this into a separate `APPS_TOC.md` or insert anchors and badges. I also scanned app folders that lacked READMEs and generated the short summaries above from their main scripts.
