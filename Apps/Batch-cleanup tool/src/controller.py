@@ -4,6 +4,7 @@ Controller to coordinate UI interactions with processing logic.
 
 import logging
 from typing import Optional, Callable
+from pathlib import Path
 
 from .config import AppState, ProcessingConfig, MattePreset
 from .batch_runner import BatchRunner
@@ -141,6 +142,59 @@ class Controller:
             logger.info("Batch processing started")
         
         return success
+
+    def start_single_file(self, input_file: str, output_folder: str, completion_callback: Optional[Callable] = None) -> bool:
+        """Process a single file immediately. Calls completion_callback(success, input_path, output_path) when done."""
+        if not input_file:
+            logger.error("No input file specified for single-file processing")
+            return False
+
+        if not output_folder:
+            logger.error("No output folder specified for single-file processing")
+            return False
+
+        try:
+            # Run processing in a background thread to avoid blocking UI
+            def worker():
+                try:
+                    from .io_handler import IOHandler
+                    from .processor import ImageProcessor
+
+                    ioh = IOHandler()
+                    proc = ImageProcessor()
+
+                    # Load and process image
+                    processed_img = proc.process_image(input_file, self.app_state.processing_config)
+
+                    # Generate output path
+                    input_path = Path(input_file)
+                    output_path = ioh.generate_output_path(input_path, output_folder, self.app_state.processing_config.add_suffix)
+
+                    success = False
+                    if processed_img is not None:
+                        success = ioh.save_image(processed_img, output_path)
+
+                    # Invoke completion callback if provided
+                    if completion_callback:
+                        try:
+                            completion_callback(success, str(input_path), str(output_path))
+                        except Exception as e:
+                            logger.error(f"Completion callback failed: {e}")
+
+                except Exception as e:
+                    logger.error(f"Single-file processing error: {e}")
+                    if completion_callback:
+                        try:
+                            completion_callback(False, input_file, "")
+                        except:
+                            pass
+
+            import threading
+            threading.Thread(target=worker, daemon=True).start()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to start single-file processing: {e}")
+            return False
     
     def stop_processing(self):
         """Stop current batch processing."""

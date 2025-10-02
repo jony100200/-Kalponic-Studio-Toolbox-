@@ -298,6 +298,16 @@ class AppUI:
         )
         self.input_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
         
+        # Process single file button (left of Browse)
+        ctk.CTkButton(
+            input_row,
+            text="Process File",
+            width=100,
+            fg_color=CYBERPUNK_COLORS['accent_green'],
+            hover_color=CYBERPUNK_COLORS['hover'],
+            command=self.process_single_file
+        ).pack(side="right", padx=(5, 0))
+
         ctk.CTkButton(
             input_row,
             text="Browse",
@@ -741,6 +751,56 @@ class AppUI:
             self.cancel_btn.configure(state="normal")
         else:
             messagebox.showerror("Error", "Failed to start processing")
+
+    def process_single_file(self):
+        """Prompt for a single image file and start single-file processing via controller."""
+        file_path = filedialog.askopenfilename(title="Select Image File", filetypes=[
+            ("Image Files", "*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.tiff"),
+            ("All Files", "*")
+        ])
+        if not file_path:
+            return
+
+        # Ensure output folder exists / selected
+        if not self.controller.get_output_folder():
+            out = filedialog.askdirectory(title="Select Output Folder for Single File")
+            if not out:
+                return
+            self.output_folder_var.set(out)
+
+        # Update UI state
+        self.run_btn.configure(state="disabled")
+        self.cancel_btn.configure(state="normal")
+        self.status_var.set("Processing single file...")
+
+        # Start single-file processing. Provide a completion callback that will run on the UI thread.
+        def completion_cb(success: bool, inp: str, outp: str):
+            # Schedule UI update on main thread
+            self.root.after(0, lambda: self._on_single_complete(success, inp, outp))
+
+        self.controller.start_single_file(file_path, self.output_folder_var.get(), completion_callback=completion_cb)
+
+    def _on_single_complete(self, success: bool, input_path: str, output_path: str):
+        """Handle UI updates after single-file processing completes."""
+        # Restore buttons
+        self.run_btn.configure(state="normal")
+        self.cancel_btn.configure(state="disabled")
+
+        if success:
+            self.status_var.set(f"Processed: {Path(output_path).name}")
+            # Try to load and display preview
+            try:
+                from PIL import Image
+                original = Image.open(input_path).convert('RGBA')
+                processed = Image.open(output_path).convert('RGBA')
+                self.display_preview(original, processed)
+            except Exception as e:
+                logger.error(f"Could not display single-file preview: {e}")
+
+            messagebox.showinfo("Done", f"Processed: {output_path}")
+        else:
+            self.status_var.set("Single file processing failed")
+            messagebox.showerror("Failed", "Processing failed for the selected file")
     
     def stop_processing(self):
         """Stop batch processing."""

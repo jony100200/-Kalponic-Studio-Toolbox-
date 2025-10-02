@@ -140,6 +140,92 @@ class UIController:
         
         self.worker_thread = threading.Thread(target=worker, daemon=True)
         self.worker_thread.start()
+
+    def start_single_file(self, input_file: str, output_folder: str, show_preview: bool = False, remover_choice: str = "", material_choice: str = ""):
+        """Process a single file immediately (non-queued mode)."""
+        if self.is_processing:
+            self._logger.warning("Processing already in progress")
+            messagebox.showwarning("Busy", "Processing already in progress")
+            return
+
+        if not input_file:
+            messagebox.showerror("Error", "No input file selected")
+            return
+
+        if not output_folder:
+            messagebox.showerror("Error", "Please select an output folder")
+            return
+
+        if not self.engine:
+            messagebox.showerror("Error", "Processing engine not initialized")
+            return
+
+        # Switch remover if requested
+        if "LayerDiffuse" in remover_choice:
+            try:
+                self.engine.switch_remover(RemoverType.LAYERDIFFUSE)
+                self._logger.info("Switched to LayerDiffuse Enhanced")
+            except Exception as e:
+                self._logger.warning(f"Failed to switch to LayerDiffuse, using default: {e}")
+
+        # Material choice map
+        material_map = {
+            "General (Standard)": "general",
+            "Glass (Transparent)": "glass",
+            "Hair/Fur (Fine Details)": "hair",
+            "Semi-Transparent (Glowing)": "transparent"
+        }
+        self.material_hint = material_map.get(material_choice, "general")
+
+        # Configure engine
+        self._configure_engine()
+        if hasattr(self.engine, 'material_hint'):
+            self.engine.material_hint = self.material_hint
+
+        # UI state
+        self.is_processing = True
+        self.app.set_processing_state(True)
+
+        input_path = Path(input_file)
+        # build output path using suffix and png extension
+        output_filename = input_path.stem + config.processing_settings.suffix + ".png"
+        output_path = Path(output_folder) / output_filename
+
+        def worker():
+            try:
+                self._logger.info(f"Starting single-file processing: {input_path}")
+                success = self.engine.process_single_image(input_path, output_path)
+
+                # Update UI after processing
+                def finish():
+                    self.is_processing = False
+                    self.app.set_processing_state(False)
+                    if success:
+                        self.app.set_status(f"Single file processed: {output_path.name}")
+                        # show preview if requested
+                        if show_preview:
+                            try:
+                                data = output_path.read_bytes()
+                                self._on_preview(data)
+                            except Exception as e:
+                                self._logger.warning(f"Could not load preview: {e}")
+                        messagebox.showinfo("Done", f"Processed: {output_path}")
+                    else:
+                        self.app.set_status("Single file processing failed")
+                        messagebox.showerror("Failed", "Processing failed for the selected file")
+
+                self.app.root.after(0, finish)
+
+            except Exception as e:
+                self._logger.error(f"Single-file processing failed: {e}")
+                self.app.root.after(0, lambda: [
+                    setattr(self, 'is_processing', False),
+                    self.app.set_processing_state(False),
+                    messagebox.showerror("Error", f"Processing failed: {e}")
+                ])
+
+        self.worker_thread = threading.Thread(target=worker, daemon=True)
+        self.worker_thread.start()
     
     def cancel_processing(self):
         """Cancel the current processing operation."""

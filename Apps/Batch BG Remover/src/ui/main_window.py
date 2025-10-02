@@ -190,6 +190,15 @@ class MainWindow:
         
         ctk.CTkButton(
             button_frame,
+            text="Add File",
+            command=self._add_input_file,
+            font=CyberpunkTheme.get_bold_font(),
+            fg_color=CyberpunkTheme.SECONDARY,
+            hover_color="#0060cc"
+        ).pack(side="left", padx=5)
+        
+        ctk.CTkButton(
+            button_frame,
             text="Clear All",
             command=self._clear_folders,
             font=CyberpunkTheme.get_bold_font(),
@@ -433,6 +442,37 @@ class MainWindow:
         folder = filedialog.askdirectory(title="Select Input Folder")
         if folder:
             self.controller.add_input_folder(folder)
+
+    def _add_input_file(self):
+        """Pick a single input file and process it immediately in single-file mode."""
+        file_path = filedialog.askopenfilename(title="Select Image File", filetypes=[
+            ("Image Files", "*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.tiff"),
+            ("All Files", "*")
+        ])
+        if not file_path:
+            return
+
+        # Use currently selected output folder if present
+        output_folder = self.output_folder.get()
+        if not output_folder:
+            # Prompt for output folder if not set
+            out = filedialog.askdirectory(title="Select Output Folder for Single File")
+            if not out:
+                return
+            output_folder = out
+            self.output_folder.set(output_folder)
+
+        remover_choice = self.remover_combo.get() if hasattr(self, 'remover_combo') else ""
+        material_choice = self.material_combo.get() if hasattr(self, 'material_combo') else ""
+
+        # Start single-file processing through controller
+        self.controller.start_single_file(
+            file_path,
+            output_folder,
+            self.show_preview.get(),
+            remover_choice,
+            material_choice
+        )
     
     def _clear_folders(self):
         """Clear all input folders."""
