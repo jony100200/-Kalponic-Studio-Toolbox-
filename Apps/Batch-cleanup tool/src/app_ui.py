@@ -1088,3 +1088,13 @@ class AppUI:
         except AttributeError:
             # Labels might not be created yet
             pass
+
+        # Callback to re-enable 'Run' button and disable 'Cancel' button when processing finishes
+        def on_processing_complete():
+            """Callback to handle processing completion."""
+            self.run_btn.configure(state="normal")
+            self.cancel_btn.configure(state="disabled")
+            self.status_var.set("Processing complete. Ready for next run.")
+
+        # Bind the callback to the controller
+        self.controller.set_processing_complete_callback(on_processing_complete)
