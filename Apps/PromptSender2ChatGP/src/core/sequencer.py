@@ -60,6 +60,23 @@ class PromptSequencer:
         # Manual intervention
         self.manual_intervention_pending = False
         self.manual_intervention_resolved = False
+        # Cancellation requests for queue items (ids)
+        # Stored on config as image_queue_cancel_requests (a set) for cross-component signaling
+        if not hasattr(self.config, 'image_queue_cancel_requests'):
+            try:
+                self.config.image_queue_cancel_requests = set()
+            except Exception:
+                # If config is not dict-like, fall back to internal set
+                self._local_cancel_requests = set()
+        else:
+            # Ensure it's a set
+            try:
+                self.config.image_queue_cancel_requests = set(self.config.image_queue_cancel_requests)
+            except Exception:
+                self.config.image_queue_cancel_requests = set()
+
+        # Track currently processing queue item id for diagnostics
+        self.current_queue_item_id = None
         
         # Setup directories
         self._setup_directories()
@@ -508,88 +525,162 @@ class PromptSequencer:
             self._log_message(f"Error in image mode: {e}", "error")
             self._change_state(SequencerState.ERROR)
     
-    def start_image_queue_mode(self, queue_items: List[Dict[str, str]]):
-        """Start image+text mode with queue processing"""
+    def start_image_queue_mode(self, queue_items):
+        """Start image+text mode with queue processing.
+
+        Accepts either a Python list (legacy) or a queue.Queue for dynamic enqueueing.
+        If a callback `self.queue_item_done_callback` is set, it will be called with the
+        finished folder name after each queue item completes so the GUI can remove it.
+        """
         if self.state != SequencerState.IDLE:
             self._log_message("Sequencer is already running", "warning")
             return
-        
-        if not queue_items:
-            self._log_message("No items in queue", "warning")
-            return
-        
+
+        # Normalize input: allow list or queue.Queue
+        import queue as _pyqueue
+        q: _pyqueue.Queue
+        using_queue = False
+        if isinstance(queue_items, _pyqueue.Queue):
+            q = queue_items
+            using_queue = True
+            self._log_message("Starting image queue mode (dynamic queue)")
+        else:
+            # Convert list to queue for simpler processing
+            q = _pyqueue.Queue()
+            for item in (queue_items or []):
+                q.put(item)
+            if q.empty():
+                self._log_message("No items in queue", "warning")
+                return
+            self._log_message(f"Starting image queue mode with {q.qsize()} folders")
+
         try:
-            self._change_state(SequencerState.RUNNING)
-            self._log_message(f"Starting image queue mode with {len(queue_items)} folders")
-            
-            # Calculate total items across all folders
-            total_images = 0
+            # Calculate total items across all folders (best-effort; for dynamic queue we
+            # compute this per-item as we go).
             image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp'}
-            
-            for item in queue_items:
-                folder = item.get('image_folder', '')
-                if os.path.exists(folder):
-                    folder_images = [f for f in os.listdir(folder) 
-                                   if Path(f).suffix.lower() in image_extensions]
-                    total_images += len(folder_images)
-            
-            self.total_items = total_images
+
+            # For legacy list-based queue we already loaded items into q; compute total
+            try:
+                if not using_queue:
+                    total_images = 0
+                    items_for_count = list(q.queue)
+                    for item in items_for_count:
+                        folder = item.get('image_folder', '')
+                        if os.path.exists(folder):
+                            folder_images = [f for f in os.listdir(folder)
+                                             if Path(f).suffix.lower() in image_extensions]
+                            total_images += len(folder_images)
+                    self.total_items = total_images
+                else:
+                    # Unknown total for dynamic queue; leave as 0 and update as we process
+                    self.total_items = 0
+            except Exception:
+                # If anything goes wrong, continue with unknown total
+                self.total_items = 0
+
             processed_images = 0
-            
-            # Process each folder in the queue
-            for queue_idx, queue_item in enumerate(queue_items):
+
+            # Process items from the queue until stopped. This supports new items being
+            # added to the queue when a queue.Queue is passed by the GUI.
+            queue_idx = 0
+            while True:
                 if self.state == SequencerState.STOPPING:
                     break
-                
+
+                try:
+                    queue_item = q.get(timeout=0.5)
+                except _pyqueue.Empty:
+                    # If the queue is empty and we're running in list-mode, break out.
+                    if not using_queue and q.empty():
+                        break
+                    # Otherwise continue waiting for items (dynamic queue) or retry
+                    continue
+
+                queue_idx += 1
+
+                item_id = queue_item.get('id')
                 folder = queue_item.get('image_folder', '')
                 prompt_file = queue_item.get('prompt_file', '')
-                folder_name = queue_item.get('name', f"Folder {queue_idx + 1}")
-                
+                folder_name = queue_item.get('name', f"Folder {queue_idx}")
+
+                # Log dequeue event
+                self._log_message(f"Dequeued queue item: {folder_name} id={item_id}")
+
                 if not os.path.exists(folder):
                     self._log_message(f"Folder not found: {folder}", "warning")
                     continue
-                
-                self._log_message(f"Processing queue item {queue_idx + 1}/{len(queue_items)}: {folder_name}")
-                
-                # Load prompt for this folder
-                folder_prompt = ""
-                if prompt_file and os.path.exists(prompt_file):
-                    with open(prompt_file, 'r', encoding='utf-8') as f:
-                        folder_prompt = f.read().strip()
-                
-                # Get images in this folder
-                folder_images = [f for f in os.listdir(folder) 
-                               if Path(f).suffix.lower() in image_extensions]
-                
-                if not folder_images:
-                    self._log_message(f"No images found in: {folder_name}", "warning")
+
+                try:
+                    self._log_message(f"Processing queue item {queue_idx}: {folder_name}")
+
+                    # Load prompt for this folder
+                    folder_prompt = ""
+                    if prompt_file and os.path.exists(prompt_file):
+                        with open(prompt_file, 'r', encoding='utf-8') as f:
+                            folder_prompt = f.read().strip()
+
+                    # Get images in this folder
+                    folder_images = [f for f in os.listdir(folder)
+                                   if Path(f).suffix.lower() in image_extensions]
+
+                    if not folder_images:
+                        self._log_message(f"No images found in: {folder_name}", "warning")
+                        continue
+
+                    # Process each image in this folder
+                    for img_idx, image_file in enumerate(folder_images):
+                        if self.state == SequencerState.STOPPING:
+                            break
+
+                        # Handle pause
+                        while self.state == SequencerState.PAUSED:
+                            time.sleep(0.1)
+
+                        processed_images += 1
+                        self.current_item = processed_images
+                        self.current_file = f"{folder_name}/{image_file}"
+                        self._update_progress()
+
+                        # Cooperative cancellation check: if the GUI requested cancel for this item id,
+                        # stop processing additional images in this folder.
+                        cancel_set = getattr(self.config, 'image_queue_cancel_requests', None)
+                        if cancel_set is None:
+                            cancel_set = getattr(self, '_local_cancel_requests', set())
+
+                        if item_id in cancel_set:
+                            self._log_message(f"Cancellation requested for item id={item_id}; stopping folder processing", "warning")
+                            # Remove cancel request now that we acknowledged it
+                            try:
+                                cancel_set.discard(item_id)
+                            except Exception:
+                                pass
+                            break
+
+                        image_path = os.path.join(folder, image_file)
+                        success = self._send_image_prompt(image_path, folder_prompt, processed_images)
+
+                        if success:
+                            self._move_file_to_sent(image_path, is_image=True, failed=False)
+                        else:
+                            self._move_file_to_sent(image_path, is_image=True, failed=True)
+
+                    # After finishing this folder, if GUI registered a callback notify it so
+                    # the GUI can remove the completed folder from its list.
+                    try:
+                        # Log completion
+                        self._log_message(f"Completed queue item: {folder_name} id={item_id}")
+                        if hasattr(self, 'queue_item_done_callback') and callable(self.queue_item_done_callback):
+                            # Provide item id so GUI can remove the exact item
+                            self.queue_item_done_callback(item_id)
+                    except Exception:
+                        pass
+                except Exception as e:
+                    # If processing this folder fails, log and continue with next one
+                    self._log_message(f"Error processing folder {folder_name}: {e}", "error")
                     continue
-                
-                # Process each image in this folder
-                for img_idx, image_file in enumerate(folder_images):
-                    if self.state == SequencerState.STOPPING:
-                        break
-                    
-                    # Handle pause
-                    while self.state == SequencerState.PAUSED:
-                        time.sleep(0.1)
-                    
-                    processed_images += 1
-                    self.current_item = processed_images
-                    self.current_file = f"{folder_name}/{image_file}"
-                    self._update_progress()
-                    
-                    image_path = os.path.join(folder, image_file)
-                    success = self._send_image_prompt(image_path, folder_prompt, processed_images)
-                    
-                    if success:
-                        self._move_file_to_sent(image_path, is_image=True, failed=False)
-                    else:
-                        self._move_file_to_sent(image_path, is_image=True, failed=True)
-            
+
             self._log_message("Image queue mode processing completed")
             self._change_state(SequencerState.IDLE)
-            
         except Exception as e:
             self._log_message(f"Error in image queue mode: {e}", "error")
             self._change_state(SequencerState.ERROR)

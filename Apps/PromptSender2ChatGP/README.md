@@ -159,3 +159,11 @@ The application automatically adapts to different screen sizes:
 ## Keyboard Safety
 
 The application includes pyautogui's built-in failsafe - move your mouse to the top-left corner of the screen to emergency stop automation.
+
+## Queue Mode (Dynamic enqueue & auto-remove)
+
+- The queue supports dynamic enqueueing: you can add folders while processing is running. When the GUI is running a queue, items are placed into a live `queue.Queue` (stored on `config.image_queue_obj`) so the worker thread picks them up immediately.
+- Each queue item receives a unique `id` on creation. When the sequencer finishes processing a folder it calls back with the item's `id`, and the GUI removes that exact entry from the visible list and the persisted `config.image_queue_items` list.
+- Removing an item via the GUI rebuilds the live queue from `config.image_queue_items` so order and runtime queue remain in sync. Note: if the sequencer has already dequeued an item and is actively processing it, removing it from the GUI will not cancel the in-flight processing; the item has already been consumed by the worker thread.
+
+If you want cancellation of active items, we can add a cancel flag and cooperative-check in the worker loop.

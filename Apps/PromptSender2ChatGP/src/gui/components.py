@@ -7,6 +7,10 @@ import customtkinter as ctk
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import os
+import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 import time
 from datetime import datetime
 from typing import Callable, Optional, List
@@ -567,6 +571,7 @@ class ImageModeTab(ctk.CTkScrollableFrame):
         prompt_name = os.path.basename(prompt_file) if prompt_file else "No prompt"
         
         queue_item = {
+            "id": str(uuid.uuid4()),
             "image_folder": folder,
             "prompt_file": prompt_file or "",
             "name": folder_name
@@ -577,10 +582,24 @@ class ImageModeTab(ctk.CTkScrollableFrame):
             self.config.image_queue_items = []
         
         self.config.image_queue_items.append(queue_item)
+        # log enqueue event
+        try:
+            logger.info(f"Enqueued queue item: {folder_name} id={queue_item['id']}")
+        except Exception:
+            pass
         
         # Update listbox
         display_text = f"{folder_name} → {prompt_name}"
         self.queue_listbox.insert(tk.END, display_text)
+        
+        # If a live queue object exists (sequencer running), push the item there too
+        try:
+            qobj = getattr(self.config, 'image_queue_obj', None)
+            if qobj is not None:
+                # queue.Queue supports .put()
+                qobj.put(queue_item)
+        except Exception:
+            pass
     
     def _remove_from_queue(self):
         """Remove selected item from queue"""
@@ -592,13 +611,62 @@ class ImageModeTab(ctk.CTkScrollableFrame):
         self.queue_listbox.delete(index)
         
         if hasattr(self.config, 'image_queue_items') and self.config.image_queue_items:
-            self.config.image_queue_items.pop(index)
+            removed = self.config.image_queue_items.pop(index)
+            try:
+                logger.info(f"Removed queue item via GUI: {removed.get('name')} id={removed.get('id')}")
+            except Exception:
+                pass
+            # Signal cancellation for currently-processing item (cooperative)
+            try:
+                cancel_set = getattr(self.config, 'image_queue_cancel_requests', None)
+                if cancel_set is None:
+                    # initialize if missing
+                    self.config.image_queue_cancel_requests = set()
+                    cancel_set = self.config.image_queue_cancel_requests
+                cancel_set.add(removed.get('id'))
+                logger.info(f"Requested cancel for queue item id={removed.get('id')}")
+            except Exception:
+                pass
+            # If a live queue exists, rebuild it from the remaining list to keep order in sync
+            try:
+                qobj = getattr(self.config, 'image_queue_obj', None)
+                if qobj is not None:
+                    import queue as _pyqueue
+                    newq = _pyqueue.Queue()
+                    for item in self.config.image_queue_items:
+                        newq.put(item)
+                    try:
+                        logger.info("Rebuilt live queue after GUI removal")
+                    except Exception:
+                        pass
+                    self.config.image_queue_obj = newq
+            except Exception:
+                pass
     
     def _clear_queue(self):
         """Clear all items from queue"""
         self.queue_listbox.delete(0, tk.END)
         if hasattr(self.config, 'image_queue_items'):
+            # Request cancellation for all outstanding items
+            try:
+                cancel_set = getattr(self.config, 'image_queue_cancel_requests', None)
+                if cancel_set is None:
+                    self.config.image_queue_cancel_requests = set()
+                    cancel_set = self.config.image_queue_cancel_requests
+                for itm in self.config.image_queue_items:
+                    cancel_set.add(itm.get('id'))
+                logger.info(f"Requested cancel for all queue items: count={len(self.config.image_queue_items)}")
+            except Exception:
+                pass
             self.config.image_queue_items = []
+        # Clear live queue if present
+        try:
+            if hasattr(self.config, 'image_queue_obj') and self.config.image_queue_obj is not None:
+                import queue as _pyqueue
+                self.config.image_queue_obj = _pyqueue.Queue()
+                logger.info("Cleared live queue via GUI clear action")
+        except Exception:
+            pass
     
     def _move_up(self):
         """Move selected item up in queue"""

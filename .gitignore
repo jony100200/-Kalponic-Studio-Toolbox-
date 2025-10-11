@@ -79,3 +79,5 @@ Apps/Universal Model Launcher/References/
 Apps/Universal Model Launcher/Testing/
 Apps/Universal Model Launcher/loader/
 /Apps/Batch BG Remover/testing
+Apps/PromptSender2ChatGP/settings.json
+/sent_images
