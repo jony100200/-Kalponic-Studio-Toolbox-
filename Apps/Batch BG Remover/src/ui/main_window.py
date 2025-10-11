@@ -556,7 +556,7 @@ class MainWindow:
         
         try:
             img = Image.open(io.BytesIO(image_data))
-            img.thumbnail(config.ui_settings.preview_size)
+            img.thumbnail(config.ui_settings.preview_size, Image.Resampling.LANCZOS)
             tk_img = ImageTk.PhotoImage(img)
             
             self.preview_label.configure(image=tk_img)

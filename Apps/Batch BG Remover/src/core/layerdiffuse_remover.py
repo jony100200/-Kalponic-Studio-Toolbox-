@@ -253,7 +253,10 @@ class LayerDiffuseRemover(AdvancedBackgroundRemover):
                 final_alpha = final_alpha[:, :, np.newaxis]
             
             result_rgba = np.concatenate([final_image, final_alpha], axis=2)
-            result_image = Image.fromarray(result_rgba, 'RGBA')
+            # Avoid passing the deprecated 'mode' parameter into Image.fromarray.
+            # Create the image and explicitly convert to 'RGBA' to ensure correct mode
+            # across Pillow versions and to suppress deprecation warnings.
+            result_image = Image.fromarray(result_rgba).convert('RGBA')
             
             # Convert to bytes
             return image_to_bytes(result_image, format='PNG')

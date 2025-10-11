@@ -144,14 +144,18 @@ class Controller:
             logger.warning("Processing already in progress")
             return False
         
-        # Create new batch runner
-        self.batch_runner = BatchRunner(self.app_state, self._progress_callback)
-        
+        # Create new batch runner and pass in a completion callback
+        self.batch_runner = BatchRunner(
+            self.app_state,
+            self._progress_callback,
+            completion_callback=self.notify_processing_complete
+        )
+
         # Start processing
         success = self.batch_runner.start_batch()
         if success:
             logger.info("Batch processing started")
-        
+
         return success
 
     def start_single_file(self, input_file: str, output_folder: str, completion_callback: Optional[Callable] = None) -> bool:

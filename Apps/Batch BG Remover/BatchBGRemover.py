@@ -495,7 +495,7 @@ class BatchBGRemoverApp:
     def _show_preview(self, image_bytes: bytes):
         try:
             img = Image.open(io.BytesIO(image_bytes))
-            img.thumbnail(PREVIEW_SIZE)
+            img.thumbnail(PREVIEW_SIZE, Image.Resampling.LANCZOS)
             tk_img = ImageTk.PhotoImage(img)
             # must update on main thread
             def _set():
