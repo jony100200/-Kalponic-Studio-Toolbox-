@@ -7,6 +7,7 @@ import customtkinter as ctk
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import threading
+import os
 import time
 import logging
 from typing import Optional
@@ -206,27 +207,46 @@ class PromptSequencerGUI:
         
         # Determine mode
         current_tab = self.notebook.get()
-        
+
         if current_tab == "Text Mode":
             if not self.config.text_input_folder:
                 messagebox.showerror("Error", "Please select a text input folder")
                 return
-            
+
             self.sequencer_thread = threading.Thread(
                 target=self._run_with_initial_delay,
                 args=(self.sequencer.start_text_mode, self.config.text_input_folder),
                 daemon=True
             )
         else:  # Image mode
-            if self.config.image_queue_mode and self.config.image_queue_items:
-                # Queue mode
-                if not self.config.image_queue_items:
-                    messagebox.showerror("Error", "Please add folders to the queue")
-                    return
-                
+            if self.config.image_queue_mode:
+                # Queue mode (support dynamic enqueueing)
+                import queue as _pyqueue
+
+                # Ensure config has a persistent queue object for runtime
+                if not hasattr(self.config, 'image_queue_obj') or self.config.image_queue_obj is None:
+                    qobj = _pyqueue.Queue()
+                    # Seed from existing items if present
+                    if hasattr(self.config, 'image_queue_items') and self.config.image_queue_items:
+                        for itm in self.config.image_queue_items:
+                            qobj.put(itm)
+                else:
+                    qobj = self.config.image_queue_obj
+
+                # Save queue object back to config
+                self.config.image_queue_obj = qobj
+
+                # Register callback to remove finished items from GUI
+                def _on_queue_item_done(item_id: str):
+                    # Remove matching entry from listbox and config (main thread)
+                    self.root.after(0, lambda: self._on_queue_item_done_by_id(item_id))
+
+                # Attach callback to sequencer
+                self.sequencer.queue_item_done_callback = _on_queue_item_done
+
                 self.sequencer_thread = threading.Thread(
                     target=self._run_with_initial_delay,
-                    args=(self.sequencer.start_image_queue_mode, self.config.image_queue_items),
+                    args=(self.sequencer.start_image_queue_mode, self.config.image_queue_obj),
                     daemon=True
                 )
             else:
@@ -234,15 +254,15 @@ class PromptSequencerGUI:
                 if not self.config.image_input_folder:
                     messagebox.showerror("Error", "Please select an image input folder")
                     return
-                
+
                 self.sequencer_thread = threading.Thread(
                     target=self._run_with_initial_delay,
-                    args=(self.sequencer.start_image_mode, 
-                          self.config.image_input_folder, 
+                    args=(self.sequencer.start_image_mode,
+                          self.config.image_input_folder,
                           self.config.global_prompt_file),
                     daemon=True
                 )
-        
+
         self.sequencer_thread.start()
     
     def _run_with_initial_delay(self, func, *args):
@@ -285,6 +305,41 @@ class PromptSequencerGUI:
         
         # Update UI to show manual intervention state
         self.root.after(0, lambda: self.control_panel.show_manual_intervention_needed())
+
+    def _on_queue_item_done(self, folder_name: str):
+        # Legacy name-based removal helper removed. Use _on_queue_item_done_by_id(item_id)
+        # which the sequencer now calls with the unique item id for deterministic removal.
+        return
+
+    def _on_queue_item_done_by_id(self, item_id: str):
+        """Remove completed queue item by its unique id."""
+        try:
+            listbox = self.image_tab.queue_listbox
+            items = listbox.get(0, tk.END)
+            match_index = None
+            for idx, text in enumerate(items):
+                # The display text contains folder name; we match by config ids instead
+                pass
+
+            # Remove from config by id and then from listbox by rebuilding display entries
+            removed_name = None
+            if hasattr(self.config, 'image_queue_items') and self.config.image_queue_items:
+                for i, itm in enumerate(self.config.image_queue_items):
+                    if itm.get('id') == item_id:
+                        removed = self.config.image_queue_items.pop(i)
+                        removed_name = removed.get('name')
+                        break
+
+            # Rebuild listbox contents to reflect removal
+            if removed_name is not None:
+                listbox.delete(0, tk.END)
+                for itm in self.config.image_queue_items:
+                    folder_name = itm.get('name', 'Unknown')
+                    prompt_name = os.path.basename(itm.get('prompt_file', '')) or 'No prompt'
+                    display_text = f"{folder_name} → {prompt_name}"
+                    listbox.insert(tk.END, display_text)
+        except Exception:
+            pass
     
     def _on_state_change(self, state: SequencerState):
         """Handle sequencer state changes"""
