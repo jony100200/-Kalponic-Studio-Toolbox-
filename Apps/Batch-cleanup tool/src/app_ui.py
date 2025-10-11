@@ -495,6 +495,33 @@ class AppUI:
         self.shift_slider.pack(side="left", fill="x", expand=True, padx=5)
         self.shift_label = ctk.CTkLabel(shift_frame, text="-1", width=30)
         self.shift_label.pack(side="right", padx=(5, 0))
+        
+        # Number of iterations control
+        iterations_frame = ctk.CTkFrame(options_frame, fg_color="transparent")
+        iterations_frame.pack(fill="x", padx=15, pady=5)
+
+        ctk.CTkLabel(
+            iterations_frame,
+            text="Processing Iterations:",
+            text_color=CYBERPUNK_COLORS['text_secondary']
+        ).pack(side="left", padx=(0, 10))
+
+        self.iterations_var = tk.IntVar(value=1)
+        self.iterations_spinbox = ctk.CTkEntry(
+            iterations_frame,
+            textvariable=self.iterations_var,
+            width=50,
+            justify="center",
+            border_color=CYBERPUNK_COLORS['border'],
+            fg_color=CYBERPUNK_COLORS['bg_primary']
+        )
+        self.iterations_spinbox.pack(side="left", padx=(0, 10))
+
+        ctk.CTkLabel(
+            iterations_frame,
+            text="(1-10)",
+            text_color=CYBERPUNK_COLORS['text_secondary']
+        ).pack(side="left")
     
     def setup_fringe_fix(self):
         """Setup fringe fix section."""
@@ -652,6 +679,10 @@ class AppUI:
         # Options
         self.skip_existing_var.trace_add("write", lambda *args: 
                                         self.controller.update_skip_existing(self.skip_existing_var.get()))
+        
+        # Bind iterations spinbox to controller
+        self.iterations_var.trace_add("write", lambda *args: 
+            self.controller.update_process_iterations(self.iterations_var.get()))
     
     def update_smooth(self, *args):
         """Update smooth value and label."""

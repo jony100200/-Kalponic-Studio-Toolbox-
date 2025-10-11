@@ -110,6 +110,12 @@ class Controller:
         self.app_state.processing_config.skip_existing = enabled
         logger.debug(f"Skip existing files: {enabled}")
     
+    def update_process_iterations(self, value: int):
+        """Update the number of processing iterations."""
+        if 1 <= value <= 10:
+            self.app_state.processing_config.process_iterations = value
+            logger.debug(f"Processing iterations updated to: {value}")
+    
     def start_processing(self) -> bool:
         """
         Start batch processing.
