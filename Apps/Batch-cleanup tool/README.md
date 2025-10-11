@@ -71,7 +71,10 @@ python main.py
    - Adjust alpha refinement parameters
    - Enable/configure fringe fix
 
-4. **Process Images**:
+4. **Set Processing Iterations**:
+   - Use the "Processing Iterations" field to specify how many times the processing pipeline should run for each image (default is 1, maximum is 10).
+
+5. **Process Images**:
    - Click "Generate Preview" to see a sample result
    - Click "Run Batch" to process all images
    - Processed images saved with "_clean" suffix

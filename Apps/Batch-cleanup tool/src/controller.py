@@ -18,10 +18,15 @@ class Controller:
         self.app_state = AppState()
         self.batch_runner: Optional[BatchRunner] = None
         self._progress_callback: Optional[Callable] = None
+        self._processing_complete_callback: Optional[Callable] = None
         
     def set_progress_callback(self, callback: Callable):
         """Set the progress callback for UI updates."""
         self._progress_callback = callback
+        
+    def set_processing_complete_callback(self, callback: Callable):
+        """Set the callback to be invoked when processing is complete."""
+        self._processing_complete_callback = callback
         
     def set_input_folder(self, folder_path: str) -> bool:
         """
@@ -207,7 +212,15 @@ class Controller:
         if self.batch_runner and self.app_state.is_processing:
             self.batch_runner.stop_batch()
             logger.info("Batch processing stop requested")
-    
+
+        # Notify UI that processing is complete
+        self.notify_processing_complete()
+
+    def notify_processing_complete(self):
+        """Notify the UI that processing is complete."""
+        if self._processing_complete_callback:
+            self._processing_complete_callback()
+
     def generate_preview(self) -> Optional[tuple]:
         """
         Generate a before/after preview.
