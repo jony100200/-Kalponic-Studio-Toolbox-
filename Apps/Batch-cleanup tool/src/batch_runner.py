@@ -18,9 +18,11 @@ logger = logging.getLogger(__name__)
 class BatchRunner:
     """Manages batch processing with threading and progress updates."""
     
-    def __init__(self, app_state: AppState, progress_callback: Optional[Callable] = None):
+    def __init__(self, app_state: AppState, progress_callback: Optional[Callable] = None,
+                 completion_callback: Optional[Callable] = None):
         self.app_state = app_state
         self.progress_callback = progress_callback
+        self._completion_callback = completion_callback
         self.io_handler = IOHandler()
         self._stop_event = threading.Event()
         self._executor: Optional[ThreadPoolExecutor] = None
@@ -219,6 +221,12 @@ class BatchRunner:
                                  self.app_state.total_count, self.app_state.error_count)
         
         logger.info(f"Batch processing {status.lower()}: {self.app_state.processed_count}/{self.app_state.total_count} processed, {self.app_state.error_count} errors")
+        # Invoke completion callback (UI/controller) so the UI can re-enable controls
+        try:
+            if self._completion_callback:
+                self._completion_callback()
+        except Exception:
+            logger.exception("Completion callback raised an exception")
     
     def get_random_preview(self) -> Optional[tuple]:
         """

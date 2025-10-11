@@ -54,8 +54,10 @@ class ImageProcessor:
                 if config.fringe_fix_enabled:
                     img_array = self._fix_fringe(img_array, config)
 
-            # Convert back to PIL Image
-            return Image.fromarray(img_array, 'RGBA')
+            # Convert back to PIL Image. Passing a positional 'mode' to Image.fromarray
+            # is deprecated in newer Pillow versions. Create the image and then
+            # explicitly convert to 'RGBA' to ensure correct mode and avoid warnings.
+            return Image.fromarray(img_array).convert('RGBA')
 
         except Exception as e:
             print(f"Error processing {image_path}: {e}")

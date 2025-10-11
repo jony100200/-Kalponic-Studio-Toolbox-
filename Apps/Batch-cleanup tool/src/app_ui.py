@@ -9,13 +9,14 @@ import customtkinter as ctk
 from PIL import Image, ImageTk
 import logging
 from typing import Optional, Dict, Any
+from pathlib import Path
 
 from .controller import Controller
 from .config import MattePreset
 try:
     from .config_professional import ProcessorType, MaterialType, PresetConfigs, ProfessionalConfig
-except ImportError:
-    # Fallback if professional config doesn't exist yet
+except Exception:
+    # Optional professional config not available — fall back to defaults
     ProcessorType = None
     MaterialType = None
     PresetConfigs = None
@@ -98,6 +99,10 @@ class AppUI:
         self.preview_processed: Optional[ImageTk.PhotoImage] = None
         
         self.setup_ui()
+
+        # Ensure the controller always has a processing-complete callback so
+        # the UI is restored automatically after a normal batch finish.
+        self.controller.set_processing_complete_callback(self._on_processing_complete)
         
     def setup_ui(self):
         """Setup the complete professional UI layout with cyberpunk styling."""
@@ -832,6 +837,31 @@ class AppUI:
         else:
             self.status_var.set("Single file processing failed")
             messagebox.showerror("Failed", "Processing failed for the selected file")
+
+    def _on_processing_complete(self):
+        """Handle UI updates when a batch processing run completes normally."""
+        try:
+            # Schedule UI updates on the main thread to remain thread-safe.
+            def _ui_restore():
+                try:
+                    if hasattr(self, 'run_btn'):
+                        self.run_btn.configure(state="normal")
+                    if hasattr(self, 'cancel_btn'):
+                        self.cancel_btn.configure(state="disabled")
+                    self.status_var.set("Processing complete. Ready for next run.")
+                except Exception as e:
+                    logger.error(f"Error updating UI in processing-complete handler: {e}")
+
+            if hasattr(self, 'root') and self.root:
+                try:
+                    self.root.after(0, _ui_restore)
+                except Exception:
+                    # If scheduling fails, try direct update as a fallback
+                    _ui_restore()
+            else:
+                _ui_restore()
+        except Exception as e:
+            logger.error(f"Error in processing-complete handler setup: {e}")
     
     def stop_processing(self):
         """Stop batch processing."""
@@ -1089,12 +1119,4 @@ class AppUI:
             # Labels might not be created yet
             pass
 
-        # Callback to re-enable 'Run' button and disable 'Cancel' button when processing finishes
-        def on_processing_complete():
-            """Callback to handle processing completion."""
-            self.run_btn.configure(state="normal")
-            self.cancel_btn.configure(state="disabled")
-            self.status_var.set("Processing complete. Ready for next run.")
-
-        # Bind the callback to the controller
-        self.controller.set_processing_complete_callback(on_processing_complete)
+        # ...existing code...
