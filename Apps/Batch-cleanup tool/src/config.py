@@ -35,6 +35,9 @@ class ProcessingConfig:
     add_suffix: str = "_clean"
     skip_existing: bool = True
     
+    # Number of processing iterations
+    process_iterations: int = 1  # Default to 1 iteration
+    
     def validate(self) -> bool:
         """Validate configuration parameters."""
         return (
@@ -43,7 +46,8 @@ class ProcessingConfig:
             1.0 <= self.contrast <= 4.0 and
             -2 <= self.shift_edge <= 2 and
             1 <= self.fringe_band <= 3 and
-            1 <= self.fringe_strength <= 3
+            1 <= self.fringe_strength <= 3 and
+            1 <= self.process_iterations <= 10  # Ensure iterations are within range
         )
 
 @dataclass

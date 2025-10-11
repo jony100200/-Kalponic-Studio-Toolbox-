@@ -34,28 +34,29 @@ class ImageProcessor:
             image = self._load_image(image_path)
             if image is None:
                 return None
-            
+
             # Convert to numpy array for processing
             img_array = np.array(image)
-            
+
             # Ensure RGBA
             if img_array.shape[2] == 3:
                 # Add alpha channel
                 alpha = np.full((img_array.shape[0], img_array.shape[1], 1), 255, dtype=np.uint8)
                 img_array = np.concatenate([img_array, alpha], axis=2)
-            
-            # Apply processing pipeline
-            if config.matte_preset.value != "Auto":
-                img_array = self._unmatte(img_array, config)
-            
-            img_array = self._refine_alpha(img_array, config)
-            
-            if config.fringe_fix_enabled:
-                img_array = self._fix_fringe(img_array, config)
-            
+
+            # Apply processing pipeline for the specified number of iterations
+            for _ in range(config.process_iterations):
+                if config.matte_preset.value != "Auto":
+                    img_array = self._unmatte(img_array, config)
+
+                img_array = self._refine_alpha(img_array, config)
+
+                if config.fringe_fix_enabled:
+                    img_array = self._fix_fringe(img_array, config)
+
             # Convert back to PIL Image
             return Image.fromarray(img_array, 'RGBA')
-            
+
         except Exception as e:
             print(f"Error processing {image_path}: {e}")
             return None
