@@ -1,22 +1,6 @@
-# Patchline Automation Project – Coding Conventions
+# KS Toolbox Project – Coding Conventions
 
-## 🏷️ Naming Conventions
 
-Please follow these conventions for **all code in this project**, regardless of language:
-
-- **Constants:** `UPPER_SNAKE_CASE`
-- **Properties:** `PascalCase`
-- **Events:** `PascalCase`
-- **Fields (Variables):** `camelCase`
-- **Function Names:** `PascalCase`
-- **Function Parameters:** `camelCase`
-- **Classes:** `PascalCase`
-
-**Note:**  
-These conventions are inspired by C# practices and are used here for cross-language consistency, even in Python.  
-If contributing, **ignore standard Python “snake_case” style and follow these project-specific conventions.**
-
----
 
 ## 🧠 Coding Principles
 
