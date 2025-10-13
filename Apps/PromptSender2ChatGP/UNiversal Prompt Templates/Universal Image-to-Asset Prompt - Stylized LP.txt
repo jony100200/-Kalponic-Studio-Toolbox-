@@ -7,4 +7,4 @@ Apply cel-shaded lighting with crisp but soft-edged highlights and shadows, then
 
 Keep the exact camera angle and perspective shown in the reference render (whether isometric,orthographic, 3/4, or other). Do not rotate or change the viewpoint.
 
-Final output should be game-ready at 1024×1024, rendered on a flat mid-grey background (#808080) for easy removal.
+Final output should be game-ready , rendered on a flat mid-grey background (#808080) for easy removal.
