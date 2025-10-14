@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QLabel, QPushButton, QLineEdit, QFileDialog, QMessageBox,
                                QProgressBar, QFrame, QDialog, QFormLayout, QSpinBox, QDialogButtonBox, QComboBox,
-                               QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QDialogButtonBox)
+                               QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QDialogButtonBox, QSizePolicy)
 from PySide6.QtGui import QPalette, QColor, QFont, QPixmap, QIcon, QKeySequence
 from PySide6.QtCore import Qt, QThread, Signal, QSize
 import cv2
@@ -223,7 +223,7 @@ class PreviewWindow(QDialog):
         self.image_label.setAlignment(Qt.AlignCenter)
         self.image_label.setStyleSheet('background:#2f3134;border:1px solid #505357;border-radius:6px;')
         self.image_label.setBackgroundRole(QPalette.Base)
-        self.image_label.setSizePolicy(self.image_label.sizePolicy().Preferred, self.image_label.sizePolicy().Preferred)
+        self.image_label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         self.scroll.setWidget(self.image_label)
         layout.addWidget(self.scroll, stretch=1)
 
