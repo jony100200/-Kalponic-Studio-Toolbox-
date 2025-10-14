@@ -1,5 +1,5 @@
 {
-  "target_window": "2D HD Game Assets - Asset recreation instructions",
+  "target_window": "ChatGPT - 2D HD Game Assets",
   "initial_delay": 10,
   "text_paste_enter_grace": 900,
   "text_generation_wait": 120,
@@ -15,5 +15,12 @@
   "image_input_folder": "D:/Assets For Sale/Vector Fantasy Sidescrolls/Side Scroll Assets to be mAde with AI/Thumbnails/3D Assets/Multistory Dungeons 2/Props 2",
   "global_prompt_file": "D:/Assets For Sale/Vector Fantasy Sidescrolls/Side Scroll Assets to be mAde with AI/Universal Image-to-Asset Prompt - Same Mood - Painterly.txt",
   "image_queue_mode": true,
-  "image_queue_items": []
+  "image_queue_items": [
+    {
+      "id": "b9e8007e-0fa1-4031-b72f-8a5a99c25e91",
+      "image_folder": "G:/___Assets for Sale/Side Scroll Assets to be mAde with AI/Nature Assets",
+      "prompt_file": "G:/___Assets for Sale/Side Scroll Assets to be mAde with AI/Universal Image-to-Asset Prompt - Semi-Realistic-PAinterly.txt",
+      "name": "Nature Assets"
+    }
+  ]
 }
