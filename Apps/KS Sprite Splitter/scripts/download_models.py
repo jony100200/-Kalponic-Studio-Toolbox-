@@ -9,12 +9,12 @@ from pathlib import Path
 
 MODELS = {
     'sam2': {
-        'url': 'https://example.com/sam2.onnx',
-        'sha256': ''
+        'url': 'https://huggingface.co/shubham0204/sam2-onnx-models/resolve/main/sam2_hiera_tiny_encoder.onnx',
+        'sha256': ''  # Will be computed after download
     },
     'modnet': {
-        'url': 'https://example.com/modnet.onnx',
-        'sha256': ''
+        'url': 'https://drive.google.com/uc?export=download&id=1cgycTQlYXpTh26gB9FTnthE7AvruV8hd',
+        'sha256': ''  # Will be computed after download
     }
 }
 
