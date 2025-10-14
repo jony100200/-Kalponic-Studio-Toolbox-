@@ -1,9 +1,12 @@
 import os
 import cv2
-from .image_checker import ImageChecker
 import csv
 from io import BytesIO
 from PIL import Image
+# Add parent directory to sys.path for relative imports when run directly
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from .image_checker import ImageChecker
 
 class BatchProcessor:
     def __init__(self, checker, supported_formats, preview_folder):
