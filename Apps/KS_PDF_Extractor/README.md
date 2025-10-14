@@ -12,9 +12,17 @@ Following KS Development Strategy Guide v4.0 principles - "Build smart, stay rea
 - ✅ Configurable output formatting
 - ✅ Clean, modular architecture
 - ✅ Cross-platform compatibility
+- ✅ **Modern GUI interface** (CustomTkinter)
 
 ## Quick Start
 
+### GUI Mode (Recommended for beginners)
+```bash
+# Run the graphical interface
+python gui_app.py
+```
+
+### Command Line Mode
 ```bash
 # Extract single PDF to text
 python ks_pdf_extract.py --input document.pdf --format txt
@@ -33,8 +41,17 @@ python ks_pdf_extract.py --input ./pdfs/ --format md --batch
 pip install -r requirements.txt
 ```
 
-2. Run the tool:
+2. For GUI mode, also install CustomTkinter:
 ```bash
+pip install customtkinter
+```
+
+3. Run the tool:
+```bash
+# GUI mode (recommended)
+python gui_app.py
+
+# CLI mode
 python ks_pdf_extract.py --help
 ```
 
@@ -48,7 +65,8 @@ KS_PDF_Extractor/
 ├── utils/             # Helper utilities
 ├── config/            # Configuration management
 ├── tests/             # Unit tests
-└── ks_pdf_extract.py  # Main CLI interface
+├── ks_pdf_extract.py  # Main CLI interface
+└── gui_app.py         # Modern GUI interface (CustomTkinter)
 ```
 
 ## Configuration

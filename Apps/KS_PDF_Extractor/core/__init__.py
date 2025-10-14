@@ -1,0 +1,1 @@
+# KS PDF Extractor - Core Package
