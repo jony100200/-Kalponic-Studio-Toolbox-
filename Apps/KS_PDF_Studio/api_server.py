@@ -557,6 +557,322 @@ class KSAPIServer:
             return jsonify({'error': str(e)}), 500
 
     @require_auth
+    def add_watermark(self):
+        """Add watermark to PDF."""
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file uploaded'}), 400
+
+        file = request.files['file']
+        watermark_text = request.form.get('watermark_text', 'CONFIDENTIAL')
+
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+
+        # Save uploaded file
+        filename = secure_filename(file.filename)
+        upload_path = self.upload_folder / f"{uuid.uuid4()}_{filename}"
+        file.save(upload_path)
+
+        try:
+            # Add watermark
+            output_filename = f"watermarked_{uuid.uuid4()}.pdf"
+            output_path = self.output_folder / output_filename
+
+            success = self.pdf_watermarker.add_watermark(
+                str(upload_path), str(output_path), watermark_text
+            )
+
+            # Clean up upload
+            upload_path.unlink(missing_ok=True)
+
+            if success:
+                # Store file info
+                file_id = str(uuid.uuid4())
+                file_info = {
+                    'file_id': file_id,
+                    'filename': output_filename,
+                    'original_name': f"watermarked_{filename}",
+                    'path': str(output_path),
+                    'created': datetime.now().isoformat(),
+                    'user_id': g.user_id
+                }
+                self._store_file_info(file_id, file_info)
+
+                return jsonify({
+                    'file_id': file_id,
+                    'download_url': f'/api/v1/files/download/{file_id}',
+                    'filename': f"watermarked_{filename}"
+                })
+            else:
+                return jsonify({'error': 'Watermarking failed'}), 500
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @require_auth
+    def merge_pdfs(self):
+        """Merge multiple PDFs."""
+        if 'files' not in request.files:
+            return jsonify({'error': 'No files uploaded'}), 400
+
+        files = request.files.getlist('files')
+        if len(files) < 2:
+            return jsonify({'error': 'At least 2 files required for merging'}), 400
+
+        # Save uploaded files
+        upload_paths = []
+        for file in files:
+            if file.filename == '':
+                continue
+            filename = secure_filename(file.filename)
+            upload_path = self.upload_folder / f"{uuid.uuid4()}_{filename}"
+            file.save(upload_path)
+            upload_paths.append(upload_path)
+
+        try:
+            # Merge PDFs
+            output_filename = f"merged_{uuid.uuid4()}.pdf"
+            output_path = self.output_folder / output_filename
+
+            success = self.pdf_engine.merge_pdfs(
+                [str(p) for p in upload_paths], str(output_path)
+            )
+
+            # Clean up uploads
+            for path in upload_paths:
+                path.unlink(missing_ok=True)
+
+            if success:
+                # Store file info
+                file_id = str(uuid.uuid4())
+                file_info = {
+                    'file_id': file_id,
+                    'filename': output_filename,
+                    'original_name': 'merged_document.pdf',
+                    'path': str(output_path),
+                    'created': datetime.now().isoformat(),
+                    'user_id': g.user_id
+                }
+                self._store_file_info(file_id, file_info)
+
+                return jsonify({
+                    'file_id': file_id,
+                    'download_url': f'/api/v1/files/download/{file_id}',
+                    'filename': 'merged_document.pdf'
+                })
+            else:
+                return jsonify({'error': 'PDF merging failed'}), 500
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @require_auth
+    def split_pdf(self):
+        """Split PDF into multiple files."""
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file uploaded'}), 400
+
+        file = request.files['file']
+        split_type = request.form.get('split_type', 'pages')
+        pages_per_file = request.form.get('pages_per_file')
+
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+
+        # Save uploaded file
+        filename = secure_filename(file.filename)
+        upload_path = self.upload_folder / f"{uuid.uuid4()}_{filename}"
+        file.save(upload_path)
+
+        try:
+            # Split PDF
+            output_dir = self.output_folder / f"split_{uuid.uuid4()}"
+            output_dir.mkdir(exist_ok=True)
+
+            if split_type == 'pages' and pages_per_file:
+                success = self.pdf_engine.split_pdf_by_pages(
+                    str(upload_path), str(output_dir), int(pages_per_file)
+                )
+            else:
+                return jsonify({'error': 'Invalid split parameters'}), 400
+
+            # Clean up upload
+            upload_path.unlink(missing_ok=True)
+
+            if success:
+                # Get output files
+                output_files = list(output_dir.glob("*.pdf"))
+                file_ids = []
+
+                for output_file in output_files:
+                    file_id = str(uuid.uuid4())
+                    file_info = {
+                        'file_id': file_id,
+                        'filename': output_file.name,
+                        'original_name': output_file.name,
+                        'path': str(output_file),
+                        'created': datetime.now().isoformat(),
+                        'user_id': g.user_id
+                    }
+                    self._store_file_info(file_id, file_info)
+                    file_ids.append({
+                        'file_id': file_id,
+                        'download_url': f'/api/v1/files/download/{file_id}',
+                        'filename': output_file.name
+                    })
+
+                return jsonify({
+                    'files': file_ids,
+                    'total_files': len(file_ids)
+                })
+            else:
+                return jsonify({'error': 'PDF splitting failed'}), 500
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @require_auth
+    def ai_generate(self):
+        """Generate content with AI."""
+        data = request.get_json()
+        prompt = data.get('prompt', '')
+        content_type = data.get('content_type', 'article')
+
+        if not prompt.strip():
+            return jsonify({'error': 'Prompt is required'}), 400
+
+        try:
+            # AI content generation (simplified)
+            generated_content = self._generate_content(prompt, content_type)
+
+            # Track generation
+            self.analytics_tracker.track_usage(
+                user_id=g.user_id,
+                license_id=g.license_id,
+                content_id=f"ai_gen_{uuid.uuid4()}",
+                event_type='ai_generate',
+                metadata={'content_type': content_type}
+            )
+
+            return jsonify({
+                'prompt': prompt,
+                'generated_content': generated_content,
+                'content_type': content_type
+            })
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @require_auth
+    def ai_summarize(self):
+        """Summarize content with AI."""
+        data = request.get_json()
+        content = data.get('content', '')
+        summary_type = data.get('summary_type', 'key_points')
+
+        if not content.strip():
+            return jsonify({'error': 'Content is required'}), 400
+
+        try:
+            # AI summarization (simplified)
+            summary = self._summarize_content(content, summary_type)
+
+            # Track summarization
+            self.analytics_tracker.track_usage(
+                user_id=g.user_id,
+                license_id=g.license_id,
+                content_id=f"ai_sum_{uuid.uuid4()}",
+                event_type='ai_summarize',
+                metadata={'summary_type': summary_type}
+            )
+
+            return jsonify({
+                'original_content': content,
+                'summary': summary,
+                'summary_type': summary_type
+            })
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @require_auth
+    def batch_process(self):
+        """Process batch operations."""
+        data = request.get_json()
+        operations = data.get('operations', [])
+        options = data.get('options', {})
+
+        if not operations:
+            return jsonify({'error': 'Operations are required'}), 400
+
+        try:
+            # Submit batch job
+            batch_id = self.batch_processor.submit_batch(
+                operations, g.user_id, g.license_id, options
+            )
+
+            return jsonify({
+                'batch_id': batch_id,
+                'status': 'submitted',
+                'message': 'Batch processing started'
+            })
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @require_auth
+    def batch_status(self, batch_id):
+        """Get batch processing status."""
+        try:
+            status = self.batch_processor.get_batch_status(batch_id)
+
+            if status:
+                return jsonify(status)
+            else:
+                return jsonify({'error': 'Batch not found'}), 404
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @require_auth
+    def validate_license(self):
+        """Validate a license key."""
+        data = request.get_json()
+        license_key = data.get('license_key')
+
+        if not license_key:
+            return jsonify({'error': 'License key is required'}), 400
+
+        try:
+            is_valid = self.license_manager.validate_license(license_key) is not None
+
+            if is_valid:
+                license_info = self.license_manager.validate_license(license_key)
+                return jsonify({
+                    'valid': True,
+                    'license_info': license_info.to_dict() if hasattr(license_info, 'to_dict') else license_info
+                })
+            else:
+                return jsonify({'valid': False, 'error': 'Invalid license'}), 400
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @require_auth
+    def get_license(self, license_id):
+        """Get license details."""
+        try:
+            license_info = self.license_manager.get_license_info(license_id)
+
+            if license_info:
+                return jsonify(license_info.to_dict() if hasattr(license_info, 'to_dict') else license_info)
+            else:
+                return jsonify({'error': 'License not found'}), 404
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @require_auth
     def create_license(self):
         """Create a new license."""
         data = request.get_json()
@@ -590,6 +906,152 @@ class KSAPIServer:
         try:
             data = self.analytics_dashboard.get_dashboard_data(days)
             return jsonify(data)
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @require_auth
+    def revenue_analytics(self):
+        """Get revenue analytics."""
+        days = int(request.args.get('days', 30))
+
+        try:
+            data = self.analytics_dashboard.get_dashboard_data(days)
+            # Focus on revenue data
+            revenue_data = {
+                'revenue': data.get('revenue', {}),
+                'period': data.get('generated_at', datetime.now().isoformat())
+            }
+            return jsonify(revenue_data)
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @require_auth
+    def list_webhooks(self):
+        """List user webhooks."""
+        try:
+            user_webhooks = []
+            for webhook_id, webhook_data in self.webhooks.items():
+                if webhook_data.get('user_id') == g.user_id:
+                    user_webhooks.append({
+                        'webhook_id': webhook_id,
+                        'url': webhook_data.get('url'),
+                        'events': webhook_data.get('events', []),
+                        'created': webhook_data.get('created')
+                    })
+
+            return jsonify({'webhooks': user_webhooks})
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @require_auth
+    def create_webhook(self):
+        """Create a webhook."""
+        data = request.get_json()
+        url = data.get('url')
+        events = data.get('events', [])
+        secret = data.get('secret')
+
+        if not url or not events:
+            return jsonify({'error': 'URL and events are required'}), 400
+
+        try:
+            webhook_id = str(uuid.uuid4())
+
+            self.webhooks[webhook_id] = {
+                'webhook_id': webhook_id,
+                'user_id': g.user_id,
+                'url': url,
+                'events': events,
+                'secret': secret,
+                'created': datetime.now().isoformat(),
+                'active': True
+            }
+
+            self._save_config()
+
+            return jsonify({
+                'webhook_id': webhook_id,
+                'url': url,
+                'events': events,
+                'message': 'Webhook created successfully'
+            })
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @require_auth
+    def delete_webhook(self, webhook_id):
+        """Delete a webhook."""
+        try:
+            if webhook_id not in self.webhooks:
+                return jsonify({'error': 'Webhook not found'}), 404
+
+            webhook_data = self.webhooks[webhook_id]
+            if webhook_data.get('user_id') != g.user_id:
+                return jsonify({'error': 'Unauthorized'}), 403
+
+            del self.webhooks[webhook_id]
+            self._save_config()
+
+            return jsonify({'message': 'Webhook deleted successfully'})
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @require_auth
+    def upload_file(self):
+        """Upload a file."""
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file uploaded'}), 400
+
+        file = request.files['file']
+        category = request.form.get('category', 'document')
+
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+
+        # Save uploaded file
+        filename = secure_filename(file.filename)
+        upload_path = self.upload_folder / f"{uuid.uuid4()}_{filename}"
+        file.save(upload_path)
+
+        try:
+            # Store file info
+            file_id = str(uuid.uuid4())
+            file_info = {
+                'file_id': file_id,
+                'filename': upload_path.name,
+                'original_name': filename,
+                'path': str(upload_path),
+                'category': category,
+                'size': upload_path.stat().st_size,
+                'created': datetime.now().isoformat(),
+                'user_id': g.user_id
+            }
+            self._store_file_info(file_id, file_info)
+
+            return jsonify({
+                'file_id': file_id,
+                'filename': filename,
+                'size': file_info['size'],
+                'category': category
+            })
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @require_auth
+    def download_file(self, file_id):
+        """Download a file."""
+        try:
+            # In production, retrieve file info from database
+            # For now, return a simple response
+            return jsonify({
+                'file_id': file_id,
+                'message': 'File download endpoint - implement file serving logic'
+            })
+
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 

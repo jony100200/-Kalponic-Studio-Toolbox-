@@ -1,6 +1,6 @@
 """
 KS PDF Studio - Main GUI Application
-Complete graphical user interface for KS PDF Studio with AI integration.
+Complete graphical user interface for KS PDF Studio with AI integration and dark theme.
 
 Author: Kalponic Studio
 Version: 2.0.0
@@ -19,6 +19,10 @@ import sys
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
+from core.pdf_engine import KSPDFEngine
+from core.markdown_parser import KSMarkdownParser
+from core.image_handler import KSImageHandler
+from core.code_formatter import KSCodeFormatter
 from core.pdf_extractor import KSPDFExtractor, PDFExtractorUtils
 from templates.base_template import KSPDFTemplate, TemplateManager
 from utils.file_utils import KSFileHandler
@@ -30,9 +34,98 @@ from monetization.license_manager import LicenseManager, LicenseEnforcement, cre
 from monetization.analytics import AnalyticsTracker, AnalyticsDashboard
 
 
+class DarkTheme:
+    """Dark theme configuration for KS PDF Studio."""
+
+    # Color palette - muted colors easy on eyes
+    COLORS = {
+        'bg_primary': '#1e1e1e',      # Main background
+        'bg_secondary': '#2d2d2d',    # Secondary backgrounds
+        'bg_tertiary': '#3a3a3a',     # Tertiary backgrounds
+        'fg_primary': '#e0e0e0',      # Primary text
+        'fg_secondary': '#b0b0b0',    # Secondary text
+        'fg_accent': '#4a9eff',       # Accent color (muted blue)
+        'border': '#404040',          # Borders
+        'highlight': '#505050',       # Highlights
+        'success': '#4a9e4a',         # Success color
+        'warning': '#9e9e4a',         # Warning color
+        'error': '#9e4a4a',           # Error color
+        'button_bg': '#404040',       # Button background
+        'button_fg': '#e0e0e0',       # Button text
+        'entry_bg': '#2d2d2d',        # Entry background
+        'entry_fg': '#e0e0e0',        # Entry text
+        'text_bg': '#1a1a1a',         # Text widget background
+        'text_fg': '#e0e0e0',         # Text widget text
+        'scrollbar_bg': '#404040',    # Scrollbar background
+        'scrollbar_fg': '#606060',    # Scrollbar foreground
+    }
+
+    @staticmethod
+    def apply_theme(root):
+        """Apply dark theme to tkinter application."""
+        # Prefer a modern theme with better ttk support
+        style = ttk.Style()
+        try:
+            style.theme_use('clam')
+        except Exception:
+            # fallback - don't crash if theme not available
+            pass
+
+        # Configure overall window
+        root.configure(bg=DarkTheme.COLORS['bg_primary'])
+
+        # Global font and paddings
+        default_font = ('Segoe UI', 10)
+        root.option_add('*Font', default_font)
+
+        # Ttk style base configuration
+        style.configure('.', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary'])
+
+        style.configure('TFrame', background=DarkTheme.COLORS['bg_primary'])
+        style.configure('TLabel', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary'])
+
+        style.configure('TButton', background=DarkTheme.COLORS['button_bg'], foreground=DarkTheme.COLORS['button_fg'], borderwidth=0, focusthickness=3)
+        style.map('TButton', background=[('active', DarkTheme.COLORS['highlight'])], foreground=[('disabled', DarkTheme.COLORS['fg_secondary'])])
+
+        style.configure('TEntry', fieldbackground=DarkTheme.COLORS['entry_bg'], foreground=DarkTheme.COLORS['entry_fg'])
+        style.configure('TCombobox', fieldbackground=DarkTheme.COLORS['entry_bg'], foreground=DarkTheme.COLORS['entry_fg'])
+
+        style.configure('TNotebook', background=DarkTheme.COLORS['bg_primary'], tabmargins=[2, 5, 2, 0])
+        style.configure('TNotebook.Tab', background=DarkTheme.COLORS['bg_secondary'], foreground=DarkTheme.COLORS['fg_primary'], padding=[8, 4])
+        style.map('TNotebook.Tab', background=[('selected', DarkTheme.COLORS['bg_tertiary'])], foreground=[('selected', DarkTheme.COLORS['fg_primary'])])
+
+        style.configure('TLabelFrame', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary'], borderwidth=1)
+        style.configure('TCheckbutton', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary'])
+        style.configure('TProgressbar', troughcolor=DarkTheme.COLORS['bg_secondary'], background=DarkTheme.COLORS['bg_tertiary'])
+
+        # Menus and classic widgets don't use ttk styles, set via option_add
+        root.option_add('*Menu.background', DarkTheme.COLORS['bg_secondary'])
+        root.option_add('*Menu.foreground', DarkTheme.COLORS['fg_primary'])
+        root.option_add('*Menu.activeBackground', DarkTheme.COLORS['highlight'])
+        root.option_add('*Menu.activeForeground', DarkTheme.COLORS['fg_primary'])
+
+        # Text widgets
+        root.option_add('*Text.background', DarkTheme.COLORS['text_bg'])
+        root.option_add('*Text.foreground', DarkTheme.COLORS['text_fg'])
+        root.option_add('*Text.selectBackground', DarkTheme.COLORS['fg_accent'])
+        root.option_add('*Text.selectForeground', DarkTheme.COLORS['bg_primary'])
+        root.option_add('*Text.insertBackground', DarkTheme.COLORS['fg_primary'])
+
+        # Listbox styling (classic widget)
+        root.option_add('*Listbox.background', DarkTheme.COLORS['text_bg'])
+        root.option_add('*Listbox.foreground', DarkTheme.COLORS['text_fg'])
+        root.option_add('*Listbox.selectBackground', DarkTheme.COLORS['fg_accent'])
+        root.option_add('*Listbox.selectForeground', DarkTheme.COLORS['bg_primary'])
+
+        # Scrollbar
+        root.option_add('*Scrollbar.background', DarkTheme.COLORS['scrollbar_bg'])
+        root.option_add('*Scrollbar.troughColor', DarkTheme.COLORS['bg_secondary'])
+        root.option_add('*Scrollbar.activeBackground', DarkTheme.COLORS['scrollbar_fg'])
+
+
 class KSPDFStudioApp:
     """
-    Main application class for KS PDF Studio.
+    Main application class for KS PDF Studio with dark theme.
     """
 
     def __init__(self, root):
@@ -46,6 +139,9 @@ class KSPDFStudioApp:
         self.root.title("KS PDF Studio v2.0 - AI-Powered Tutorial Creation")
         self.root.geometry("1200x800")
         self.root.minsize(800, 600)
+
+        # Apply dark theme
+        DarkTheme.apply_theme(root)
 
         # Initialize core components
         self._init_components()
@@ -270,8 +366,14 @@ class KSPDFStudioApp:
         ttk.Button(editor_toolbar, text="📄 Format", command=self._format_markdown).pack(side=tk.RIGHT, padx=2)
 
         # Main editor
-        self.editor_text = scrolledtext.ScrolledText(editor_frame, wrap=tk.WORD,
-                                                   font=('Consolas', 10))
+        self.editor_text = scrolledtext.ScrolledText(
+            editor_frame,
+            wrap=tk.WORD,
+            font=('Consolas', 10),
+            bg=DarkTheme.COLORS['text_bg'],
+            fg=DarkTheme.COLORS['text_fg'],
+            insertbackground=DarkTheme.COLORS['fg_primary'],
+        )
         self.editor_text.pack(fill=tk.BOTH, expand=True)
 
         # Bind events
@@ -309,8 +411,14 @@ class KSPDFStudioApp:
         ttk.Button(controls_frame, text="📖 Open PDF", command=self._open_pdf).pack(side=tk.LEFT, padx=2)
 
         # Preview area (placeholder for now)
-        self.preview_text = scrolledtext.ScrolledText(preview_tab, wrap=tk.WORD,
-                                                    font=('Arial', 10))
+        self.preview_text = scrolledtext.ScrolledText(
+            preview_tab,
+            wrap=tk.WORD,
+            font=('Arial', 10),
+            bg=DarkTheme.COLORS['text_bg'],
+            fg=DarkTheme.COLORS['text_fg'],
+            insertbackground=DarkTheme.COLORS['fg_primary'],
+        )
         self.preview_text.pack(fill=tk.BOTH, expand=True)
         self.preview_text.insert('1.0', "PDF preview will appear here...\n\nClick 'Refresh' to generate preview.")
 
@@ -333,7 +441,15 @@ class KSPDFStudioApp:
         template_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
 
         # Template listbox
-        self.template_listbox = tk.Listbox(template_frame, height=10)
+        self.template_listbox = tk.Listbox(
+            template_frame,
+            height=10,
+            bg=DarkTheme.COLORS['text_bg'],
+            fg=DarkTheme.COLORS['text_fg'],
+            selectbackground=DarkTheme.COLORS['fg_accent'],
+            selectforeground=DarkTheme.COLORS['bg_primary'],
+            highlightbackground=DarkTheme.COLORS['border']
+        )
         self.template_listbox.pack(fill=tk.BOTH, expand=True)
 
         # Load available templates
