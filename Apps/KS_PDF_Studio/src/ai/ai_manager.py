@@ -279,6 +279,11 @@ class AIModelManager:
 
         return info
 
+    @property
+    def models(self) -> Dict[str, Dict[str, Any]]:
+        """Get available models information."""
+        return self.get_model_info()['models']
+
     def cleanup_cache(self, max_age_days: int = 30) -> int:
         """
         Clean up old cached models.

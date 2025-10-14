@@ -140,7 +140,9 @@ class AIControlPanel(ttk.Frame):
         input_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
 
         # Text input
-        self.enhancement_text = scrolledtext.ScrolledText(input_frame, height=10)
+        self.enhancement_text = scrolledtext.ScrolledText(input_frame, height=10,
+                                                         bg='#1a1a1a', fg='#e0e0e0',
+                                                         insertbackground='#e0e0e0')
         self.enhancement_text.pack(fill=tk.BOTH, expand=True)
 
         # Enhancement options frame
@@ -182,14 +184,18 @@ class AIControlPanel(ttk.Frame):
         enhanced_frame = ttk.Frame(results_notebook)
         results_notebook.add(enhanced_frame, text="Enhanced Content")
 
-        self.enhanced_text = scrolledtext.ScrolledText(enhanced_frame, height=15)
+        self.enhanced_text = scrolledtext.ScrolledText(enhanced_frame, height=15,
+                                                      bg='#1a1a1a', fg='#e0e0e0',
+                                                      insertbackground='#e0e0e0')
         self.enhanced_text.pack(fill=tk.BOTH, expand=True)
 
         # Suggestions tab
         suggestions_frame = ttk.Frame(results_notebook)
         results_notebook.add(suggestions_frame, text="Suggestions")
 
-        self.suggestions_text = scrolledtext.ScrolledText(suggestions_frame, height=15)
+        self.suggestions_text = scrolledtext.ScrolledText(suggestions_frame, height=15,
+                                                        bg='#1a1a1a', fg='#e0e0e0',
+                                                        insertbackground='#e0e0e0')
         self.suggestions_text.pack(fill=tk.BOTH, expand=True)
 
     def _create_tutorial_tab(self):
@@ -227,7 +233,13 @@ class AIControlPanel(ttk.Frame):
         tutorial_frame = ttk.LabelFrame(tab, text="Generated Tutorial", padding=10)
         tutorial_frame.pack(fill=tk.BOTH, expand=True)
 
-        self.tutorial_text = scrolledtext.ScrolledText(tutorial_frame, height=20)
+        self.tutorial_text = scrolledtext.ScrolledText(
+            tutorial_frame,
+            height=20,
+            bg='#1a1a1a',
+            fg='#e0e0e0',
+            insertbackground='#e0e0e0'
+        )
         self.tutorial_text.pack(fill=tk.BOTH, expand=True)
 
     def _create_settings_tab(self):
