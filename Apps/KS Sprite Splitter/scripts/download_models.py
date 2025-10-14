@@ -32,14 +32,28 @@ def download(url, dest):
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', choices=list(MODELS.keys()), help='Model to download')
-    parser.add_argument('--dest', default='../models', help='Destination folder')
+    parser.add_argument('--dest', default=str(Path(__file__).resolve().parent.parent / 'models'), help='Destination folder')
+    parser.add_argument('--placeholder', action='store_true', help='Create a small placeholder file instead of downloading (for offline/dev)')
     args = parser.parse_args(argv)
 
     dest = Path(args.dest).resolve()
     dest.mkdir(parents=True, exist_ok=True)
+    if not args.model:
+        print("No model specified. Available models:")
+        for k in MODELS.keys():
+            print(f" - {k}")
+        return
 
     model = MODELS[args.model]
     out = dest / f"{args.model}.onnx"
+
+    if args.placeholder:
+        print(f"Creating placeholder model file at {out}")
+        with open(out, 'w', encoding='utf-8') as f:
+            f.write(f"# Placeholder for {args.model} ONNX model\n# Replace with a real ONNX model for production.\n")
+        print("Placeholder created.")
+        return
+
     print(f"Downloading {args.model} to {out}")
     download(model['url'], out)
     print("Done")

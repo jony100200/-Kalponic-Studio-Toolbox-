@@ -13,10 +13,10 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QComboBox, QProgressBar, QTextEdit,
     QFileDialog, QGroupBox, QFormLayout, QSplitter, QTabWidget,
-    QListWidget, QCheckBox, QSpinBox, QDoubleSpinBox
+    QListWidget, QCheckBox, QSpinBox, QDoubleSpinBox, QFrame
 )
-from PySide6.QtCore import Qt, QThread, Signal, QTimer
-from PySide6.QtGui import QPixmap, QImage, QIcon
+from PySide6.QtCore import Qt, QThread, Signal, QTimer, QPoint
+from PySide6.QtGui import QPixmap, QImage, QIcon, QMouseEvent
 
 import qdarkstyle
 
@@ -41,14 +41,25 @@ class ProcessingThread(QThread):
         self.output_dir = output_dir
         self.category = category
         self.config = config
+        self._is_cancelled = False
+
+    def requestInterruption(self):
+        """Request thread interruption."""
+        self._is_cancelled = True
 
     def run(self):
         """Run the processing pipeline in background thread."""
         try:
+            if self._is_cancelled:
+                return
+
             self.progress_updated.emit(10, "Initializing pipeline...")
 
             runner = PipelineRunner(self.config)
             self.progress_updated.emit(30, "Processing sprite...")
+
+            if self._is_cancelled:
+                return
 
             run_dir = runner.run(self.input_path, self.output_dir, self.category)
             self.progress_updated.emit(100, f"Processing complete! Results in: {run_dir}")
@@ -73,6 +84,10 @@ class SpriteSplitterGUI(QMainWindow):
         self.config = self.load_config()
         self.processing_thread = None
         self.current_theme = self.load_theme_preference()  # Load saved theme preference
+
+        # Custom title bar variables
+        self.drag_position = QPoint()
+        self.is_dragging = False
 
         self.init_ui()
         self.load_stylesheet()
@@ -100,7 +115,12 @@ class SpriteSplitterGUI(QMainWindow):
 
     def init_ui(self):
         """Initialize the user interface."""
-        self.setWindowTitle("KS Sprite Splitter v1.0")
+        # Make window frameless and add custom title bar
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
+
+        # Remove version from title for professional look
+        self.setWindowTitle("KS Sprite Splitter")
         self.setMinimumSize(1000, 700)
         self.setAccessibleName("KS Sprite Splitter Main Window")
         self.setAccessibleDescription("AI-powered 2D sprite separation tool with dark theme interface")
@@ -114,12 +134,23 @@ class SpriteSplitterGUI(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
-        # Main layout
-        main_layout = QHBoxLayout(central_widget)
+        # Main layout - vertical to accommodate custom title bar
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        # Create custom title bar
+        self.create_custom_title_bar(main_layout)
+
+        # Content area
+        content_widget = QWidget()
+        content_layout = QHBoxLayout(content_widget)
+        content_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.addWidget(content_widget)
 
         # Create splitter for resizable panels
         splitter = QSplitter(Qt.Horizontal)
-        main_layout.addWidget(splitter)
+        content_layout.addWidget(splitter)
 
         # Left panel - Controls
         self.create_control_panel(splitter)
@@ -133,8 +164,167 @@ class SpriteSplitterGUI(QMainWindow):
         # Status bar
         self.statusBar().showMessage("Ready")
 
-        # Menu bar
+        # Menu bar (create for shortcuts and actions but hide it visually
+        # so the custom title bar occupies the top area)
         self.create_menu_bar()
+        try:
+            # Hide native menu bar so our custom title bar is the visible top bar
+            self.menuBar().setVisible(False)
+        except Exception:
+            pass
+
+        # Restore window geometry
+        self.restore_window_geometry()
+
+    def create_custom_title_bar(self, parent_layout):
+        """Create a custom title bar for the frameless window."""
+        title_bar = QWidget()
+        title_bar.setFixedHeight(40)
+        title_bar.setObjectName("custom_title_bar")
+        title_bar.setStyleSheet("""
+            QWidget#custom_title_bar {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #2a2a2a, stop:1 #1a1a1a);
+                border-bottom: 1px solid #404040;
+            }
+        """)
+
+        title_layout = QHBoxLayout(title_bar)
+        title_layout.setContentsMargins(15, 0, 15, 0)
+        title_layout.setSpacing(10)
+
+        # App icon
+        icon_label = QLabel()
+        icon_path = Path(__file__).parent / "icons" / "app_icon.svg"
+        if icon_path.exists():
+            icon_pixmap = QPixmap(str(icon_path))
+            if not icon_pixmap.isNull():
+                scaled_icon = icon_pixmap.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                icon_label.setPixmap(scaled_icon)
+        icon_label.setFixedSize(24, 24)
+
+        # App title
+        title_label = QLabel("KS Sprite Splitter")
+        title_label.setStyleSheet("""
+            QLabel {
+                color: #ffffff;
+                font-size: 14px;
+                font-weight: bold;
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }
+        """)
+
+        # Spacer
+        title_layout.addWidget(icon_label)
+        title_layout.addWidget(title_label)
+        title_layout.addStretch()
+
+        # Window control buttons
+        from PySide6.QtGui import QIcon
+        from PySide6.QtCore import QSize
+
+        # Load SVG icons (fall back to text if icons are missing)
+        icons_dir = Path(__file__).parent.parent / "icons"
+
+        minimize_icon_path = icons_dir / "minimize.svg"
+        maximize_icon_path = icons_dir / "maximize.svg"
+        close_icon_path = icons_dir / "close.svg"
+
+        btn_size = QSize(28, 28)
+
+        minimize_btn = QPushButton()
+        minimize_btn.setFixedSize(36, 32)
+        if minimize_icon_path.exists():
+            minimize_btn.setIcon(QIcon(str(minimize_icon_path)))
+            minimize_btn.setIconSize(btn_size)
+        else:
+            minimize_btn.setText("─")
+        minimize_btn.setToolTip("Minimize")
+        minimize_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        minimize_btn.setStyleSheet("""
+            QPushButton { background: transparent; border: none; color: #cccccc }
+            QPushButton:hover { background: #404040; color: #ffffff }
+        """)
+        minimize_btn.clicked.connect(self.showMinimized)
+
+        maximize_btn = QPushButton()
+        maximize_btn.setFixedSize(36, 32)
+        if maximize_icon_path.exists():
+            maximize_btn.setIcon(QIcon(str(maximize_icon_path)))
+            maximize_btn.setIconSize(btn_size)
+        else:
+            maximize_btn.setText("□")
+        maximize_btn.setToolTip("Maximize")
+        maximize_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        maximize_btn.setStyleSheet("""
+            QPushButton { background: transparent; border: none; color: #cccccc }
+            QPushButton:hover { background: #404040; color: #ffffff }
+        """)
+        maximize_btn.clicked.connect(self.toggle_maximize)
+
+        close_btn = QPushButton()
+        close_btn.setFixedSize(36, 32)
+        if close_icon_path.exists():
+            close_btn.setIcon(QIcon(str(close_icon_path)))
+            close_btn.setIconSize(btn_size)
+        else:
+            close_btn.setText("✕")
+        close_btn.setToolTip("Close")
+        close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        close_btn.setStyleSheet("""
+            QPushButton { background: transparent; border: none; color: #cccccc }
+            QPushButton:hover { background: #ff4444; color: #ffffff }
+        """)
+        close_btn.clicked.connect(self.close)
+
+        title_layout.addWidget(minimize_btn)
+        title_layout.addWidget(maximize_btn)
+        title_layout.addWidget(close_btn)
+
+        # Make title bar draggable
+        title_bar.mousePressEvent = self.title_bar_mouse_press
+        title_bar.mouseMoveEvent = self.title_bar_mouse_move
+        title_bar.mouseReleaseEvent = self.title_bar_mouse_release
+        title_bar.mouseDoubleClickEvent = self.title_bar_double_click
+
+        parent_layout.addWidget(title_bar)
+
+    def title_bar_mouse_press(self, event: QMouseEvent):
+        """Handle mouse press on title bar for dragging."""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.is_dragging = True
+            self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            event.accept()
+
+    def title_bar_mouse_move(self, event: QMouseEvent):
+        """Handle mouse move on title bar for dragging."""
+        if self.is_dragging and event.buttons() & Qt.MouseButton.LeftButton:
+            self.move(event.globalPosition().toPoint() - self.drag_position)
+            event.accept()
+
+    def title_bar_mouse_release(self, event: QMouseEvent):
+        """Handle mouse release on title bar."""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.is_dragging = False
+            event.accept()
+
+    def title_bar_double_click(self, event: QMouseEvent):
+        """Handle double-click on title bar to maximize/restore."""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.toggle_maximize()
+            event.accept()
+
+    def toggle_maximize(self):
+        """Toggle between maximized and normal window state."""
+        if self.isMaximized():
+            self.showNormal()
+        else:
+            self.showMaximized()
+
+    def closeEvent(self, event):
+        """Handle application close event."""
+        self.save_window_geometry()
+        super().closeEvent(event)
 
     def create_control_panel(self, parent):
         """Create the control panel with input/output settings."""
@@ -241,6 +431,16 @@ class SpriteSplitterGUI(QMainWindow):
         self.process_btn.setShortcut("Ctrl+P")
         self.process_btn.clicked.connect(self.start_processing)
 
+        # Cancel button for user control and freedom
+        self.cancel_btn = QPushButton("❌ Cancel")
+        self.cancel_btn.setMinimumHeight(40)
+        self.cancel_btn.setToolTip("Cancel the current processing operation")
+        self.cancel_btn.setAccessibleName("Cancel processing button")
+        self.cancel_btn.setAccessibleDescription("Stops the current sprite processing operation")
+        self.cancel_btn.setShortcut("Ctrl+C")
+        self.cancel_btn.setEnabled(False)
+        self.cancel_btn.clicked.connect(self.cancel_processing)
+
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
         self.progress_bar.setAccessibleName("Processing progress")
@@ -252,6 +452,7 @@ class SpriteSplitterGUI(QMainWindow):
         self.progress_label.setAccessibleDescription("Displays current processing status messages")
 
         process_layout.addWidget(self.process_btn)
+        process_layout.addWidget(self.cancel_btn)
         process_layout.addWidget(self.progress_bar)
         process_layout.addWidget(self.progress_label)
 
@@ -343,8 +544,15 @@ class SpriteSplitterGUI(QMainWindow):
         # Help menu
         help_menu = menubar.addMenu('Help')
 
+        help_action = help_menu.addAction('Help Contents')
+        help_action.setShortcut("F1")
+        help_action.setStatusTip("Show detailed help and usage instructions")
+        help_action.triggered.connect(self.show_help)
+
+        help_menu.addSeparator()
+
         about_action = help_menu.addAction('About')
-        about_action.setShortcut("F1")
+        about_action.setShortcut("Ctrl+F1")
         about_action.setStatusTip("Show information about KS Sprite Splitter")
         about_action.triggered.connect(self.show_about)
 
@@ -680,14 +888,39 @@ class SpriteSplitterGUI(QMainWindow):
         except Exception:
             return "dark"
 
-    def save_theme_preference(self):
-        """Save current theme preference to settings."""
+    def save_window_geometry(self):
+        """Save window geometry and state."""
         try:
             from PySide6.QtCore import QSettings
             settings = QSettings("Kalponic Studio", "KS Sprite Splitter")
-            settings.setValue("theme", self.current_theme)
+            settings.setValue("geometry", self.saveGeometry())
+            settings.setValue("windowState", self.windowState())
         except Exception:
             pass
+
+    def restore_window_geometry(self):
+        """Restore window geometry and state."""
+        try:
+            from PySide6.QtCore import QSettings
+            settings = QSettings("Kalponic Studio", "KS Sprite Splitter")
+            geometry = settings.value("geometry")
+            if geometry:
+                self.restoreGeometry(geometry)
+            windowState = settings.value("windowState")
+            if windowState:
+                self.setWindowState(windowState)
+        except Exception:
+            pass
+
+    def cancel_processing(self):
+        """Cancel the current processing operation."""
+        if self.processing_thread and self.processing_thread.isRunning():
+            # Request cancellation
+            self.processing_thread.requestInterruption()
+            self.statusBar().showMessage("Cancelling processing...")
+            self.cancel_btn.setEnabled(False)
+        else:
+            self.statusBar().showMessage("No processing to cancel")
 
     def select_input_file(self):
         """Open file dialog to select input sprite image."""
@@ -751,7 +984,57 @@ class SpriteSplitterGUI(QMainWindow):
     def start_processing(self):
         """Start the sprite processing pipeline."""
         if not hasattr(self, 'input_path') or not hasattr(self, 'output_dir'):
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self, "Missing Input/Output",
+                "Please select both an input sprite image and an output directory before processing."
+            )
             self.statusBar().showMessage("Please select input file and output directory")
+            return
+
+        # Validate input file exists and is readable
+        input_path = Path(self.input_path)
+        if not input_path.exists():
+            QMessageBox.critical(
+                self, "Input File Error",
+                f"The selected input file does not exist:\n{input_path}"
+            )
+            return
+
+        if not input_path.is_file():
+            QMessageBox.critical(
+                self, "Input File Error",
+                f"The selected input path is not a file:\n{input_path}"
+            )
+            return
+
+        # Validate output directory exists and is writable
+        output_dir = Path(self.output_dir)
+        if not output_dir.exists():
+            QMessageBox.critical(
+                self, "Output Directory Error",
+                f"The selected output directory does not exist:\n{output_dir}"
+            )
+            return
+
+        if not output_dir.is_dir():
+            QMessageBox.critical(
+                self, "Output Directory Error",
+                f"The selected output path is not a directory:\n{output_dir}"
+            )
+            return
+
+        # Check if output directory is writable
+        try:
+            test_file = output_dir / ".write_test"
+            test_file.write_text("test")
+            test_file.unlink()
+        except Exception:
+            QMessageBox.critical(
+                self, "Output Directory Error",
+                f"Cannot write to the selected output directory:\n{output_dir}\n\n"
+                "Please choose a different directory or check permissions."
+            )
             return
 
         # Update config with selected backends
@@ -759,8 +1042,9 @@ class SpriteSplitterGUI(QMainWindow):
         self.config['matte_backend'] = self.matter_combo.currentText()
         self.config['parts_backend'] = self.parts_combo.currentText()
 
-        # Disable processing button
+        # Disable processing button and enable cancel
         self.process_btn.setEnabled(False)
+        self.cancel_btn.setEnabled(True)
         self.process_btn.setText("Processing...")
 
         # Show progress
@@ -787,17 +1071,93 @@ class SpriteSplitterGUI(QMainWindow):
 
         self.processing_thread.start()
 
+        # Add subtle animation to show processing started
+        self.animate_processing_start()
+
+    def animate_processing_start(self):
+        """Add subtle animation when processing starts."""
+        from PySide6.QtCore import QPropertyAnimation, QEasingCurve
+
+        # Animate the progress bar appearance
+        self.progress_bar.setValue(0)
+        animation = QPropertyAnimation(self.progress_bar, b"value")
+        animation.setDuration(500)
+        animation.setStartValue(0)
+        animation.setEndValue(5)
+        animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
+        animation.start()
+
+        # Add a subtle glow effect to the processing button
+        original_style = self.process_btn.styleSheet()
+        self.process_btn.setStyleSheet(original_style + """
+            QPushButton {
+                border-color: #00FF88;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #00D4FF, stop:1 #00FF88);
+            }
+        """)
+
+        # Reset the glow after a short time
+        QTimer.singleShot(1000, lambda: self.process_btn.setStyleSheet(original_style))
+
     def on_progress_updated(self, progress: int, message: str):
-        """Handle progress updates from processing thread."""
-        self.progress_bar.setValue(progress)
+        """Handle progress updates from processing thread with smooth animation."""
+        from PySide6.QtCore import QPropertyAnimation, QEasingCurve
+
+        # Animate progress bar smoothly
+        animation = QPropertyAnimation(self.progress_bar, b"value")
+        animation.setDuration(300)  # 300ms animation
+        animation.setStartValue(self.progress_bar.value())
+        animation.setEndValue(progress)
+        animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
+        animation.start()
+
         self.progress_label.setText(message)
         self.log_text.append(f"[{progress}%] {message}")
+
+        # Add subtle status bar pulse for major milestones
+        if progress in [25, 50, 75, 100]:
+            original_style = self.statusBar().styleSheet()
+            self.statusBar().setStyleSheet(original_style + """
+                QStatusBar {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #00FF88, stop:1 #00D4FF);
+                }
+            """)
+            QTimer.singleShot(500, lambda: self.statusBar().setStyleSheet(original_style))
+
+    def animate_completion(self):
+        """Add completion animation when processing finishes successfully."""
+        from PySide6.QtCore import QPropertyAnimation, QEasingCurve
+
+        # Animate progress bar to 100% smoothly if not already there
+        if self.progress_bar.value() < 100:
+            animation = QPropertyAnimation(self.progress_bar, b"value")
+            animation.setDuration(800)
+            animation.setStartValue(self.progress_bar.value())
+            animation.setEndValue(100)
+            animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
+            animation.start()
+
+        # Add success glow to the results tab
+        original_tab_style = self.tab_widget.styleSheet()
+        self.tab_widget.setStyleSheet(original_tab_style + """
+            QTabBar::tab:selected {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #00FF88, stop:1 #00D4FF);
+                border-bottom: 4px solid #00FF88;
+            }
+        """)
+
+        # Reset after animation
+        QTimer.singleShot(2000, lambda: self.tab_widget.setStyleSheet(original_tab_style))
 
     def on_processing_finished(self, results: dict):
         """Handle successful processing completion."""
         self.progress_bar.setVisible(False)
         self.progress_label.setVisible(False)
         self.process_btn.setEnabled(True)
+        self.cancel_btn.setEnabled(False)
         self.process_btn.setText("🚀 Process Sprite")
 
         # Update results list
@@ -815,15 +1175,27 @@ class SpriteSplitterGUI(QMainWindow):
 
         self.statusBar().showMessage("Processing completed successfully!")
 
+        # Add completion animation
+        self.animate_completion()
+
     def on_error_occurred(self, error_msg: str):
         """Handle processing errors."""
         self.progress_bar.setVisible(False)
         self.progress_label.setVisible(False)
         self.process_btn.setEnabled(True)
+        self.cancel_btn.setEnabled(False)
         self.process_btn.setText("🚀 Process Sprite")
 
         self.log_text.append(f"ERROR: {error_msg}")
         self.statusBar().showMessage(f"Processing failed: {error_msg}")
+
+        # Show error dialog for better error recognition (Heuristic #9)
+        from PySide6.QtWidgets import QMessageBox
+        QMessageBox.warning(
+            self, "Processing Error",
+            f"An error occurred during processing:\n\n{error_msg}\n\n"
+            "Please check your input file and try again."
+        )
 
     def show_about(self):
         """Show about dialog."""
@@ -836,12 +1208,62 @@ class SpriteSplitterGUI(QMainWindow):
             "© 2025 Kalponic Studio"
         )
 
+    def show_help(self):
+        """Show detailed help and usage instructions."""
+        help_text = """
+        <h2>KS Sprite Splitter - Help</h2>
+
+        <h3>Getting Started</h3>
+        <ol>
+            <li><b>Select Input:</b> Click "Select Sprite Image" to choose your sprite file</li>
+            <li><b>Choose Output:</b> Click "Select Output Directory" for results</li>
+            <li><b>Pick Category:</b> Select the sprite type (tree, flag, character, etc.)</li>
+            <li><b>Configure Backends:</b> Choose processing algorithms</li>
+            <li><b>Process:</b> Click "🚀 Process Sprite" to start</li>
+        </ol>
+
+        <h3>Sprite Categories</h3>
+        <ul>
+            <li><b>Tree:</b> Leaves, branches, trunk</li>
+            <li><b>Flag:</b> Cloth, pole</li>
+            <li><b>Character:</b> Body parts, clothing, accessories</li>
+            <li><b>Architecture:</b> Walls, roofs, doors</li>
+            <li><b>VFX:</b> Special effects elements</li>
+        </ul>
+
+        <h3>Keyboard Shortcuts</h3>
+        <ul>
+            <li><b>Ctrl+O:</b> Open sprite file</li>
+            <li><b>Ctrl+D:</b> Select output directory</li>
+            <li><b>Ctrl+P:</b> Process sprite</li>
+            <li><b>Ctrl+C:</b> Cancel processing</li>
+            <li><b>Ctrl+T:</b> Toggle theme</li>
+            <li><b>Ctrl+Q:</b> Exit application</li>
+            <li><b>F1:</b> Show this help</li>
+        </ul>
+
+        <h3>Troubleshooting</h3>
+        <ul>
+            <li>Ensure input file is a valid image (PNG, JPG, BMP, TIFF)</li>
+            <li>Check that output directory is writable</li>
+            <li>Try different backend combinations if processing fails</li>
+            <li>Use 'mock' backends for development without AI models</li>
+        </ul>
+        """
+
+        from PySide6.QtWidgets import QMessageBox
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("KS Sprite Splitter - Help")
+        msg_box.setTextFormat(Qt.TextFormat.RichText)
+        msg_box.setText(help_text)
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg_box.exec()
+
 
 def main():
     """Main application entry point."""
     app = QApplication(sys.argv)
     app.setApplicationName("KS Sprite Splitter")
-    app.setApplicationVersion("1.0.0")
     app.setOrganizationName("Kalponic Studio")
 
     # Set application icon if available
