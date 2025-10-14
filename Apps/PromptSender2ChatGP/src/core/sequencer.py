@@ -177,35 +177,6 @@ class PromptSequencer:
         except Exception as e:
             self._log_message(f"Failed to save sent prompt: {e}", "error")
     
-    def _save_sent_prompt(self, prompt_text: str, prompt_title: str, source_file: str):
-        """Save a successfully sent prompt to a file"""
-        try:
-            # Create sent directory if it doesn't exist
-            sent_dir = "sent_prompts"
-            os.makedirs(sent_dir, exist_ok=True)
-            
-            # Create filename based on prompt title and timestamp
-            from datetime import datetime
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            safe_title = "".join(c for c in prompt_title if c.isalnum() or c in (' ', '-', '_')).rstrip()
-            safe_title = safe_title.replace(' ', '_')[:50]  # Limit length
-            
-            filename = f"sent_{timestamp}_{safe_title}.txt"
-            filepath = os.path.join(sent_dir, filename)
-            
-            # Write the prompt to file
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(f"Title: {prompt_title}\n")
-                f.write(f"Source: {os.path.basename(source_file)}\n")
-                f.write(f"Sent: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                f.write("-" * 50 + "\n")
-                f.write(prompt_text)
-            
-            self._log_message(f"Saved sent prompt to: {filepath}")
-            
-        except Exception as e:
-            self._log_message(f"Failed to save sent prompt: {e}", "error")
-    
     def _focus_target_window(self) -> bool:
         """Focus the target window and input box with manual intervention fallback"""
         if not self.config.target_window:
