@@ -79,3 +79,19 @@ class PartSplitter(Protocol):
             {'Leaves': mask_array, 'Trunk': mask_array, ...}
         """
         ...
+
+
+# Backend registry
+_SEGMENTER_BACKENDS = {}
+
+
+def register_segmenter_backend(name: str, backend_class):
+    """Register a segmenter backend implementation."""
+    _SEGMENTER_BACKENDS[name] = backend_class()
+
+
+def get_segmenter_backend(name: str) -> Segmenter:
+    """Get a segmenter backend instance by name."""
+    if name not in _SEGMENTER_BACKENDS:
+        raise ValueError(f"Unknown segmenter backend: {name}")
+    return _SEGMENTER_BACKENDS[name]
