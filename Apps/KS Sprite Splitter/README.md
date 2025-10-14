@@ -50,6 +50,23 @@ The GUI provides:
 - Progress tracking and result preview
 - Dark theme matching VS Code aesthetics
 
+### Keyboard Shortcuts
+
+The GUI supports the following keyboard shortcuts for improved productivity:
+
+- **Ctrl+O**: Open sprite file
+- **Ctrl+D**: Select output directory
+- **Ctrl+P**: Process sprite
+- **Ctrl+C**: Cancel processing
+- **Ctrl+T**: Toggle between light and dark themes
+- **Ctrl+Q**: Exit application
+- **F1**: Show help and usage instructions
+
+**Accessibility Shortcuts:**
+- **Alt+I**: Focus input file field
+- **Alt+O**: Focus output directory field
+- **Alt+P**: Focus process button
+
 ### Command Line Interface
 
 Process sprites via command line:
