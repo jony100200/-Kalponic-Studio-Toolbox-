@@ -1,0 +1,10 @@
+name: char
+parts: [Body, Head, Arms, Legs]
+heuristics:
+  kmeans_k: 5
+  freq_window: [4, 12]
+  limb_detection: true
+matting:
+  band_px: 5
+extras:
+  pose_variants: true
