@@ -1,9 +1,3 @@
-Absolutely—let’s lock in a **professional, production-grade spec** (folders + contracts + models + build + QA) so we can start coding immediately and scale cleanly later.
-
-I’ve combined your v1 design with fresh model research (SAM 2 for object masks; Mask2Former/YOLO-seg as class-aware options; MODNet/FBA for matting; ONNX Runtime for fast CPU/GPU inference) and wrapped it in a rock-solid repo + delivery plan. Citations are in-line.
-
----
-
 # KS Sprite Splitter — Engineering Specification (Pro)
 
 ## 0) Purpose & Scope
@@ -15,7 +9,7 @@ A Python desktop/CLI tool that **auto-separates 2D sprites into semantic parts**
 ## 1) Repository Layout (Production-Ready)
 
 ```
-ks-sprite-splitter/
+Apps\KS Sprite Splitter/
 ├─ app/                         # (Phase 2) PySide6 UI
 │  ├─ main.py
 │  ├─ ui/                       # screens, layouts
@@ -306,7 +300,3 @@ runtimes:
 * Meets v1 quality/perf thresholds; passes unit tests; binaries available for all OS targets.
 
 ---
-
-### Ready to scaffold?
-
-If you’re good with this spec, I’ll generate the repo skeleton (folders + configs + stubs + CLI) exactly as above so you can run `ks-splitter` on `samples/` right away.
