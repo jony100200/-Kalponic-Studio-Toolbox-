@@ -38,27 +38,10 @@ class DarkTheme:
     """Dark theme configuration for KS PDF Studio."""
 
     # Color palette - muted colors easy on eyes
-    COLORS = {
-        'bg_primary': '#1e1e1e',      # Main background
-        'bg_secondary': '#2d2d2d',    # Secondary backgrounds
-        'bg_tertiary': '#3a3a3a',     # Tertiary backgrounds
-        'fg_primary': '#e0e0e0',      # Primary text
-        'fg_secondary': '#b0b0b0',    # Secondary text
-        'fg_accent': '#4a9eff',       # Accent color (muted blue)
-        'border': '#404040',          # Borders
-        'highlight': '#505050',       # Highlights
-        'success': '#4a9e4a',         # Success color
-        'warning': '#9e9e4a',         # Warning color
-        'error': '#9e4a4a',           # Error color
-        'button_bg': '#404040',       # Button background
-        'button_fg': '#e0e0e0',       # Button text
-        'entry_bg': '#2d2d2d',        # Entry background
-        'entry_fg': '#e0e0e0',        # Entry text
-        'text_bg': '#1a1a1a',         # Text widget background
-        'text_fg': '#e0e0e0',         # Text widget text
-        'scrollbar_bg': '#404040',    # Scrollbar background
-        'scrollbar_fg': '#606060',    # Scrollbar foreground
-    }
+    # COLORS are centralized in src/theme.py. Keep an empty placeholder here
+    # so the class exists; the real values are loaded (and override this)
+    # further down when importing the centralized theme.
+    COLORS = {}
 
     @staticmethod
     def apply_theme(root):
@@ -87,11 +70,14 @@ class DarkTheme:
 
         # Buttons
         style.configure('TButton', background=DarkTheme.COLORS['button_bg'], foreground=DarkTheme.COLORS['button_fg'], borderwidth=0, focusthickness=3)
-        style.map('TButton', background=[('active', DarkTheme.COLORS['highlight'])], foreground=[('disabled', DarkTheme.COLORS['fg_secondary'])])
+        style.map('TButton', background=[('active', DarkTheme.COLORS.get('button_active_bg', DarkTheme.COLORS['highlight']))], foreground=[('disabled', DarkTheme.COLORS['fg_secondary'])])
 
         # Entries / Combobox
         style.configure('TEntry', fieldbackground=DarkTheme.COLORS['entry_bg'], foreground=DarkTheme.COLORS['entry_fg'])
         style.configure('TCombobox', fieldbackground=DarkTheme.COLORS['entry_bg'], foreground=DarkTheme.COLORS['entry_fg'])
+        # Entry selection colors
+        root.option_add('*Entry.selectBackground', DarkTheme.COLORS.get('entry_select_bg', DarkTheme.COLORS.get('select_bg', DarkTheme.COLORS['fg_accent'])))
+        root.option_add('*Entry.selectForeground', DarkTheme.COLORS.get('entry_select_fg', DarkTheme.COLORS.get('select_fg', DarkTheme.COLORS['bg_primary'])))
 
         # Notebook / Tabs
         style.configure('TNotebook', background=DarkTheme.COLORS['bg_primary'], tabmargins=[2, 5, 2, 0], borderwidth=0)
@@ -110,38 +96,86 @@ class DarkTheme:
         # Menus and classic widgets don't use ttk styles, set via option_add
         root.option_add('*Menu.background', DarkTheme.COLORS['bg_secondary'])
         root.option_add('*Menu.foreground', DarkTheme.COLORS['fg_primary'])
-        root.option_add('*Menu.activeBackground', DarkTheme.COLORS['highlight'])
-        root.option_add('*Menu.activeForeground', DarkTheme.COLORS['fg_primary'])
+        root.option_add('*Menu.activeBackground', DarkTheme.COLORS.get('menu_active_bg', DarkTheme.COLORS['highlight']))
+        root.option_add('*Menu.activeForeground', DarkTheme.COLORS.get('menu_active_fg', DarkTheme.COLORS['fg_primary']))
 
-        # Text widgets
+        # Text widgets and selection colors (muted, non-white selection)
         root.option_add('*Text.background', DarkTheme.COLORS['text_bg'])
         root.option_add('*Text.foreground', DarkTheme.COLORS['text_fg'])
-        root.option_add('*Text.selectBackground', DarkTheme.COLORS['fg_accent'])
-        root.option_add('*Text.selectForeground', DarkTheme.COLORS['bg_primary'])
+        root.option_add('*Text.selectBackground', DarkTheme.COLORS.get('select_bg', DarkTheme.COLORS['fg_accent']))
+        root.option_add('*Text.selectForeground', DarkTheme.COLORS.get('select_fg', DarkTheme.COLORS['bg_primary']))
         root.option_add('*Text.insertBackground', DarkTheme.COLORS['fg_primary'])
 
-        # Listbox styling (classic widget)
+        # Listbox styling (classic widget) - use muted selection
         root.option_add('*Listbox.background', DarkTheme.COLORS['text_bg'])
         root.option_add('*Listbox.foreground', DarkTheme.COLORS['text_fg'])
-        root.option_add('*Listbox.selectBackground', DarkTheme.COLORS['fg_accent'])
-        root.option_add('*Listbox.selectForeground', DarkTheme.COLORS['bg_primary'])
+        root.option_add('*Listbox.selectBackground', DarkTheme.COLORS.get('select_bg', DarkTheme.COLORS['fg_accent']))
+        root.option_add('*Listbox.selectForeground', DarkTheme.COLORS.get('select_fg', DarkTheme.COLORS['bg_primary']))
 
-        # Scrollbar
-        root.option_add('*Scrollbar.background', DarkTheme.COLORS['scrollbar_bg'])
-        root.option_add('*Scrollbar.troughColor', DarkTheme.COLORS['bg_secondary'])
-        root.option_add('*Scrollbar.activeBackground', DarkTheme.COLORS['scrollbar_fg'])
+        # Scrollbar (thumb and trough)
+        root.option_add('*Scrollbar.background', DarkTheme.COLORS.get('scrollbar_bg', DarkTheme.COLORS['bg_secondary']))
+        root.option_add('*Scrollbar.troughColor', DarkTheme.COLORS.get('scroll_track', DarkTheme.COLORS['bg_secondary']))
+        root.option_add('*Scrollbar.activeBackground', DarkTheme.COLORS.get('scroll_thumb', DarkTheme.COLORS['scrollbar_fg']))
+        # Ttk scrollbar style when available
+        try:
+            style.configure('Vertical.TScrollbar', background=DarkTheme.COLORS.get('scroll_thumb', DarkTheme.COLORS['scrollbar_fg']), troughcolor=DarkTheme.COLORS.get('scroll_track', DarkTheme.COLORS['bg_secondary']))
+            style.configure('Horizontal.TScrollbar', background=DarkTheme.COLORS.get('scroll_thumb', DarkTheme.COLORS['scrollbar_fg']), troughcolor=DarkTheme.COLORS.get('scroll_track', DarkTheme.COLORS['bg_secondary']))
+        except Exception:
+            pass
 
         # Canvas and labelframe borders
         style.configure('TLabelframe', background=DarkTheme.COLORS['bg_primary'], bordercolor=DarkTheme.COLORS['border'])
         style.configure('TLabelframe.Label', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary'])
+
+        # Treeview selection (where used)
+        try:
+            style.configure('Treeview', background=DarkTheme.COLORS['bg_secondary'], foreground=DarkTheme.COLORS['fg_primary'], fieldbackground=DarkTheme.COLORS['bg_secondary'])
+            style.map('Treeview', background=[('selected', DarkTheme.COLORS.get('tree_selected_bg', DarkTheme.COLORS.get('select_bg', DarkTheme.COLORS['fg_accent'])))], foreground=[('selected', DarkTheme.COLORS.get('tree_selected_fg', DarkTheme.COLORS.get('select_fg', DarkTheme.COLORS['bg_primary'])))])
+        except Exception:
+            pass
 
         # Ensure classic separator widgets and frames have dark borders
         root.option_add('*Separator.background', DarkTheme.COLORS['border'])
         root.option_add('*Frame.background', DarkTheme.COLORS['bg_primary'])
 
         # Remove focus highlight rings that can appear white on some Windows themes
-        root.option_add('*HighlightColor', DarkTheme.COLORS['bg_primary'])
-        root.option_add('*HighlightBackground', DarkTheme.COLORS['bg_primary'])
+        root.option_add('*HighlightColor', DarkTheme.COLORS.get('focus_ring', DarkTheme.COLORS['bg_primary']))
+        root.option_add('*HighlightBackground', DarkTheme.COLORS.get('focus_ring', DarkTheme.COLORS['bg_primary']))
+
+
+# Use centralized theme tokens when available
+try:
+    # Try importing as a top-level module (when src is on sys.path)
+    import theme as _theme
+    DarkTheme.COLORS = getattr(_theme, 'COLORS', {}) or DarkTheme.COLORS
+except Exception:
+    try:
+        # Try package-relative import (when running as package)
+        from .theme import COLORS as THEME_COLORS
+        DarkTheme.COLORS = THEME_COLORS
+    except Exception:
+        # Fallback defaults to guarantee keys exist (used when running tests or imports from different CWDs)
+        DarkTheme.COLORS = {
+            'bg_primary': '#1e1e1e',
+            'bg_secondary': '#2d2d2d',
+            'bg_tertiary': '#3a3a3a',
+            'fg_primary': '#e0e0e0',
+            'fg_secondary': '#b0b0b0',
+            'fg_accent': '#4a9eff',
+            'border': '#404040',
+            'highlight': '#505050',
+            'success': '#4a9e4a',
+            'warning': '#9e9e4a',
+            'error': '#9e4a4a',
+            'button_bg': '#404040',
+            'button_fg': '#e0e0e0',
+            'entry_bg': '#2d2d2d',
+            'entry_fg': '#e0e0e0',
+            'text_bg': '#1a1a1a',
+            'text_fg': '#e0e0e0',
+            'scrollbar_bg': '#404040',
+            'scrollbar_fg': '#606060',
+        }
 
 
 class KSPDFStudioApp:
