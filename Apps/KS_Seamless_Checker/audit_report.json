@@ -1,0 +1,418 @@
+{
+  "score": 13.253012048192772,
+  "passed": 11,
+  "warnings": 71,
+  "issues": 1,
+  "details": {
+    "passed": [
+      {
+        "category": "File Structure",
+        "message": "Found required file: README.md"
+      },
+      {
+        "category": "File Structure",
+        "message": "Found required file: requirements.txt"
+      },
+      {
+        "category": "File Structure",
+        "message": "Found required file: main.py"
+      },
+      {
+        "category": "File Structure",
+        "message": "Found required file: run_app.bat"
+      },
+      {
+        "category": "File Structure",
+        "message": "Found required file: config.json"
+      },
+      {
+        "category": "File Structure",
+        "message": "Found src/image_checker.py"
+      },
+      {
+        "category": "File Structure",
+        "message": "Found src/batch_processor.py"
+      },
+      {
+        "category": "File Structure",
+        "message": "Found src/gui.py"
+      },
+      {
+        "category": "Dependencies",
+        "message": "Found 10 dependencies in requirements.txt"
+      },
+      {
+        "category": "Documentation",
+        "message": "README.md found and contains content"
+      },
+      {
+        "category": "Functionality",
+        "message": "ImageChecker instantiates successfully"
+      }
+    ],
+    "warnings": [
+      {
+        "category": "File Structure",
+        "message": "Unnecessary file found: __pycache__\\test_import.cpython-313-pytest-8.4.1.pyc",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\__pycache__\\test_import.cpython-313-pytest-8.4.1.pyc"
+      },
+      {
+        "category": "File Structure",
+        "message": "Unnecessary file found: __pycache__\\test_smoke.cpython-313.pyc",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\__pycache__\\test_smoke.cpython-313.pyc"
+      },
+      {
+        "category": "File Structure",
+        "message": "Unnecessary file found: tests\\__pycache__\\test_batch_processor.cpython-313-pytest-8.4.1.pyc",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\tests\\__pycache__\\test_batch_processor.cpython-313-pytest-8.4.1.pyc"
+      },
+      {
+        "category": "File Structure",
+        "message": "Unnecessary file found: src\\__pycache__\\ai_seam_checker.cpython-313.pyc",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\__pycache__\\ai_seam_checker.cpython-313.pyc"
+      },
+      {
+        "category": "File Structure",
+        "message": "Unnecessary file found: src\\__pycache__\\batch_processor.cpython-313.pyc",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\__pycache__\\batch_processor.cpython-313.pyc"
+      },
+      {
+        "category": "File Structure",
+        "message": "Unnecessary file found: src\\__pycache__\\gui.cpython-313.pyc",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\__pycache__\\gui.cpython-313.pyc"
+      },
+      {
+        "category": "File Structure",
+        "message": "Unnecessary file found: src\\__pycache__\\image_checker.cpython-313.pyc",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\__pycache__\\image_checker.cpython-313.pyc"
+      },
+      {
+        "category": "File Structure",
+        "message": "Unnecessary file found: src\\__pycache__\\__init__.cpython-313.pyc",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\__pycache__\\__init__.cpython-313.pyc"
+      },
+      {
+        "category": "File Structure",
+        "message": "Unnecessary file found: test_fully_seamless.png",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\test_fully_seamless.png"
+      },
+      {
+        "category": "File Structure",
+        "message": "Unnecessary file found: test_horizontal_only.png",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\test_horizontal_only.png"
+      },
+      {
+        "category": "File Structure",
+        "message": "Unnecessary file found: test_non_seamless.png",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\test_non_seamless.png"
+      },
+      {
+        "category": "File Structure",
+        "message": "Unnecessary file found: test_vertical_only.png",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\test_vertical_only.png"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Potential debug code found in audit_app.py: print\\s*\\(",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\audit_app.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Potential debug code found in audit_app.py: TODO",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\audit_app.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Potential debug code found in audit_app.py: FIXME",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\audit_app.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Potential debug code found in audit_app.py: XXX",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\audit_app.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Potential debug code found in audit_app.py: import pdb",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\audit_app.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Hardcoded path found in audit_app.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\audit_app.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for __init__ in audit_app.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\audit_app.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Potential debug code found in ai_seam_checker.py: print\\s*\\(",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\ai_seam_checker.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for AISeamChecker in ai_seam_checker.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\ai_seam_checker.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for __init__ in ai_seam_checker.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\ai_seam_checker.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for BatchProcessor in batch_processor.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\batch_processor.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for __init__ in batch_processor.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\batch_processor.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Potential debug code found in gui.py: print\\s*\\(",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for BatchWorker in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for SettingsDialog in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for SeamlessCheckerGUI in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for __init__ in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for run in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for __init__ in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for save in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for __init__ in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for _toggle_max_restore in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for mouseReleaseEvent in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for mouseDoubleClickEvent in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for __init__ in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for show_index in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for _update_image in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for _apply_scale in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for wheelEvent in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for _on_mouse_move in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for _on_mouse_release in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for show_prev in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for show_next in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for resizeEvent in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for __init__ in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for load_config in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for setup_dark_theme in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for setup_ui in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for browse_folder in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for dragEnterEvent in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for dropEvent in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for process_batch in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for on_batch_finished in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for _on_table_click in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for export_csv in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for open_settings in gui.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for ImageChecker in image_checker.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\image_checker.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for __init__ in image_checker.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\image_checker.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for make_temp_image in test_batch_processor.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\tests\\test_batch_processor.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for test_process_file_in_memory in test_batch_processor.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\tests\\test_batch_processor.py"
+      },
+      {
+        "category": "Code Quality",
+        "message": "Missing docstring for test_process_file_disk in test_batch_processor.py",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\tests\\test_batch_processor.py"
+      },
+      {
+        "category": "Dependencies",
+        "message": "Potentially unused imports in audit_app.py: pathlib, batch_processor, MainWindow, Set, BatchProcessor, gui, Tuple, image_checker, typing, os, List, subprocess, Dict, importlib",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\audit_app.py"
+      },
+      {
+        "category": "Dependencies",
+        "message": "Potentially unused imports in main.py: PySide6, src",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\main.py"
+      },
+      {
+        "category": "Dependencies",
+        "message": "Potentially unused imports in ai_seam_checker.py: numpy, torchvision, PIL",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\ai_seam_checker.py"
+      },
+      {
+        "category": "Dependencies",
+        "message": "Potentially unused imports in batch_processor.py: ImageChecker, image_checker, io, PIL",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\batch_processor.py"
+      },
+      {
+        "category": "Dependencies",
+        "message": "Potentially unused imports in gui.py: QKeySequence, PySide6, batch_processor, image_checker, cv2",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
+      },
+      {
+        "category": "Dependencies",
+        "message": "Potentially unused imports in image_checker.py: skimage, PIL, numpy, structural_similarity, scipy, ai_seam_checker, os",
+        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\image_checker.py"
+      },
+      {
+        "category": "Configuration",
+        "message": "Missing config key: threshold",
+        "file": null
+      },
+      {
+        "category": "Configuration",
+        "message": "Missing config key: use_ai",
+        "file": null
+      }
+    ],
+    "issues": [
+      {
+        "category": "Functionality",
+        "message": "Import error: attempted relative import with no known parent package",
+        "file": null
+      }
+    ]
+  }
+}

@@ -79,11 +79,33 @@ class ImageChecker:
         horizontal_seamless = combined_horizontal < self.threshold
         vertical_seamless = combined_vertical < self.threshold
 
-        # Determine overall seamless status
+        # Smart classification: if one direction tiles perfectly but the other doesn't,
+        # it might be a uniform pattern (stripes) that shouldn't be "fully seamless"
+        perfect_tile_threshold = 5.0  # Very low score indicates near-perfect tiling
+
         if horizontal_seamless and vertical_seamless:
-            return True  # Fully seamless
+            # Both directions are seamless - check if it's truly varied or just uniform stripes
+            if combined_vertical < perfect_tile_threshold and combined_horizontal > perfect_tile_threshold:
+                # Vertical tiles perfectly, horizontal has variation - likely horizontal stripes
+                seamless_type = 'horizontal_only'
+                is_seamless = False
+            elif combined_horizontal < perfect_tile_threshold and combined_vertical > perfect_tile_threshold:
+                # Horizontal tiles perfectly, vertical has variation - likely vertical stripes
+                seamless_type = 'vertical_only'
+                is_seamless = False
+            else:
+                # Both have reasonable variation - truly fully seamless
+                seamless_type = 'fully_seamless'
+                is_seamless = True
+        elif horizontal_seamless and not vertical_seamless:
+            seamless_type = 'horizontal_only'
+            is_seamless = False
+        elif not horizontal_seamless and vertical_seamless:
+            seamless_type = 'vertical_only'
+            is_seamless = False
         else:
-            return False  # Not fully seamless (could be X-only, Y-only, or neither)
+            seamless_type = 'not_seamless'
+            is_seamless = False
 
     def get_seamless_score(self, img, img_path=None):
         """Get the actual seamless score from traditional method (for debugging)."""
@@ -194,14 +216,14 @@ class ImageChecker:
         # If an image is uniform in one direction (like stripes), it shouldn't be considered seamless
         variation_threshold = 5.0  # Minimum variation score to be considered "meaningful"
 
-        h_variation = self._calculate_direction_variation(lab_img, vertical=False)  # Horizontal variation
-        v_variation = self._calculate_direction_variation(lab_img, vertical=True)   # Vertical variation
+        h_variation = self._calculate_direction_variation(lab_img, vertical=False)  # Horizontal variation (variation across rows)
+        v_variation = self._calculate_direction_variation(lab_img, vertical=True)   # Vertical variation (variation across columns)
 
-        # Penalize scores if variation is too low in either direction
+        # Penalize scores if variation is too low in either direction (uniform patterns like stripes)
         if h_variation < variation_threshold:
-            combined_horizontal += 50.0  # Large penalty
+            combined_horizontal += 50.0  # Heavy penalty for uniform horizontal patterns
         if v_variation < variation_threshold:
-            combined_vertical += 50.0   # Large penalty
+            combined_vertical += 50.0   # Heavy penalty for uniform vertical patterns
 
         return combined_horizontal, combined_vertical
 
@@ -450,6 +472,39 @@ class ImageChecker:
             discontinuity_ratio = 0.0
 
         return discontinuity_ratio
+
+    def _calculate_direction_variation(self, lab_img, vertical=True):
+        """Calculate variation/entropy in a specific direction to detect uniform patterns."""
+        if lab_img.shape[2] == 3:  # Lab image
+            gray = cv2.cvtColor((lab_img * (255.0/100.0)).astype(np.uint8), cv2.COLOR_LAB2RGB)
+            gray = cv2.cvtColor(gray, cv2.COLOR_RGB2GRAY).astype(float) / 255.0
+        else:
+            gray = lab_img[:, :, 0] if lab_img.shape[2] > 0 else lab_img
+
+        if vertical:
+            # For vertical direction, check if columns are similar (low variation between columns)
+            # Sample every 4th column to avoid noise
+            cols_to_check = gray[:, ::4]  # Every 4th column
+            if cols_to_check.shape[1] < 2:
+                return 0.0
+
+            # Calculate standard deviation across columns for each row
+            col_std = np.std(cols_to_check, axis=1)  # Variation across columns
+            avg_variation = np.mean(col_std)
+
+            return avg_variation * 100.0  # Scale up
+        else:
+            # For horizontal direction, check if rows are similar (low variation between rows)
+            # Sample every 4th row to avoid noise
+            rows_to_check = gray[::4, :]  # Every 4th row
+            if rows_to_check.shape[0] < 2:
+                return 0.0
+
+            # Calculate standard deviation across rows for each column
+            row_std = np.std(rows_to_check, axis=0)  # Variation across rows
+            avg_variation = np.mean(row_std)
+
+            return avg_variation * 100.0  # Scale up
 
     def create_tiled_preview(self, img):
         """Create a 2x2 tiled preview with seam overlay visualization."""
