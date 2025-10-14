@@ -81,22 +81,31 @@ class DarkTheme:
         # Ttk style base configuration
         style.configure('.', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary'])
 
-        style.configure('TFrame', background=DarkTheme.COLORS['bg_primary'])
+        # Frame and label defaults
+        style.configure('TFrame', background=DarkTheme.COLORS['bg_primary'], relief='flat')
         style.configure('TLabel', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary'])
 
+        # Buttons
         style.configure('TButton', background=DarkTheme.COLORS['button_bg'], foreground=DarkTheme.COLORS['button_fg'], borderwidth=0, focusthickness=3)
         style.map('TButton', background=[('active', DarkTheme.COLORS['highlight'])], foreground=[('disabled', DarkTheme.COLORS['fg_secondary'])])
 
+        # Entries / Combobox
         style.configure('TEntry', fieldbackground=DarkTheme.COLORS['entry_bg'], foreground=DarkTheme.COLORS['entry_fg'])
         style.configure('TCombobox', fieldbackground=DarkTheme.COLORS['entry_bg'], foreground=DarkTheme.COLORS['entry_fg'])
 
-        style.configure('TNotebook', background=DarkTheme.COLORS['bg_primary'], tabmargins=[2, 5, 2, 0])
+        # Notebook / Tabs
+        style.configure('TNotebook', background=DarkTheme.COLORS['bg_primary'], tabmargins=[2, 5, 2, 0], borderwidth=0)
         style.configure('TNotebook.Tab', background=DarkTheme.COLORS['bg_secondary'], foreground=DarkTheme.COLORS['fg_primary'], padding=[8, 4])
         style.map('TNotebook.Tab', background=[('selected', DarkTheme.COLORS['bg_tertiary'])], foreground=[('selected', DarkTheme.COLORS['fg_primary'])])
 
+        # LabelFrames, Checkbuttons, Progress
         style.configure('TLabelFrame', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary'], borderwidth=1)
         style.configure('TCheckbutton', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary'])
         style.configure('TProgressbar', troughcolor=DarkTheme.COLORS['bg_secondary'], background=DarkTheme.COLORS['bg_tertiary'])
+
+        # PanedWindow and additional separators
+        style.configure('TPanedwindow', background=DarkTheme.COLORS['bg_primary'])
+        style.configure('TSeparator', background=DarkTheme.COLORS['border'])
 
         # Menus and classic widgets don't use ttk styles, set via option_add
         root.option_add('*Menu.background', DarkTheme.COLORS['bg_secondary'])
@@ -121,6 +130,18 @@ class DarkTheme:
         root.option_add('*Scrollbar.background', DarkTheme.COLORS['scrollbar_bg'])
         root.option_add('*Scrollbar.troughColor', DarkTheme.COLORS['bg_secondary'])
         root.option_add('*Scrollbar.activeBackground', DarkTheme.COLORS['scrollbar_fg'])
+
+        # Canvas and labelframe borders
+        style.configure('TLabelframe', background=DarkTheme.COLORS['bg_primary'], bordercolor=DarkTheme.COLORS['border'])
+        style.configure('TLabelframe.Label', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary'])
+
+        # Ensure classic separator widgets and frames have dark borders
+        root.option_add('*Separator.background', DarkTheme.COLORS['border'])
+        root.option_add('*Frame.background', DarkTheme.COLORS['bg_primary'])
+
+        # Remove focus highlight rings that can appear white on some Windows themes
+        root.option_add('*HighlightColor', DarkTheme.COLORS['bg_primary'])
+        root.option_add('*HighlightBackground', DarkTheme.COLORS['bg_primary'])
 
 
 class KSPDFStudioApp:
@@ -265,7 +286,8 @@ class KSPDFStudioApp:
         tools_menu.add_command(label="Batch Process", command=self._batch_process)
         tools_menu.add_command(label="Image Optimizer", command=self._image_optimizer)
         tools_menu.add_command(label="Code Formatter", command=self._code_formatter)
-        tools_menu.add_command(label="Extract PDF Text", command=self._extract_pdf_text)
+        # Tools -> open the Extractor tab rather than running extraction directly
+        tools_menu.add_command(label="Extract PDF Text", command=lambda: self.preview_notebook.select(self._find_tab_index_by_name('PDF Extractor')))
 
         # AI menu
         ai_menu = tk.Menu(menubar, tearoff=0)
@@ -397,6 +419,18 @@ class KSPDFStudioApp:
 
         # Templates tab
         self._create_templates_tab()
+        # PDF Extractor tab
+        self._create_pdf_extractor_tab()
+
+    def _find_tab_index_by_name(self, name: str) -> int:
+        """Return the index of a notebook tab by its displayed name. Returns 0 if not found."""
+        try:
+            for idx in range(self.preview_notebook.index('end')):
+                if self.preview_notebook.tab(idx, option='text') == name:
+                    return idx
+        except Exception:
+            pass
+        return 0
 
     def _create_pdf_preview_tab(self):
         """Create PDF preview tab."""
@@ -455,9 +489,9 @@ class KSPDFStudioApp:
         # Load available templates
         self._load_template_list()
 
-        # Template controls
-        controls_frame = ttk.Frame(templates_tab)
-        controls_frame.pack(fill=tk.X)
+        # Template controls (use template_frame as parent to avoid potential NULL main window on some environments)
+        controls_frame = ttk.Frame(template_frame)
+        controls_frame.pack(fill=tk.X, pady=(5, 0))
 
         ttk.Button(controls_frame, text="Apply Template", command=self._apply_template).pack(side=tk.LEFT, padx=2)
         ttk.Button(controls_frame, text="Preview Template", command=self._preview_template).pack(side=tk.LEFT, padx=2)
@@ -485,11 +519,17 @@ class KSPDFStudioApp:
     def _load_template_list(self):
         """Load available templates into the listbox."""
         try:
-            templates = self.template_manager.get_available_templates()
+            # TemplateManager exposes list_templates()
+            templates = self.template_manager.list_templates()
             self.template_listbox.delete(0, tk.END)
 
             for template in templates:
-                self.template_listbox.insert(tk.END, template['name'])
+                if isinstance(template, (dict,)) and 'name' in template:
+                    display_name = template['name']
+                else:
+                    display_name = str(template)
+
+                self.template_listbox.insert(tk.END, display_name)
 
         except Exception as e:
             messagebox.showerror("Template Error", f"Failed to load templates: {e}")
@@ -769,70 +809,146 @@ class KSPDFStudioApp:
         """Create a new template."""
         messagebox.showinfo("Create Template", "Template creation feature coming soon!")
 
-    # Utility operations
-    def _extract_pdf_text(self):
-        """Extract text from PDF and insert into editor."""
-        pdf_path = filedialog.askopenfilename(
-            title="Select PDF to Extract",
-            filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")]
-        )
+    def _create_pdf_extractor_tab(self):
+        """Create PDF Extractor tab."""
+        extractor_tab = ttk.Frame(self.preview_notebook)
+        self.preview_notebook.add(extractor_tab, text="PDF Extractor")
 
+        # Controls frame
+        ctrl = ttk.Frame(extractor_tab)
+        ctrl.pack(fill=tk.X, pady=(5, 5))
+        # Open / Export buttons (store as attributes so worker can disable/enable)
+        self.extract_open_btn = ttk.Button(ctrl, text="Open PDF", command=self._open_pdf_for_extraction)
+        self.extract_open_btn.pack(side=tk.LEFT, padx=4)
+
+        self.extract_export_btn = ttk.Button(ctrl, text="Export", command=self._export_extracted)
+        self.extract_export_btn.pack(side=tk.LEFT, padx=4)
+
+        ttk.Label(ctrl, text="Format:").pack(side=tk.LEFT, padx=(10, 2))
+        self.extract_format_var = tk.StringVar(value='md')
+        ttk.Combobox(ctrl, textvariable=self.extract_format_var, values=['md', 'txt', 'docx'], width=6, state='readonly').pack(side=tk.LEFT)
+
+        # Preview area
+        self.extract_preview = scrolledtext.ScrolledText(
+            extractor_tab,
+            wrap=tk.WORD,
+            font=('Consolas', 10),
+            bg=DarkTheme.COLORS['text_bg'],
+            fg=DarkTheme.COLORS['text_fg'],
+            insertbackground=DarkTheme.COLORS['fg_primary']
+        )
+        self.extract_preview.pack(fill=tk.BOTH, expand=True, pady=(5, 0))
+
+        # Internal state
+        self._last_extracted = None
+        # Status label to show progress and messages
+        self.extract_status = ttk.Label(extractor_tab, text="", background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_secondary'])
+        self.extract_status.pack(fill=tk.X, pady=(4, 0))
+
+    def _open_pdf_for_extraction(self):
+        """Open a PDF and extract text into the extractor preview."""
+        pdf_path = filedialog.askopenfilename(title="Open PDF for Extraction", filetypes=[("PDF files", "*.pdf")])
         if not pdf_path:
             return
 
-        # Ask for output format
-        format_choice = tk.simpledialog.askstring(
-            "Output Format",
-            "Choose output format (txt/md):",
-            initialvalue="md"
-        )
+        # Run extraction in background to avoid UI hang
+        def worker(path):
+            try:
+                # update UI: disable buttons and show status
+                self.root.after(0, lambda: [
+                    self.extract_open_btn.config(state=tk.DISABLED),
+                    self.extract_export_btn.config(state=tk.DISABLED),
+                    self.extract_status.config(text='Extracting...')
+                ])
 
-        if not format_choice or format_choice.lower() not in ['txt', 'md']:
+                if not PDFExtractorUtils.validate_pdf(path):
+                    self.root.after(0, lambda: messagebox.showerror("Invalid PDF", "The selected file is not a valid PDF."))
+                    return
+
+                result = self.pdf_extractor.extract_text(path)
+                if not result.get('success', True):
+                    self.root.after(0, lambda: messagebox.showerror("Extraction Error", f"Extraction failed: {result.get('error')}"))
+                    return
+
+                md = self.pdf_extractor.extract_to_markdown(path)
+                self._last_extracted = {'path': path, 'markdown': md, 'raw': result}
+
+                # Update UI on main thread
+                def update_ui():
+                    try:
+                        self.extract_preview.delete('1.0', tk.END)
+                        self.extract_preview.insert('1.0', md)
+                        # Switch to extractor tab
+                        self.preview_notebook.select(self._find_tab_index_by_name('PDF Extractor'))
+                    except Exception as e:
+                        messagebox.showerror("UI Update Error", f"Failed to update extractor UI: {e}")
+
+                self.root.after(0, update_ui)
+
+                # re-enable buttons and clear status
+                def finalize_ui():
+                    self.extract_open_btn.config(state=tk.NORMAL)
+                    self.extract_export_btn.config(state=tk.NORMAL)
+                    self.extract_status.config(text='')
+
+                self.root.after(0, finalize_ui)
+
+            except Exception as e:
+                self.root.after(0, lambda: messagebox.showerror("Extraction Error", f"Failed to extract PDF: {e}"))
+                self.root.after(0, lambda: [
+                    self.extract_open_btn.config(state=tk.NORMAL),
+                    self.extract_export_btn.config(state=tk.NORMAL),
+                    self.extract_status.config(text='')
+                ])
+
+        thread = threading.Thread(target=worker, args=(pdf_path,), daemon=True)
+        thread.start()
+
+    def _export_extracted(self):
+        """Export the last extracted content to the chosen format."""
+        if not self._last_extracted:
+            messagebox.showwarning("No Extraction", "No extracted PDF content to export. Open a PDF first.")
+            return
+
+        fmt = self.extract_format_var.get()
+        default_ext = '.md' if fmt == 'md' else ('.txt' if fmt == 'txt' else '.docx')
+
+        file_path = filedialog.asksaveasfilename(defaultextension=default_ext, filetypes=[(f"{fmt.upper()} files", f"*{default_ext}"), ("All files", "*.*")])
+        if not file_path:
             return
 
         try:
-            # Validate PDF
-            if not PDFExtractorUtils.validate_pdf(pdf_path):
-                messagebox.showerror("Invalid PDF", "The selected file is not a valid PDF.")
-                return
+            content = self._last_extracted['markdown'] if fmt in ('md', 'txt') else self._last_extracted['markdown']
 
-            # Extract text
-            if format_choice.lower() == 'md':
-                extracted_text = self.pdf_extractor.extract_to_markdown(pdf_path)
+            # If docx requested, try to convert using python-docx if available
+            if fmt == 'docx':
+                try:
+                    from docx import Document
+                    doc = Document()
+                    for line in content.split('\n'):
+                        doc.add_paragraph(line)
+                    doc.save(file_path)
+                except Exception:
+                    # fallback to plain text save
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(content)
             else:
-                result = self.pdf_extractor.extract_text(pdf_path)
-                extracted_text = result['text']
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
 
-            # Insert into editor
-            current_text = self.editor.get('1.0', tk.END).strip()
-            if current_text:
-                # Ask if user wants to replace or append
-                choice = messagebox.askyesno(
-                    "Insert Extracted Text",
-                    "Replace current content or append to end?",
-                    detail="Yes = Replace, No = Append"
-                )
-                if choice:
-                    self.editor.delete('1.0', tk.END)
-                else:
-                    extracted_text = f"\n\n{extracted_text}"
-
-            self.editor.insert(tk.END, extracted_text)
-            self.is_modified = True
-            self._update_title()
-
-            # Show success message with stats
-            result = self.pdf_extractor.extract_text(pdf_path)
-            messagebox.showinfo(
-                "Extraction Complete",
-                f"Successfully extracted text from PDF!\n\n"
-                f"Pages: {result['page_count']}\n"
-                f"Characters: {result.get('total_chars', len(result['text']))}\n"
-                f"Format: {format_choice.upper()}"
-            )
-
+            messagebox.showinfo("Export Complete", f"Extracted content exported to:\n{file_path}")
         except Exception as e:
-            messagebox.showerror("Extraction Error", f"Failed to extract PDF text: {e}")
+            messagebox.showerror("Export Error", f"Failed to export extracted content: {e}")
+
+    # Utility operations
+    def _extract_pdf_text(self):
+        """Extract text from PDF and insert into editor."""
+        # Open the PDF Extractor tab so the user can choose a file and export there.
+        try:
+            idx = self._find_tab_index_by_name('PDF Extractor')
+            self.preview_notebook.select(idx)
+        except Exception:
+            messagebox.showinfo("PDF Extractor", "Open the 'PDF Extractor' tab to import and export PDF content.")
 
     def _batch_process(self):
         """Show batch processing dialog."""
@@ -1103,9 +1219,15 @@ https://github.com/kalponic-studio/ks-pdf-studio
             analytics_window.title("Analytics Dashboard")
             analytics_window.geometry("800x600")
 
-            # Analytics text area
-            text_area = scrolledtext.ScrolledText(analytics_window, wrap=tk.WORD,
-                                                font=('Consolas', 10))
+            # Analytics text area (styled to dark theme)
+            text_area = scrolledtext.ScrolledText(
+                analytics_window,
+                wrap=tk.WORD,
+                font=('Consolas', 10),
+                bg=DarkTheme.COLORS['text_bg'],
+                fg=DarkTheme.COLORS['text_fg'],
+                insertbackground=DarkTheme.COLORS['fg_primary']
+            )
             text_area.pack(fill=tk.BOTH, expand=True)
             text_area.insert('1.0', report)
             text_area.config(state=tk.DISABLED)
