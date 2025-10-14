@@ -39,14 +39,14 @@ PART_BACKENDS = {}
 
 def register_part_backend(name: str, backend_class):
     """Register a part splitting backend implementation."""
-    PART_BACKENDS[name] = backend_class
+    PART_BACKENDS[name] = backend_class()
 
 
 def get_part_backend(name: str) -> PartSplitter:
     """Get a part splitting backend instance by name."""
     if name not in PART_BACKENDS:
         raise ValueError(f"Unknown part backend: {name}")
-    return PART_BACKENDS[name]()
+    return PART_BACKENDS[name]
 
 
 def load_template(category: str, templates_dir: str = "templates") -> Dict:

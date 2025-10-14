@@ -2,9 +2,9 @@
 # Global defaults and backend settings
 
 # Backend selections
-objects_backend: sam2          # sam2, m2f (Mask2Former), yolo
-matte_backend: modnet          # modnet, fba, guided
-parts_backend: heuristics       # heuristics, tiny_partnet
+objects_backend: opencv          # mock, opencv, sam2, m2f (Mask2Former), yolo
+matte_backend: guided          # mock, guided, modnet, fba
+parts_backend: heuristic       # mock, heuristic, tiny_partnet
 
 # Template settings
 parts:
