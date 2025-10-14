@@ -13,7 +13,24 @@ except ImportError:
     from ai_seam_checker import AISeamChecker
 
 class ImageChecker:
+    """
+    Advanced seamless texture detection using research-based methodology.
+
+    Implements the TexTile approach with multi-scale analysis, multiple metrics,
+    and optional AI classification for highly accurate seamless texture detection.
+    Supports direction-specific classification: fully seamless, horizontal-only,
+    vertical-only, or not seamless.
+    """
+
     def __init__(self, threshold=10, use_ai=False, model_path=None):
+        """
+        Initialize the ImageChecker with configuration parameters.
+
+        Args:
+            threshold (float): Seamlessness threshold (lower = more seamless)
+            use_ai (bool): Whether to use AI classification for hybrid approach
+            model_path (str): Path to AI model file (if use_ai=True)
+        """
         self.threshold = threshold
         self.use_ai = use_ai
         self.ai_checker = AISeamChecker(model_path) if use_ai else None
