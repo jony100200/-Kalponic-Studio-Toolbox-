@@ -1,0 +1,34 @@
+{
+  "extraction": {
+    "method": "pdfplumber",
+    "preserve_formatting": true,
+    "clean_text": true,
+    "extract_metadata": true,
+    "page_separator": "\n\n---\n\n",
+    "chunk_size": 1000000
+  },
+  "output": {
+    "default_format": "md",
+    "encoding": "utf-8",
+    "add_timestamp": true,
+    "add_stats": true,
+    "create_index": false
+  },
+  "markdown": {
+    "add_toc": false,
+    "heading_style": "atx",
+    "code_blocks": true,
+    "preserve_tables": true
+  },
+  "batch": {
+    "parallel_processing": false,
+    "max_workers": 4,
+    "skip_existing": true,
+    "create_summary": true
+  },
+  "logging": {
+    "level": "INFO",
+    "file_logging": false,
+    "log_file": "ks_pdf_extractor.log"
+  }
+}
