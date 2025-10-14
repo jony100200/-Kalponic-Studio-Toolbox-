@@ -1,13 +1,15 @@
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QLabel, QPushButton, QLineEdit, QFileDialog, QMessageBox,
                                QProgressBar, QFrame, QDialog, QFormLayout, QSpinBox, QDialogButtonBox, QComboBox,
-                               QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QDialogButtonBox)
+                               QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QDialogButtonBox, QSizePolicy)
 from PySide6.QtGui import QPalette, QColor, QFont, QPixmap, QIcon, QKeySequence
 from PySide6.QtCore import Qt, QThread, Signal, QSize
 import cv2
 import os
 import json
 import sys
+# Add parent directory to sys.path for relative imports when run directly
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from .batch_processor import BatchProcessor
 from .image_checker import ImageChecker
 
@@ -69,28 +71,27 @@ class SettingsDialog(QDialog):
         self.preview_line = QLineEdit()
         self.preview_line.setText(self.config.get('preview_folder', 'previews'))
         layout.addRow('Preview folder', self.preview_line)
+        # Preview mode: memory or disk
+        self.preview_mode_combo = QComboBox()
+        self.preview_mode_combo.addItems(['memory', 'disk'])
+        self.preview_mode_combo.setCurrentText(self.config.get('preview_mode', 'memory'))
+        layout.addRow('Preview mode', self.preview_mode_combo)
 
-    # Preview mode: memory or disk
-    self.preview_mode_combo = QComboBox()
-    self.preview_mode_combo.addItems(['memory', 'disk'])
-    self.preview_mode_combo.setCurrentText(self.config.get('preview_mode', 'memory'))
-    layout.addRow('Preview mode', self.preview_mode_combo)
+        # Auto-start on drop
+        from PySide6.QtWidgets import QCheckBox
+        self.auto_start_cb = QCheckBox('Auto-start when file/folder dropped')
+        self.auto_start_cb.setChecked(self.config.get('auto_start_on_drop', True))
+        layout.addRow(self.auto_start_cb)
 
-    # Auto-start on drop
-    from PySide6.QtWidgets import QCheckBox
-    self.auto_start_cb = QCheckBox('Auto-start when file/folder dropped')
-    self.auto_start_cb.setChecked(self.config.get('auto_start_on_drop', True))
-    layout.addRow(self.auto_start_cb)
+        # Thumbnail settings: keep thumbnails in memory only and max size
+        self.thumb_only_cb = QCheckBox('Keep only thumbnails in memory (save RAM)')
+        self.thumb_only_cb.setChecked(self.config.get('thumbnail_only_in_memory', True))
+        layout.addRow(self.thumb_only_cb)
 
-    # Thumbnail settings: keep thumbnails in memory only and max size
-    self.thumb_only_cb = QCheckBox('Keep only thumbnails in memory (save RAM)')
-    self.thumb_only_cb.setChecked(self.config.get('thumbnail_only_in_memory', True))
-    layout.addRow(self.thumb_only_cb)
-
-    self.thumb_size_spin = QSpinBox()
-    self.thumb_size_spin.setRange(32, 2048)
-    self.thumb_size_spin.setValue(int(self.config.get('thumbnail_max_size', 256)))
-    layout.addRow('Thumbnail max size (px)', self.thumb_size_spin)
+        self.thumb_size_spin = QSpinBox()
+        self.thumb_size_spin.setRange(32, 2048)
+        self.thumb_size_spin.setValue(int(self.config.get('thumbnail_max_size', 256)))
+        layout.addRow('Thumbnail max size (px)', self.thumb_size_spin)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.save)
@@ -201,6 +202,9 @@ class PreviewWindow(QDialog):
         self.setMinimumSize(480, 480)
         self.results = []
         self.current_index = 0
+        self._scale = 1.0
+        self._dragging = False
+        self._last_pos = None
 
         layout = QVBoxLayout(self)
         nav = QHBoxLayout()
@@ -211,13 +215,25 @@ class PreviewWindow(QDialog):
         nav.addWidget(self.next_btn)
         layout.addLayout(nav)
 
+        # Scroll area for zooming and panning
+        from PySide6.QtWidgets import QScrollArea
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
         self.image_label.setStyleSheet('background:#2f3134;border:1px solid #505357;border-radius:6px;')
-        layout.addWidget(self.image_label, stretch=1)
+        self.image_label.setBackgroundRole(QPalette.Base)
+        self.image_label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self.scroll.setWidget(self.image_label)
+        layout.addWidget(self.scroll, stretch=1)
 
         self.prev_btn.clicked.connect(self.show_prev)
         self.next_btn.clicked.connect(self.show_next)
+
+        # Bind mouse events for dragging on the image_label
+        self.image_label.mousePressEvent = self._on_mouse_press
+        self.image_label.mouseMoveEvent = self._on_mouse_move
+        self.image_label.mouseReleaseEvent = self._on_mouse_release
 
     def set_results(self, results):
         self.results = results or []
@@ -238,14 +254,76 @@ class PreviewWindow(QDialog):
             self.image_label.clear()
             return
         preview_bytes = self.results[self.current_index].get('preview_bytes', b'')
-        if preview_bytes:
+        thumb_bytes = self.results[self.current_index].get('thumb_bytes', b'')
+        use_bytes = preview_bytes if preview_bytes else thumb_bytes
+        if use_bytes:
             pix = QPixmap()
-            pix.loadFromData(preview_bytes, format='PNG')
-            w = max(20, self.width() - 40)
-            h = max(20, self.height() - 80)
-            self.image_label.setPixmap(pix.scaled(w, h, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            pix.loadFromData(use_bytes, format='PNG')
+            self._orig_pixmap = pix
+            self._scale = 1.0
+            self._apply_scale()
         else:
             self.image_label.clear()
+
+    def _apply_scale(self):
+        if not hasattr(self, '_orig_pixmap') or self._orig_pixmap.isNull():
+            return
+        old_h = self.scroll.horizontalScrollBar().value()
+        old_v = self.scroll.verticalScrollBar().value()
+        vp_w = self.scroll.viewport().width()
+        vp_h = self.scroll.viewport().height()
+
+        # center before scale
+        center_x = old_h + vp_w / 2
+        center_y = old_v + vp_h / 2
+
+        new_w = max(1, int(self._orig_pixmap.width() * self._scale))
+        new_h = max(1, int(self._orig_pixmap.height() * self._scale))
+        scaled = self._orig_pixmap.scaled(new_w, new_h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        self.image_label.setPixmap(scaled)
+        self.image_label.resize(scaled.size())
+
+        # adjust scrollbars to keep same center
+        ratio = (self._scale)
+        new_center_x = center_x * ratio
+        new_center_y = center_y * ratio
+        hbar = self.scroll.horizontalScrollBar()
+        vbar = self.scroll.verticalScrollBar()
+        hbar.setValue(int(new_center_x - vp_w / 2))
+        vbar.setValue(int(new_center_y - vp_h / 2))
+
+    def wheelEvent(self, event):
+        # Zoom in/out with wheel
+        delta = event.angleDelta().y()
+        if delta == 0:
+            return
+        factor = 1.15 if delta > 0 else 0.85
+        new_scale = self._scale * factor
+        # clamp
+        new_scale = max(0.05, min(8.0, new_scale))
+        self._scale = new_scale
+        self._apply_scale()
+
+    def _on_mouse_press(self, event):
+        if event.button() == Qt.LeftButton:
+            self._dragging = True
+            self._last_pos = event.globalPos()
+            event.accept()
+
+    def _on_mouse_move(self, event):
+        if not self._dragging:
+            return
+        delta = event.globalPos() - self._last_pos
+        self._last_pos = event.globalPos()
+        hbar = self.scroll.horizontalScrollBar()
+        vbar = self.scroll.verticalScrollBar()
+        hbar.setValue(hbar.value() - delta.x())
+        vbar.setValue(vbar.value() - delta.y())
+        event.accept()
+
+    def _on_mouse_release(self, event):
+        self._dragging = False
+        event.accept()
 
     def show_prev(self):
         if not self.results:
@@ -286,12 +364,12 @@ class SeamlessCheckerGUI(QMainWindow):
         self.setWindowFlag(Qt.FramelessWindowHint, True)
         self.config = self.load_config()
         self.checker = ImageChecker(self.config.get('seam_threshold', 10))
-    self.processor = BatchProcessor(self.checker, self.config.get('supported_formats', ['.png', '.jpg', '.jpeg']), self.config.get('preview_folder', 'previews'))
-    # Apply preview_mode from config (memory or disk)
-    self.processor.preview_mode = self.config.get('preview_mode', 'memory')
-    # Thumbnail settings
-    self.processor.thumbnail_only_in_memory = self.config.get('thumbnail_only_in_memory', True)
-    self.processor.thumbnail_max_size = int(self.config.get('thumbnail_max_size', 256))
+        self.processor = BatchProcessor(self.checker, self.config.get('supported_formats', ['.png', '.jpg', '.jpeg']), self.config.get('preview_folder', 'previews'))
+        # Apply preview_mode from config (memory or disk)
+        self.processor.preview_mode = self.config.get('preview_mode', 'memory')
+        # Thumbnail settings
+        self.processor.thumbnail_only_in_memory = self.config.get('thumbnail_only_in_memory', True)
+        self.processor.thumbnail_max_size = int(self.config.get('thumbnail_max_size', 256))
         self.worker = None
         self.last_results = []
         self.setup_dark_theme()
@@ -525,7 +603,7 @@ class SeamlessCheckerGUI(QMainWindow):
             # adjust row height
             self.results_table.setRowHeight(row, 72)
 
-    QMessageBox.information(self, 'Done', f'Processed {len(results)} images.')
+        QMessageBox.information(self, 'Done', f'Processed {len(results)} images.')
 
     def _on_table_click(self, row, column):
         # get preview_path stored in filename cell's UserRole
