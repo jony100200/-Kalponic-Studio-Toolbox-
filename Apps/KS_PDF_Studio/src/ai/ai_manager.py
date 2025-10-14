@@ -69,6 +69,17 @@ class AIModelManager:
 
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
+        # Ensure HuggingFace/transformers uses the project-local cache by default.
+        # Transformers honors the TRANSFORMERS_CACHE env var; set it here so
+        # downloads go into the application's `models/` folder rather than
+        # the user's global cache.
+        try:
+            os.environ.setdefault('TRANSFORMERS_CACHE', str(self.cache_dir))
+        except Exception:
+            # If environment modification fails for some reason, continue
+            # but warn in stdout so devs can notice.
+            warnings.warn(f"Failed to set TRANSFORMERS_CACHE to {self.cache_dir}")
+
         # Determine device
         if device == 'auto':
             self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -172,10 +183,12 @@ class AIModelManager:
         model_name = self.MODELS['distilbart']['name']
 
         # Create summarization pipeline (downloads model automatically)
+        # Pass cache_dir explicitly to ensure files are stored in project cache
         self._models['distilbart'] = pipeline(
             'summarization',
             model=model_name,
-            device=0 if self.device == 'cuda' else -1
+            device=0 if self.device == 'cuda' else -1,
+            cache_dir=str(self.cache_dir)
         )
 
     def _download_clip(self, show_progress: bool = True) -> None:
@@ -183,8 +196,9 @@ class AIModelManager:
         model_name = self.MODELS['clip']['name']
 
         # Download model and processor
-        self._models['clip'] = CLIPModel.from_pretrained(model_name)
-        self._processors['clip'] = CLIPProcessor.from_pretrained(model_name)
+        # Use cache_dir so models are saved into the project-local cache
+        self._models['clip'] = CLIPModel.from_pretrained(model_name, cache_dir=str(self.cache_dir))
+        self._processors['clip'] = CLIPProcessor.from_pretrained(model_name, cache_dir=str(self.cache_dir))
 
         # Move to device
         if self.device == 'cuda':
