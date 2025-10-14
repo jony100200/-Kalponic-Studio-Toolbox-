@@ -15,6 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
 from main_gui import DarkTheme
+from src.theme import COLORS as THEME_COLORS
 
 
 def create_demo_window():
@@ -172,7 +173,7 @@ hello_world()
                                padding=10)
     info_frame.pack(fill=tk.X, pady=(20, 0))
 
-    colors_info = """
+    colors_info = f"""
 🎨 Dark Theme Features:
 • Muted color palette for eye comfort
 • High contrast for readability
@@ -180,11 +181,11 @@ hello_world()
 • Professional appearance
 
 Color Scheme:
-• Background: Deep charcoal (#1e1e1e)
-• Secondary: Medium gray (#2d2d2d)
-• Text: Light gray (#e0e0e0)
-• Accent: Muted blue (#4a9eff)
-• Borders: Subtle gray (#404040)
+• Background: Deep charcoal ({THEME_COLORS['bg_primary']})
+• Secondary: Medium gray ({THEME_COLORS['bg_secondary']})
+• Text: Light gray ({THEME_COLORS['fg_primary']})
+• Accent: Muted blue ({THEME_COLORS['fg_accent']})
+• Borders: Subtle gray ({THEME_COLORS['border']})
 """
 
     info_text = scrolledtext.ScrolledText(info_frame, wrap=tk.WORD,

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 import os
 import sys
+import fnmatch
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
@@ -38,27 +39,10 @@ class DarkTheme:
     """Dark theme configuration for KS PDF Studio."""
 
     # Color palette - muted colors easy on eyes
-    COLORS = {
-        'bg_primary': '#1e1e1e',      # Main background
-        'bg_secondary': '#2d2d2d',    # Secondary backgrounds
-        'bg_tertiary': '#3a3a3a',     # Tertiary backgrounds
-        'fg_primary': '#e0e0e0',      # Primary text
-        'fg_secondary': '#b0b0b0',    # Secondary text
-        'fg_accent': '#4a9eff',       # Accent color (muted blue)
-        'border': '#404040',          # Borders
-        'highlight': '#505050',       # Highlights
-        'success': '#4a9e4a',         # Success color
-        'warning': '#9e9e4a',         # Warning color
-        'error': '#9e4a4a',           # Error color
-        'button_bg': '#404040',       # Button background
-        'button_fg': '#e0e0e0',       # Button text
-        'entry_bg': '#2d2d2d',        # Entry background
-        'entry_fg': '#e0e0e0',        # Entry text
-        'text_bg': '#1a1a1a',         # Text widget background
-        'text_fg': '#e0e0e0',         # Text widget text
-        'scrollbar_bg': '#404040',    # Scrollbar background
-        'scrollbar_fg': '#606060',    # Scrollbar foreground
-    }
+    # COLORS are centralized in src/theme.py. Keep an empty placeholder here
+    # so the class exists; the real values are loaded (and override this)
+    # further down when importing the centralized theme.
+    COLORS = {}
 
     @staticmethod
     def apply_theme(root):
@@ -87,11 +71,14 @@ class DarkTheme:
 
         # Buttons
         style.configure('TButton', background=DarkTheme.COLORS['button_bg'], foreground=DarkTheme.COLORS['button_fg'], borderwidth=0, focusthickness=3)
-        style.map('TButton', background=[('active', DarkTheme.COLORS['highlight'])], foreground=[('disabled', DarkTheme.COLORS['fg_secondary'])])
+        style.map('TButton', background=[('active', DarkTheme.COLORS.get('button_active_bg', DarkTheme.COLORS['highlight']))], foreground=[('disabled', DarkTheme.COLORS['fg_secondary'])])
 
         # Entries / Combobox
         style.configure('TEntry', fieldbackground=DarkTheme.COLORS['entry_bg'], foreground=DarkTheme.COLORS['entry_fg'])
         style.configure('TCombobox', fieldbackground=DarkTheme.COLORS['entry_bg'], foreground=DarkTheme.COLORS['entry_fg'])
+        # Entry selection colors
+        root.option_add('*Entry.selectBackground', DarkTheme.COLORS.get('entry_select_bg', DarkTheme.COLORS.get('select_bg', DarkTheme.COLORS['fg_accent'])))
+        root.option_add('*Entry.selectForeground', DarkTheme.COLORS.get('entry_select_fg', DarkTheme.COLORS.get('select_fg', DarkTheme.COLORS['bg_primary'])))
 
         # Notebook / Tabs
         style.configure('TNotebook', background=DarkTheme.COLORS['bg_primary'], tabmargins=[2, 5, 2, 0], borderwidth=0)
@@ -110,38 +97,86 @@ class DarkTheme:
         # Menus and classic widgets don't use ttk styles, set via option_add
         root.option_add('*Menu.background', DarkTheme.COLORS['bg_secondary'])
         root.option_add('*Menu.foreground', DarkTheme.COLORS['fg_primary'])
-        root.option_add('*Menu.activeBackground', DarkTheme.COLORS['highlight'])
-        root.option_add('*Menu.activeForeground', DarkTheme.COLORS['fg_primary'])
+        root.option_add('*Menu.activeBackground', DarkTheme.COLORS.get('menu_active_bg', DarkTheme.COLORS['highlight']))
+        root.option_add('*Menu.activeForeground', DarkTheme.COLORS.get('menu_active_fg', DarkTheme.COLORS['fg_primary']))
 
-        # Text widgets
+        # Text widgets and selection colors (muted, non-white selection)
         root.option_add('*Text.background', DarkTheme.COLORS['text_bg'])
         root.option_add('*Text.foreground', DarkTheme.COLORS['text_fg'])
-        root.option_add('*Text.selectBackground', DarkTheme.COLORS['fg_accent'])
-        root.option_add('*Text.selectForeground', DarkTheme.COLORS['bg_primary'])
+        root.option_add('*Text.selectBackground', DarkTheme.COLORS.get('select_bg', DarkTheme.COLORS['fg_accent']))
+        root.option_add('*Text.selectForeground', DarkTheme.COLORS.get('select_fg', DarkTheme.COLORS['bg_primary']))
         root.option_add('*Text.insertBackground', DarkTheme.COLORS['fg_primary'])
 
-        # Listbox styling (classic widget)
+        # Listbox styling (classic widget) - use muted selection
         root.option_add('*Listbox.background', DarkTheme.COLORS['text_bg'])
         root.option_add('*Listbox.foreground', DarkTheme.COLORS['text_fg'])
-        root.option_add('*Listbox.selectBackground', DarkTheme.COLORS['fg_accent'])
-        root.option_add('*Listbox.selectForeground', DarkTheme.COLORS['bg_primary'])
+        root.option_add('*Listbox.selectBackground', DarkTheme.COLORS.get('select_bg', DarkTheme.COLORS['fg_accent']))
+        root.option_add('*Listbox.selectForeground', DarkTheme.COLORS.get('select_fg', DarkTheme.COLORS['bg_primary']))
 
-        # Scrollbar
-        root.option_add('*Scrollbar.background', DarkTheme.COLORS['scrollbar_bg'])
-        root.option_add('*Scrollbar.troughColor', DarkTheme.COLORS['bg_secondary'])
-        root.option_add('*Scrollbar.activeBackground', DarkTheme.COLORS['scrollbar_fg'])
+        # Scrollbar (thumb and trough)
+        root.option_add('*Scrollbar.background', DarkTheme.COLORS.get('scrollbar_bg', DarkTheme.COLORS['bg_secondary']))
+        root.option_add('*Scrollbar.troughColor', DarkTheme.COLORS.get('scroll_track', DarkTheme.COLORS['bg_secondary']))
+        root.option_add('*Scrollbar.activeBackground', DarkTheme.COLORS.get('scroll_thumb', DarkTheme.COLORS['scrollbar_fg']))
+        # Ttk scrollbar style when available
+        try:
+            style.configure('Vertical.TScrollbar', background=DarkTheme.COLORS.get('scroll_thumb', DarkTheme.COLORS['scrollbar_fg']), troughcolor=DarkTheme.COLORS.get('scroll_track', DarkTheme.COLORS['bg_secondary']))
+            style.configure('Horizontal.TScrollbar', background=DarkTheme.COLORS.get('scroll_thumb', DarkTheme.COLORS['scrollbar_fg']), troughcolor=DarkTheme.COLORS.get('scroll_track', DarkTheme.COLORS['bg_secondary']))
+        except Exception:
+            pass
 
         # Canvas and labelframe borders
         style.configure('TLabelframe', background=DarkTheme.COLORS['bg_primary'], bordercolor=DarkTheme.COLORS['border'])
         style.configure('TLabelframe.Label', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary'])
+
+        # Treeview selection (where used)
+        try:
+            style.configure('Treeview', background=DarkTheme.COLORS['bg_secondary'], foreground=DarkTheme.COLORS['fg_primary'], fieldbackground=DarkTheme.COLORS['bg_secondary'])
+            style.map('Treeview', background=[('selected', DarkTheme.COLORS.get('tree_selected_bg', DarkTheme.COLORS.get('select_bg', DarkTheme.COLORS['fg_accent'])))], foreground=[('selected', DarkTheme.COLORS.get('tree_selected_fg', DarkTheme.COLORS.get('select_fg', DarkTheme.COLORS['bg_primary'])))])
+        except Exception:
+            pass
 
         # Ensure classic separator widgets and frames have dark borders
         root.option_add('*Separator.background', DarkTheme.COLORS['border'])
         root.option_add('*Frame.background', DarkTheme.COLORS['bg_primary'])
 
         # Remove focus highlight rings that can appear white on some Windows themes
-        root.option_add('*HighlightColor', DarkTheme.COLORS['bg_primary'])
-        root.option_add('*HighlightBackground', DarkTheme.COLORS['bg_primary'])
+        root.option_add('*HighlightColor', DarkTheme.COLORS.get('focus_ring', DarkTheme.COLORS['bg_primary']))
+        root.option_add('*HighlightBackground', DarkTheme.COLORS.get('focus_ring', DarkTheme.COLORS['bg_primary']))
+
+
+# Use centralized theme tokens when available
+try:
+    # Try importing as a top-level module (when src is on sys.path)
+    import theme as _theme
+    DarkTheme.COLORS = getattr(_theme, 'COLORS', {}) or DarkTheme.COLORS
+except Exception:
+    try:
+        # Try package-relative import (when running as package)
+        from .theme import COLORS as THEME_COLORS
+        DarkTheme.COLORS = THEME_COLORS
+    except Exception:
+        # Fallback defaults to guarantee keys exist (used when running tests or imports from different CWDs)
+        DarkTheme.COLORS = {
+            'bg_primary': '#1e1e1e',
+            'bg_secondary': '#2d2d2d',
+            'bg_tertiary': '#3a3a3a',
+            'fg_primary': '#e0e0e0',
+            'fg_secondary': '#b0b0b0',
+            'fg_accent': '#4a9eff',
+            'border': '#404040',
+            'highlight': '#505050',
+            'success': '#4a9e4a',
+            'warning': '#9e9e4a',
+            'error': '#9e4a4a',
+            'button_bg': '#404040',
+            'button_fg': '#e0e0e0',
+            'entry_bg': '#2d2d2d',
+            'entry_fg': '#e0e0e0',
+            'text_bg': '#1a1a1a',
+            'text_fg': '#e0e0e0',
+            'scrollbar_bg': '#404040',
+            'scrollbar_fg': '#606060',
+        }
 
 
 class KSPDFStudioApp:
@@ -845,9 +880,162 @@ class KSPDFStudioApp:
         self.extract_status = ttk.Label(extractor_tab, text="", background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_secondary'])
         self.extract_status.pack(fill=tk.X, pady=(4, 0))
 
+    def _themed_open_file(self, title="Open", filetypes=None, initialdir=None) -> Optional[str]:
+        """A minimal, themed file-open dialog implemented as a Toplevel to avoid native OS chrome.
+        Returns the selected full path or None if cancelled.
+        filetypes: list of (desc, pattern) e.g. [("PDF files","*.pdf")]
+        """
+        if filetypes is None:
+            filetypes = [("All files", "*")]
+
+        dlg = tk.Toplevel(self.root)
+        dlg.transient(self.root)
+        dlg.grab_set()
+        dlg.title(title)
+        dlg.configure(bg=DarkTheme.COLORS['bg_primary'])
+        dlg.geometry('720x420')
+
+        sel = {'path': None}
+
+        path_var = tk.StringVar(value=initialdir or os.getcwd())
+
+        top_bar = ttk.Frame(dlg)
+        top_bar.pack(fill=tk.X, padx=8, pady=8)
+        ttk.Label(top_bar, text='Path:', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary']).pack(side=tk.LEFT)
+        path_entry = ttk.Entry(top_bar, textvariable=path_var)
+        path_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(6, 6))
+
+        def list_dir(path):
+            try:
+                entries = sorted(os.listdir(path), key=lambda x: (not os.path.isdir(os.path.join(path, x)), x.lower()))
+            except Exception:
+                entries = []
+            lb.delete(0, tk.END)
+            # parent dir
+            parent = os.path.dirname(path)
+            if parent and parent != path:
+                lb.insert(tk.END, '..')
+            for name in entries:
+                full = os.path.join(path, name)
+                if os.path.isdir(full):
+                    lb.insert(tk.END, f'[D] {name}')
+                else:
+                    # filter by filetypes
+                    keep = False
+                    for _, pat in filetypes:
+                        if pat == '*' or fnmatch.fnmatch(name, pat.replace('*', '*')):
+                            keep = True
+                            break
+                    if keep:
+                        lb.insert(tk.END, name)
+
+        body = ttk.Frame(dlg)
+        body.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0, 8))
+
+        lb = tk.Listbox(body, bg=DarkTheme.COLORS['text_bg'], fg=DarkTheme.COLORS['text_fg'], selectbackground=DarkTheme.COLORS.get('select_bg', DarkTheme.COLORS['fg_accent']), selectforeground=DarkTheme.COLORS.get('select_fg', DarkTheme.COLORS['bg_primary']))
+        vscroll = ttk.Scrollbar(body, orient=tk.VERTICAL, command=lb.yview)
+        lb.config(yscrollcommand=vscroll.set)
+        lb.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        vscroll.pack(side=tk.LEFT, fill=tk.Y)
+
+        def on_refresh(_=None):
+            p = path_var.get()
+            if not p:
+                p = os.getcwd()
+                path_var.set(p)
+            list_dir(p)
+
+        def on_activate(evt=None):
+            sel_idx = lb.curselection()
+            if not sel_idx:
+                return
+            name = lb.get(sel_idx[0])
+            cur = path_var.get()
+            if name == '..':
+                newp = os.path.dirname(cur) or cur
+                path_var.set(newp)
+                on_refresh()
+                return
+            if name.startswith('[D] '):
+                dirname = name[4:]
+                newp = os.path.join(cur, dirname)
+                path_var.set(newp)
+                on_refresh()
+                return
+            # file selected
+            selected = os.path.join(cur, name)
+            sel['path'] = selected
+            dlg.destroy()
+
+        lb.bind('<Double-Button-1>', on_activate)
+
+        btn_bar = ttk.Frame(dlg)
+        btn_bar.pack(fill=tk.X, padx=8, pady=(0, 8))
+        ttk.Button(btn_bar, text='Refresh', command=on_refresh).pack(side=tk.LEFT)
+        ttk.Button(btn_bar, text='Open', command=on_activate).pack(side=tk.RIGHT)
+        ttk.Button(btn_bar, text='Cancel', command=dlg.destroy).pack(side=tk.RIGHT, padx=(0, 6))
+
+        # initial populate
+        on_refresh()
+
+        # allow Enter to open
+        dlg.bind('<Return>', on_activate)
+
+        self.root.wait_window(dlg)
+        return sel['path']
+
+    def _themed_save_as(self, title='Save As', defaultextension='.md', initialdir=None) -> Optional[str]:
+        """Minimal themed Save As dialog. Returns full path or None."""
+        dlg = tk.Toplevel(self.root)
+        dlg.transient(self.root)
+        dlg.grab_set()
+        dlg.title(title)
+        dlg.configure(bg=DarkTheme.COLORS['bg_primary'])
+        dlg.geometry('640x220')
+
+        result = {'path': None}
+
+        dir_var = tk.StringVar(value=initialdir or os.getcwd())
+        name_var = tk.StringVar(value='untitled' + (defaultextension or ''))
+
+        frm = ttk.Frame(dlg)
+        frm.pack(fill=tk.BOTH, expand=True, padx=12, pady=12)
+        ttk.Label(frm, text='Folder:', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary']).grid(row=0, column=0, sticky=tk.W)
+        dir_entry = ttk.Entry(frm, textvariable=dir_var)
+        dir_entry.grid(row=0, column=1, sticky='we', padx=6)
+        ttk.Label(frm, text='Filename:', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary']).grid(row=1, column=0, sticky=tk.W, pady=(8,0))
+        name_entry = ttk.Entry(frm, textvariable=name_var)
+        name_entry.grid(row=1, column=1, sticky='we', padx=6, pady=(8,0))
+
+        frm.columnconfigure(1, weight=1)
+
+        def on_ok():
+            folder = dir_var.get() or os.getcwd()
+            name = name_var.get() or ('untitled' + (defaultextension or ''))
+            if not os.path.isdir(folder):
+                try:
+                    os.makedirs(folder, exist_ok=True)
+                except Exception:
+                    messagebox.showerror('Save Error', 'Cannot create folder')
+                    return
+            full = os.path.join(folder, name)
+            # append extension if missing
+            if defaultextension and not full.lower().endswith(defaultextension.lower()):
+                full = full + defaultextension
+            result['path'] = full
+            dlg.destroy()
+
+        btns = ttk.Frame(dlg)
+        btns.pack(fill=tk.X, padx=12, pady=(0,12))
+        ttk.Button(btns, text='Save', command=on_ok).pack(side=tk.RIGHT)
+        ttk.Button(btns, text='Cancel', command=dlg.destroy).pack(side=tk.RIGHT, padx=(0,8))
+
+        self.root.wait_window(dlg)
+        return result['path']
+
     def _open_pdf_for_extraction(self):
         """Open a PDF and extract text into the extractor preview."""
-        pdf_path = filedialog.askopenfilename(title="Open PDF for Extraction", filetypes=[("PDF files", "*.pdf")])
+        pdf_path = self._themed_open_file(title="Open PDF for Extraction", filetypes=[("PDF files", "*.pdf")])
         if not pdf_path:
             return
 
@@ -913,7 +1101,8 @@ class KSPDFStudioApp:
         fmt = self.extract_format_var.get()
         default_ext = '.md' if fmt == 'md' else ('.txt' if fmt == 'txt' else '.docx')
 
-        file_path = filedialog.asksaveasfilename(defaultextension=default_ext, filetypes=[(f"{fmt.upper()} files", f"*{default_ext}"), ("All files", "*.*")])
+        # Use themed save-as to avoid native save dialog chrome
+        file_path = self._themed_save_as(defaultextension=default_ext, initialdir=os.path.dirname(self._last_extracted.get('path', os.getcwd())))
         if not file_path:
             return
 
