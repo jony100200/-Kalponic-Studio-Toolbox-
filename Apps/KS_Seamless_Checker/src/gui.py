@@ -1,7 +1,8 @@
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QLabel, QPushButton, QLineEdit, QFileDialog, QMessageBox,
                                QProgressBar, QFrame, QDialog, QFormLayout, QSpinBox, QDialogButtonBox, QComboBox,
-                               QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QDialogButtonBox, QSizePolicy)
+                               QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QDialogButtonBox, QSizePolicy,
+                               QCheckBox)
 from PySide6.QtGui import QPalette, QColor, QFont, QPixmap, QIcon, QKeySequence
 from PySide6.QtCore import Qt, QThread, Signal, QSize
 import cv2
@@ -55,6 +56,11 @@ class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle('Settings')
+        self.setModal(True)
+
+        # Apply dark theme
+        self.setup_dark_theme()
+
         config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json')
         if not os.path.exists(config_path):
             self.config = {}
@@ -63,40 +69,102 @@ class SettingsDialog(QDialog):
                 self.config = json.load(f)
 
         layout = QFormLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+
+        # Seam threshold
         self.spin = QSpinBox()
         self.spin.setRange(0, 100000)
         self.spin.setValue(self.config.get('seam_threshold', 10))
-        layout.addRow('Seam threshold', self.spin)
+        self.spin.setStyleSheet('background: #35363a; color: #e6e6e6; padding:6px; border-radius:6px;')
+        layout.addRow(self.create_label('Seam threshold'), self.spin)
 
+        # Preview folder
         self.preview_line = QLineEdit()
         self.preview_line.setText(self.config.get('preview_folder', 'previews'))
-        layout.addRow('Preview folder', self.preview_line)
-        # Preview mode: memory or disk
+        self.preview_line.setStyleSheet('background: #35363a; color: #e6e6e6; padding:6px; border-radius:6px;')
+        layout.addRow(self.create_label('Preview folder'), self.preview_line)
+
+        # Preview mode
         self.preview_mode_combo = QComboBox()
         self.preview_mode_combo.addItems(['memory', 'disk'])
         self.preview_mode_combo.setCurrentText(self.config.get('preview_mode', 'memory'))
-        layout.addRow('Preview mode', self.preview_mode_combo)
+        self.preview_mode_combo.setStyleSheet('background: #35363a; color: #e6e6e6; padding:6px; border-radius:6px;')
+        layout.addRow(self.create_label('Preview mode'), self.preview_mode_combo)
 
         # Auto-start on drop
-        from PySide6.QtWidgets import QCheckBox
         self.auto_start_cb = QCheckBox('Auto-start when file/folder dropped')
         self.auto_start_cb.setChecked(self.config.get('auto_start_on_drop', True))
+        self.auto_start_cb.setStyleSheet('color: #e6e6e6;')
         layout.addRow(self.auto_start_cb)
 
-        # Thumbnail settings: keep thumbnails in memory only and max size
+        # Thumbnail settings
         self.thumb_only_cb = QCheckBox('Keep only thumbnails in memory (save RAM)')
         self.thumb_only_cb.setChecked(self.config.get('thumbnail_only_in_memory', True))
+        self.thumb_only_cb.setStyleSheet('color: #e6e6e6;')
         layout.addRow(self.thumb_only_cb)
 
         self.thumb_size_spin = QSpinBox()
         self.thumb_size_spin.setRange(32, 2048)
         self.thumb_size_spin.setValue(int(self.config.get('thumbnail_max_size', 256)))
-        layout.addRow('Thumbnail max size (px)', self.thumb_size_spin)
+        self.thumb_size_spin.setStyleSheet('background: #35363a; color: #e6e6e6; padding:6px; border-radius:6px;')
+        layout.addRow(self.create_label('Thumbnail max size (px)'), self.thumb_size_spin)
 
+        # AI seam detection
+        self.ai_seam_cb = QCheckBox('Use AI for seam detection (requires PyTorch)')
+        self.ai_seam_cb.setChecked(self.config.get('use_ai_seam_detection', False))
+        self.ai_seam_cb.setStyleSheet('color: #e6e6e6;')
+        layout.addRow(self.ai_seam_cb)
+
+        # Buttons
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.save)
         buttons.rejected.connect(self.reject)
+        buttons.setStyleSheet("""
+            QPushButton {
+                background: #4b5056;
+                color: #e6e6e6;
+                padding: 8px 16px;
+                border-radius: 6px;
+                border: none;
+            }
+            QPushButton:hover {
+                background: #5a6066;
+            }
+        """)
         layout.addRow(buttons)
+
+    def create_label(self, text):
+        """Create a styled label for form rows."""
+        label = QLabel(text)
+        label.setStyleSheet('color: #dcdcdc; font-weight: bold;')
+        return label
+
+    def setup_dark_theme(self):
+        """Apply the same dark theme as the main window."""
+        palette = QPalette()
+        accent = self.parent().config.get('accent_color', '#C49A6C') if self.parent() else '#C49A6C'
+        palette.setColor(QPalette.Window, QColor(40, 42, 45))
+        palette.setColor(QPalette.WindowText, QColor(230, 230, 230))
+        palette.setColor(QPalette.Base, QColor(50, 52, 56))
+        palette.setColor(QPalette.AlternateBase, QColor(43, 45, 48))
+        palette.setColor(QPalette.ToolTipBase, QColor(230, 230, 230))
+        palette.setColor(QPalette.ToolTipText, QColor(20, 20, 20))
+        palette.setColor(QPalette.Text, QColor(225, 225, 225))
+        palette.setColor(QPalette.Button, QColor(60, 62, 66))
+        palette.setColor(QPalette.ButtonText, QColor(230, 230, 230))
+        palette.setColor(QPalette.BrightText, QColor(220, 80, 80))
+        try:
+            r = int(accent[1:3], 16)
+            g = int(accent[3:5], 16)
+            b = int(accent[5:7], 16)
+            palette.setColor(QPalette.Link, QColor(r, g, b))
+            palette.setColor(QPalette.Highlight, QColor(r, g, b))
+            palette.setColor(QPalette.HighlightedText, QColor(20, 20, 20))
+        except Exception:
+            pass
+        self.setPalette(palette)
+        self.setStyleSheet("QDialog{background-color: #28282D;}")
 
     def save(self):
         config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json')
@@ -106,6 +174,7 @@ class SettingsDialog(QDialog):
         self.config['auto_start_on_drop'] = bool(self.auto_start_cb.isChecked())
         self.config['thumbnail_only_in_memory'] = bool(self.thumb_only_cb.isChecked())
         self.config['thumbnail_max_size'] = int(self.thumb_size_spin.value())
+        self.config['use_ai_seam_detection'] = bool(self.ai_seam_cb.isChecked())
         with open(config_path, 'w') as f:
             json.dump(self.config, f, indent=2)
         self.accept()
@@ -362,8 +431,12 @@ class SeamlessCheckerGUI(QMainWindow):
         self.setAcceptDrops(True)
         # Use a frameless window so we can draw a custom header
         self.setWindowFlag(Qt.FramelessWindowHint, True)
+        self.config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json')
         self.config = self.load_config()
-        self.checker = ImageChecker(self.config.get('seam_threshold', 10))
+        self.checker = ImageChecker(
+            threshold=self.config.get('seam_threshold', 10),
+            use_ai=self.config.get('use_ai_seam_detection', False)
+        )
         self.processor = BatchProcessor(self.checker, self.config.get('supported_formats', ['.png', '.jpg', '.jpeg']), self.config.get('preview_folder', 'previews'))
         # Apply preview_mode from config (memory or disk)
         self.processor.preview_mode = self.config.get('preview_mode', 'memory')
@@ -372,6 +445,8 @@ class SeamlessCheckerGUI(QMainWindow):
         self.processor.thumbnail_max_size = int(self.config.get('thumbnail_max_size', 256))
         self.worker = None
         self.last_results = []
+        self.footer_label = None
+        self.footer_progress = None
         self.setup_dark_theme()
         self.setup_ui()
 
@@ -386,6 +461,13 @@ class SeamlessCheckerGUI(QMainWindow):
             'preview_folder': 'previews',
             'accent_color': '#C49A6C'
         }
+
+    def save_last_path(self, path):
+        """Save the last used folder/file path to config."""
+        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json')
+        self.config['last_folder_path'] = path
+        with open(config_path, 'w') as f:
+            json.dump(self.config, f, indent=2)
 
     def setup_dark_theme(self):
         palette = QPalette()
@@ -435,6 +517,14 @@ class SeamlessCheckerGUI(QMainWindow):
         self.folder_entry.setPlaceholderText('Enter or browse folder path')
         self.folder_entry.setToolTip('Path to folder containing images')
         self.folder_entry.setStyleSheet('background: #35363a; color: #e6e6e6; padding:6px; border-radius:6px;')
+        # Enable drag and drop on the folder entry
+        self.folder_entry.setAcceptDrops(True)
+        self.folder_entry.dragEnterEvent = self._folder_drag_enter
+        self.folder_entry.dropEvent = self._folder_drop
+        # Load last folder path
+        last_path = self.config.get('last_folder_path', '')
+        if last_path:
+            self.folder_entry.setText(last_path)
         folder_layout.addWidget(self.folder_entry)
 
         browse_btn = QPushButton()
@@ -460,18 +550,9 @@ class SeamlessCheckerGUI(QMainWindow):
         process_button.setStyleSheet(f"QPushButton{{background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 {accent}, stop:1 {accent}); color:#0f1416; padding:8px 12px; border-radius:8px;}} QPushButton:hover{{opacity:0.95;}}")
         actions_layout.addWidget(process_button)
 
-        export_button = QPushButton('Export CSV')
-        export_button.setToolTip('Export last batch results to CSV')
-        export_button.clicked.connect(self.export_csv)
-        export_button.setStyleSheet("QPushButton{background:#4b5056;color:#e6e6e6;padding:8px;border-radius:6px;} QPushButton:hover{background:#5a6066}")
-        actions_layout.addWidget(export_button)
-
         layout.addLayout(actions_layout)
 
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setVisible(False)
-        self.progress_bar.setStyleSheet(f"QProgressBar{{background:#3b3b3b; color:#e6e6e6; border-radius:6px; height:12px;}} QProgressBar::chunk{{background:{accent}; border-radius:6px}}")
-        layout.addWidget(self.progress_bar)
+        # Remove old progress_bar and export_button, they will be in footer
 
         results_layout = QHBoxLayout()
 
@@ -514,6 +595,25 @@ class SeamlessCheckerGUI(QMainWindow):
         results_layout.addWidget(right_frame, stretch=1)
         layout.addLayout(results_layout)
 
+        # Footer bar
+        footer_layout = QHBoxLayout()
+        self.footer_label = QLabel('Ready')
+        self.footer_label.setStyleSheet('color: #dcdcdc;')
+        footer_layout.addWidget(self.footer_label)
+        footer_layout.addStretch()
+        self.footer_progress = QProgressBar()
+        self.footer_progress.setVisible(False)
+        self.footer_progress.setStyleSheet(f"QProgressBar{{background:#3b3b3b; color:#e6e6e6; border-radius:6px; height:12px;}} QProgressBar::chunk{{background:{accent}; border-radius:6px}}")
+        footer_layout.addWidget(self.footer_progress)
+        export_btn = QPushButton('Export CSV')
+        export_btn.setToolTip('Export last batch results to CSV')
+        export_btn.clicked.connect(self.export_csv)
+        export_btn.setStyleSheet("QPushButton{background:#4b5056;color:#e6e6e6;padding:8px;border-radius:6px;} QPushButton:hover{background:#5a6066}")
+        footer_layout.addWidget(export_btn)
+        footer_widget = QWidget()
+        footer_widget.setLayout(footer_layout)
+        layout.addWidget(footer_widget)
+
         settings_btn = QPushButton()
         settings_btn.setFixedSize(36, 28)
         settings_icon = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons', 'settings.svg')
@@ -527,6 +627,7 @@ class SeamlessCheckerGUI(QMainWindow):
         folder = QFileDialog.getExistingDirectory(self, 'Select Folder')
         if folder:
             self.folder_entry.setText(folder)
+            self.save_last_path(folder)
 
     # Drag & drop support
     def dragEnterEvent(self, event):
@@ -544,8 +645,41 @@ class SeamlessCheckerGUI(QMainWindow):
         path = urls[0].toLocalFile()
         # If a file was dropped, set it; if a folder, set folder
         self.folder_entry.setText(path)
+        self.save_last_path(path)
         # Auto-start processing for convenience only if enabled in settings
         # reload config in case settings changed externally
+        self.config = self.load_config()
+        if self.config.get('auto_start_on_drop', True):
+            self.process_batch()
+
+    def save_last_path(self, path):
+        """Save the last used path to config.json"""
+        try:
+            config = self.load_config()
+            config['last_folder_path'] = path
+            with open(self.config_path, 'w') as f:
+                json.dump(config, f, indent=4)
+        except Exception as e:
+            print(f"Error saving last path: {e}")
+
+    def _folder_drag_enter(self, event):
+        """Handle drag enter event for folder_entry"""
+        mime = event.mimeData()
+        if mime.hasUrls():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def _folder_drop(self, event):
+        """Handle drop event for folder_entry"""
+        mime = event.mimeData()
+        urls = mime.urls()
+        if not urls:
+            return
+        path = urls[0].toLocalFile()
+        self.folder_entry.setText(path)
+        self.save_last_path(path)
+        # Auto-start processing for convenience only if enabled in settings
         self.config = self.load_config()
         if self.config.get('auto_start_on_drop', True):
             self.process_batch()
@@ -555,15 +689,17 @@ class SeamlessCheckerGUI(QMainWindow):
         if not (os.path.isdir(path) or os.path.isfile(path)):
             QMessageBox.critical(self, 'Error', 'Invalid folder or file path')
             return
-        self.progress_bar.setVisible(True)
-        self.progress_bar.setValue(0)
+        self.footer_progress.setVisible(True)
+        self.footer_progress.setValue(0)
+        self.footer_label.setText('Processing...')
         self.worker = BatchWorker(self.processor, path)
-        self.worker.progress.connect(self.progress_bar.setValue)
+        self.worker.progress.connect(self.footer_progress.setValue)
         self.worker.finished.connect(self.on_batch_finished)
         self.worker.start()
 
     def on_batch_finished(self, results):
-        self.progress_bar.setVisible(False)
+        self.footer_progress.setVisible(False)
+        self.footer_label.setText(f'Processed {len(results)} images')
         self.last_results = results
         # populate results table
         self.results_table.clearContents()
@@ -638,7 +774,10 @@ class SeamlessCheckerGUI(QMainWindow):
         dlg = SettingsDialog(self)
         if dlg.exec() == QDialog.Accepted:
             self.config = self.load_config()
-            self.checker = ImageChecker(self.config.get('seam_threshold', 10))
+            self.checker = ImageChecker(
+                threshold=self.config.get('seam_threshold', 10),
+                use_ai=self.config.get('use_ai_seam_detection', False)
+            )
             self.processor.preview_folder = self.config.get('preview_folder', 'previews')
             self.processor.preview_mode = self.config.get('preview_mode', 'memory')
             # apply thumbnail settings
