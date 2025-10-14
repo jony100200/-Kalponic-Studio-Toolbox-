@@ -1,8 +1,9 @@
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                               QLabel, QPushButton, QLineEdit, QTextEdit, QFileDialog, QMessageBox,
-                               QProgressBar, QFrame, QDialog, QFormLayout, QSpinBox, QDialogButtonBox)
+                               QLabel, QPushButton, QLineEdit, QFileDialog, QMessageBox,
+                               QProgressBar, QFrame, QDialog, QFormLayout, QSpinBox, QDialogButtonBox,
+                               QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView)
 from PySide6.QtGui import QPalette, QColor, QFont, QPixmap, QIcon
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt, QThread, Signal, QSize
 import cv2
 import os
 import json
@@ -83,6 +84,88 @@ class SettingsDialog(QDialog):
         self.accept()
 
 
+class HeaderBar(QWidget):
+    """Custom header bar for frameless window with drag-to-move and window controls."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_window = parent
+        self.setFixedHeight(40)
+        self.setObjectName('HeaderBar')
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(10, 4, 8, 4)
+        layout.setSpacing(8)
+
+        # Title label
+        self.title = QLabel('KS Seamless Checker')
+        self.title.setStyleSheet('color: #e6e6e6;')
+        title_font = QFont('Segoe UI', 12, QFont.Bold)
+        self.title.setFont(title_font)
+        layout.addWidget(self.title, stretch=1)
+
+        # Window control buttons
+        base = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons')
+        self.min_btn = QPushButton()
+        self.min_btn.setIcon(QIcon(os.path.join(base, 'minimize.svg')))
+        self.min_btn.setFixedSize(32, 28)
+        self.min_btn.setFlat(True)
+        self.min_btn.setToolTip('Minimize')
+        layout.addWidget(self.min_btn)
+
+        self.max_btn = QPushButton()
+        self.max_btn.setIcon(QIcon(os.path.join(base, 'maximize.svg')))
+        self.max_btn.setFixedSize(32, 28)
+        self.max_btn.setFlat(True)
+        self.max_btn.setToolTip('Maximize')
+        layout.addWidget(self.max_btn)
+
+        self.close_btn = QPushButton()
+        self.close_btn.setIcon(QIcon(os.path.join(base, 'close.svg')))
+        self.close_btn.setFixedSize(32, 28)
+        self.close_btn.setFlat(True)
+        self.close_btn.setToolTip('Close')
+        layout.addWidget(self.close_btn)
+
+        # Connect signals (parent should be main window)
+        if self.parent_window is not None:
+            self.min_btn.clicked.connect(self.parent_window.showMinimized)
+            self.max_btn.clicked.connect(self._toggle_max_restore)
+            self.close_btn.clicked.connect(self.parent_window.close)
+
+        # Dragging state
+        self._mouse_pressed = False
+        self._drag_pos = None
+
+    def _toggle_max_restore(self):
+        if not self.parent_window:
+            return
+        if self.parent_window.isMaximized():
+            self.parent_window.showNormal()
+        else:
+            self.parent_window.showMaximized()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._mouse_pressed = True
+            self._drag_pos = event.globalPos()
+            event.accept()
+
+    def mouseMoveEvent(self, event):
+        if self._mouse_pressed and self.parent_window and not self.parent_window.isMaximized():
+            delta = event.globalPos() - self._drag_pos
+            self.parent_window.move(self.parent_window.pos() + delta)
+            self._drag_pos = event.globalPos()
+            event.accept()
+
+    def mouseReleaseEvent(self, event):
+        self._mouse_pressed = False
+        event.accept()
+
+    def mouseDoubleClickEvent(self, event):
+        # Double click toggles maximize/restore
+        self._toggle_max_restore()
+        event.accept()
+
+
 class SeamlessCheckerGUI(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -90,6 +173,8 @@ class SeamlessCheckerGUI(QMainWindow):
         self.setGeometry(100, 100, 920, 640)
         # Accept drops for files/folders
         self.setAcceptDrops(True)
+        # Use a frameless window so we can draw a custom header
+        self.setWindowFlag(Qt.FramelessWindowHint, True)
         self.config = self.load_config()
         self.checker = ImageChecker(self.config.get('seam_threshold', 10))
         self.processor = BatchProcessor(self.checker, self.config.get('supported_formats', ['.png', '.jpg', '.jpeg']), self.config.get('preview_folder', 'previews'))
@@ -144,12 +229,10 @@ class SeamlessCheckerGUI(QMainWindow):
         layout.setContentsMargins(8, 6, 8, 8)
         layout.setSpacing(12)
 
-        title_label = QLabel('KS Seamless Checker')
-        title_font = QFont('Segoe UI', 18, QFont.Bold)
-        title_label.setFont(title_font)
-        title_label.setAlignment(Qt.AlignCenter)
-        title_label.setStyleSheet('color: #e6e6e6;')
-        layout.addWidget(title_label)
+        # Add custom header bar
+        header = HeaderBar(self)
+        header.setStyleSheet('QWidget#HeaderBar{background: transparent;}')
+        layout.addWidget(header)
 
         folder_layout = QHBoxLayout()
         folder_label = QLabel('Select Folder:')
@@ -205,11 +288,21 @@ class SeamlessCheckerGUI(QMainWindow):
         results_label = QLabel('Results:')
         results_label.setStyleSheet('color: #dcdcdc;')
         left_layout.addWidget(results_label)
-        self.results_text = QTextEdit()
-        self.results_text.setReadOnly(True)
-        self.results_text.setToolTip('Processing results')
-        self.results_text.setStyleSheet('background:#2f3134;color:#e6e6e6;padding:8px;border-radius:6px;')
-        left_layout.addWidget(self.results_text)
+        # Results table: thumbnail, filename, status
+        self.results_table = QTableWidget(0, 3)
+        self.results_table.setHorizontalHeaderLabels(['Preview', 'File', 'Status'])
+        self.results_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.results_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.results_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        self.results_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.results_table.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.results_table.verticalHeader().setVisible(False)
+        self.results_table.setShowGrid(False)
+        self.results_table.setStyleSheet('QTableWidget{background:#2f3134;color:#e6e6e6;border-radius:6px;} QHeaderView::section{background:#35363a;color:#dcdcdc;border:0px;}')
+        self.results_table.setIconSize(QSize(64, 64))
+        left_layout.addWidget(self.results_table)
+        # Connect click to preview
+        self.results_table.cellClicked.connect(self._on_table_click)
 
         right_frame = QFrame()
         right_layout = QVBoxLayout(right_frame)
@@ -260,29 +353,61 @@ class SeamlessCheckerGUI(QMainWindow):
         self.process_batch()
 
     def process_batch(self):
-        folder = self.folder_entry.text()
-        if not os.path.isdir(folder):
-            QMessageBox.critical(self, 'Error', 'Invalid folder path')
+        path = self.folder_entry.text()
+        if not (os.path.isdir(path) or os.path.isfile(path)):
+            QMessageBox.critical(self, 'Error', 'Invalid folder or file path')
             return
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
-        self.worker = BatchWorker(self.processor, folder)
+        self.worker = BatchWorker(self.processor, path)
         self.worker.progress.connect(self.progress_bar.setValue)
         self.worker.finished.connect(self.on_batch_finished)
         self.worker.start()
 
     def on_batch_finished(self, results):
         self.progress_bar.setVisible(False)
-        self.results_text.clear()
         self.last_results = results
-        for res in results:
+        # populate results table
+        self.results_table.clearContents()
+        self.results_table.setRowCount(len(results))
+        for row, res in enumerate(results):
             status = 'Seamless' if res.get('seamless') else 'Not Seamless'
-            self.results_text.append(f"{res.get('file')}: {status}\nPreview: {res.get('preview_path')}\n")
+            filename = res.get('file')
             preview_path = res.get('preview_path')
+
+            # Thumbnail cell
+            thumb_item = QTableWidgetItem()
             if preview_path and os.path.exists(preview_path):
-                pixmap = QPixmap(preview_path)
-                self.preview_label.setPixmap(pixmap.scaled(220, 220, Qt.KeepAspectRatio))
+                pix = QPixmap(preview_path).scaled(64, 64, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                thumb_item.setIcon(QIcon(pix))
+            thumb_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+            self.results_table.setItem(row, 0, thumb_item)
+
+            # Filename cell (store preview_path in UserRole)
+            file_item = QTableWidgetItem(filename)
+            file_item.setData(Qt.UserRole, preview_path)
+            file_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+            self.results_table.setItem(row, 1, file_item)
+
+            # Status cell
+            status_item = QTableWidgetItem(status)
+            status_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+            self.results_table.setItem(row, 2, status_item)
+
+            # adjust row height
+            self.results_table.setRowHeight(row, 72)
+
         QMessageBox.information(self, 'Done', f'Processed {len(results)} images. Previews saved.')
+
+    def _on_table_click(self, row, column):
+        # get preview_path stored in filename cell's UserRole
+        item = self.results_table.item(row, 1)
+        if not item:
+            return
+        preview_path = item.data(Qt.UserRole)
+        if preview_path and os.path.exists(preview_path):
+            pixmap = QPixmap(preview_path)
+            self.preview_label.setPixmap(pixmap.scaled(220, 220, Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
     def export_csv(self):
         if not self.last_results:
