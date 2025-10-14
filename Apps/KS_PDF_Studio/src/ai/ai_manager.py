@@ -59,7 +59,14 @@ class AIModelManager:
             cache_dir: Directory for model caching
             device: Device for inference ('auto', 'cpu', 'cuda')
         """
-        self.cache_dir = Path(cache_dir) if cache_dir else Path.home() / '.ks_pdf_studio' / 'models'
+        # Default to a project-local models folder so models are stored inside the application
+        if cache_dir:
+            self.cache_dir = Path(cache_dir)
+        else:
+            # place models folder next to the src package root
+            project_root = Path(__file__).resolve().parents[1]
+            self.cache_dir = project_root / 'models'
+
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Determine device
