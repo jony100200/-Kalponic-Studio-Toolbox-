@@ -19,6 +19,7 @@ from PySide6.QtCore import Qt, QThread, Signal, QTimer, QPoint
 from PySide6.QtGui import QPixmap, QImage, QIcon, QMouseEvent
 
 import qdarkstyle
+import subprocess
 
 # Import qdarkstyle for better theme support
 import qdarkstyle
@@ -76,11 +77,61 @@ class ProcessingThread(QThread):
             self.error_occurred.emit(str(e))
 
 
+class ExportThread(QThread):
+    """Run the exporter script in background to avoid blocking the UI."""
+
+    progress = Signal(str)
+    finished = Signal(str)  # out_dir
+    error = Signal(str)
+
+    def __init__(self, exporter_path: Path, image_path: Path, out_dir: Path, parts: list):
+        super().__init__()
+        self.exporter_path = exporter_path
+        self.image_path = image_path
+        self.out_dir = out_dir
+        self.parts = parts
+
+    def run(self):
+        try:
+            cmd = [sys.executable, str(self.exporter_path), '--image', str(self.image_path), '--out', str(self.out_dir), '--parts'] + self.parts
+            self.progress.emit('Calling exporter: ' + ' '.join(cmd))
+            subprocess.check_call(cmd)
+            self.finished.emit(str(self.out_dir))
+        except Exception as e:
+            self.error.emit(str(e))
+
+
+class BatchExportThread(QThread):
+    """Export multiple separated run folders sequentially."""
+
+    progress = Signal(str)
+    finished = Signal()
+    error = Signal(str)
+
+    def __init__(self, tasks: list):
+        super().__init__()
+        # tasks is list of tuples: (exporter_path, image_path, out_dir, parts)
+        self.tasks = tasks
+
+    def run(self):
+        try:
+            for exporter_path, image_path, out_dir, parts in self.tasks:
+                cmd = [sys.executable, str(exporter_path), '--image', str(image_path), '--out', str(out_dir), '--parts'] + parts
+                self.progress.emit('Calling exporter: ' + ' '.join(cmd))
+                subprocess.check_call(cmd)
+            self.finished.emit()
+        except Exception as e:
+            self.error.emit(str(e))
+
+
 class SpriteSplitterGUI(QMainWindow):
     """Main GUI application for KS Sprite Splitter."""
 
     def __init__(self):
         super().__init__()
+        # Last run information for quick export actions
+        self.last_run_dir: Optional[Path] = None
+        self.last_input_path: Optional[Path] = None
         self.config = self.load_config()
         self.processing_thread = None
         self.current_theme = self.load_theme_preference()  # Load saved theme preference
@@ -362,6 +413,13 @@ class SpriteSplitterGUI(QMainWindow):
         io_layout.addRow("Output:", self.output_dir_label)
         io_layout.addRow(select_output_btn)
 
+        # Auto-export checkbox (will trigger exporter after a successful run)
+        self.auto_export_checkbox = QCheckBox("Auto-export color parts after run")
+        self.auto_export_checkbox.setToolTip("Automatically run the color/matte/mask exporter when processing completes")
+        self.auto_export_checkbox.setAccessibleName("Auto export after run")
+        self.auto_export_checkbox.setChecked(False)
+        io_layout.addRow(self.auto_export_checkbox)
+
         control_layout.addWidget(io_group)
 
         # Template selection group
@@ -555,6 +613,15 @@ class SpriteSplitterGUI(QMainWindow):
         about_action.setShortcut("Ctrl+F1")
         about_action.setStatusTip("Show information about KS Sprite Splitter")
         about_action.triggered.connect(self.show_about)
+
+        # Export actions (quick access)
+        export_last_action = file_menu.addAction('Export Last Run Color Parts')
+        export_last_action.setStatusTip('Run color/matte/mask exporter for the last processing run')
+        export_last_action.triggered.connect(self.menu_export_last_run)
+
+        export_all_action = file_menu.addAction('Export All Runs...')
+        export_all_action.setStatusTip('Run color/matte/mask exporter for all existing runs')
+        export_all_action.triggered.connect(self.menu_export_all_runs)
 
     def load_config(self) -> dict:
         """Load configuration from YAML file."""
@@ -1178,6 +1245,40 @@ class SpriteSplitterGUI(QMainWindow):
         # Add completion animation
         self.animate_completion()
 
+        # Store last run info for quick exports
+        try:
+            self.last_run_dir = Path(results['run_dir'])
+            self.last_input_path = Path(results['input_path'])
+        except Exception:
+            self.last_run_dir = None
+            self.last_input_path = None
+
+        # If auto-export enabled, launch exporter in background
+        try:
+            if getattr(self, 'auto_export_checkbox', None) and self.auto_export_checkbox.isChecked():
+                separated_dir = self.last_run_dir / 'Separated' / self.last_input_path.stem
+                parts = []
+                if separated_dir.exists():
+                    mattes = sorted(separated_dir.glob('matte_*.png'))
+                    if mattes:
+                        parts = [p.stem[len('matte_'):] for p in mattes]
+                    else:
+                        if (separated_dir / 'parts.png').exists() or (separated_dir / 'parts.tga').exists():
+                            parts = ['Part0', 'Part1', 'Part2']
+
+                if parts:
+                    exporter = Path(__file__).resolve().parent.parent / 'scripts' / 'export_color_parts.py'
+                    export_thread = ExportThread(exporter, self.last_input_path, separated_dir, parts)
+                    export_thread.progress.connect(self.handle_export_progress)
+                    export_thread.finished.connect(self.handle_export_finished)
+                    export_thread.error.connect(self.handle_export_error)
+                    export_thread.start()
+                    self.log_text.append(f"Started auto-export for parts: {parts}")
+                else:
+                    self.log_text.append("Auto-export: no parts/mattes found to export.")
+        except Exception as e:
+            self.log_text.append(f"Auto-export failed to start: {e}")
+
     def on_error_occurred(self, error_msg: str):
         """Handle processing errors."""
         self.progress_bar.setVisible(False)
@@ -1196,6 +1297,98 @@ class SpriteSplitterGUI(QMainWindow):
             f"An error occurred during processing:\n\n{error_msg}\n\n"
             "Please check your input file and try again."
         )
+
+    # --- Export helpers and menu actions ---
+    def handle_export_progress(self, msg: str):
+        self.log_text.append(msg)
+
+    def handle_export_finished(self, out_dir: str):
+        self.log_text.append(f"Export finished. Outputs in: {out_dir}")
+        self.statusBar().showMessage("Export finished")
+
+    def handle_export_error(self, err: str):
+        self.log_text.append(f"Export error: {err}")
+        self.statusBar().showMessage("Export failed")
+
+    def menu_export_last_run(self):
+        """Trigger export for the last run (if available)."""
+        if not getattr(self, 'last_run_dir', None) or not getattr(self, 'last_input_path', None):
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.information(self, "Export Last Run", "No previous run available to export.")
+            return
+
+        separated_dir = self.last_run_dir / 'Separated' / self.last_input_path.stem
+        if not separated_dir.exists():
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.information(self, "Export Last Run", f"Separated folder not found: {separated_dir}")
+            return
+
+        mattes = sorted(separated_dir.glob('matte_*.png'))
+        if mattes:
+            parts = [p.stem[len('matte_'):] for p in mattes]
+        else:
+            if (separated_dir / 'parts.png').exists() or (separated_dir / 'parts.tga').exists():
+                parts = ['Part0','Part1','Part2']
+            else:
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.information(self, "Export Last Run", "No mattes or packed parts found in the run folder.")
+                return
+
+        exporter = Path(__file__).resolve().parent.parent / 'scripts' / 'export_color_parts.py'
+        export_thread = ExportThread(exporter, self.last_input_path, separated_dir, parts)
+        export_thread.progress.connect(self.handle_export_progress)
+        export_thread.finished.connect(self.handle_export_finished)
+        export_thread.error.connect(self.handle_export_error)
+        export_thread.start()
+        self.log_text.append(f"Started manual export for parts: {parts}")
+
+    def menu_export_all_runs(self):
+        """Enumerate runs/Run_* and export each run sequentially."""
+        root = Path(__file__).resolve().parent.parent
+        runs_dir = root / 'runs'
+        if not runs_dir.exists():
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.information(self, "Export All Runs", "No runs directory found.")
+            return
+
+        tasks = []
+        exporter = root / 'scripts' / 'export_color_parts.py'
+        for run in sorted(runs_dir.glob('Run_*')):
+            separated_base = run / 'Separated'
+            if not separated_base.exists():
+                continue
+            for img_dir in separated_base.iterdir():
+                if not img_dir.is_dir():
+                    continue
+                mattes = sorted(img_dir.glob('matte_*.png'))
+                if mattes:
+                    parts = [p.stem[len('matte_'):] for p in mattes]
+                else:
+                    if (img_dir / 'parts.png').exists() or (img_dir / 'parts.tga').exists():
+                        parts = ['Part0','Part1','Part2']
+                    else:
+                        continue
+
+                # try to find original image in Preview or assume same name in workspace samples
+                image_candidates = list((run / 'Preview').glob('*.png')) if (run / 'Preview').exists() else []
+                if image_candidates:
+                    image_path = image_candidates[0]
+                else:
+                    image_path = Path(img_dir) / (img_dir.name + '.png')
+
+                tasks.append((exporter, image_path, img_dir, parts))
+
+        if not tasks:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.information(self, "Export All Runs", "No exportable run folders found.")
+            return
+
+        batch_thread = BatchExportThread(tasks)
+        batch_thread.progress.connect(self.handle_export_progress)
+        batch_thread.finished.connect(lambda: self.log_text.append('Batch export finished'))
+        batch_thread.error.connect(self.handle_export_error)
+        batch_thread.start()
+        self.log_text.append(f"Started batch export for {len(tasks)} tasks")
 
     def show_about(self):
         """Show about dialog."""
