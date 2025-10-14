@@ -1,0 +1,33 @@
+# KS PDF Extractor Requirements
+# ============================
+# 
+# Core dependencies for the KS PDF Extractor tool
+# Following KS principles: minimal, focused, reliable
+
+# Core PDF processing libraries
+PyPDF2>=3.0.0
+pdfplumber>=0.10.0
+
+# Optional: Additional PDF libraries for better compatibility
+# pymupdf>=1.23.0  # Uncomment if you need PyMuPDF support
+
+# Text processing
+chardet>=5.0.0
+
+# CLI utilities (built into Python 3.6+)
+# argparse - built-in
+# pathlib - built-in
+# json - built-in
+# logging - built-in
+# hashlib - built-in
+# re - built-in
+# os - built-in
+# sys - built-in
+# datetime - built-in
+# typing - built-in (Python 3.5+)
+# dataclasses - built-in (Python 3.7+)
+
+# Development dependencies (optional)
+# pytest>=7.0.0  # For testing
+# black>=22.0.0  # For code formatting
+# flake8>=5.0.0  # For linting
