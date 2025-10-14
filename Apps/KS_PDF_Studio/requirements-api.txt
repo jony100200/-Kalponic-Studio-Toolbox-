@@ -1,0 +1,49 @@
+# KS PDF Studio API Server Requirements
+# Install with: pip install -r requirements-api.txt
+
+# Core web framework
+Flask==2.3.3
+Flask-CORS==4.0.0
+
+# HTTP client for webhooks
+requests==2.31.0
+
+# Security and cryptography
+cryptography==41.0.4
+Werkzeug==2.3.7
+
+# PDF processing
+reportlab==4.0.7
+
+# Image processing
+Pillow==10.0.1
+
+# Data processing
+pandas==2.1.1
+
+# Development and testing
+pytest==7.4.2
+pytest-flask==1.2.0
+
+# Optional: AI/ML dependencies (if using AI features)
+# transformers==4.34.0
+# torch==2.0.1
+# accelerate==0.23.0
+
+# Optional: Database support
+# SQLAlchemy==2.0.23
+# alembic==1.12.1
+
+# Optional: Redis for caching/session storage
+# redis==5.0.1
+
+# Optional: Advanced logging
+# structlog==23.2.0
+
+# Optional: API documentation
+# flasgger==0.9.7.1
+
+# Development tools
+black==23.9.1
+flake8==6.0.0
+mypy==1.5.1
