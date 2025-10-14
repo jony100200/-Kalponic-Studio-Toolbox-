@@ -15,6 +15,325 @@ from .batch_processor import BatchProcessor
 from .image_checker import ImageChecker
 
 
+class ModernDarkTheme:
+    """
+    Modern Dark Theme System for KS Seamless Checker
+    Implements sci-fi aesthetics with proper contrast and visual hierarchy
+    """
+
+    # Core Color Palette (60-30-10 Rule)
+    COLORS = {
+        # Primary (60%): Deep space background
+        'bg_primary': '#0f0f0f',      # Main background
+        'bg_secondary': '#1a1a1a',    # Secondary surfaces
+        'bg_tertiary': '#2d2d2d',     # Cards, panels
+
+        # Accent (10%): Cyberpunk neon
+        'accent_primary': '#00d4aa',  # Main accent (teal/cyan)
+        'accent_secondary': '#ff6b6b', # Error/warning
+        'accent_success': '#4ecdc4',   # Success states
+        'accent_info': '#45b7d1',     # Info states
+
+        # Text Hierarchy
+        'text_primary': '#ffffff',    # Primary text (high contrast)
+        'text_secondary': '#b0b0b0',  # Secondary text
+        'text_tertiary': '#808080',   # Tertiary/disabled text
+
+        # Interactive States
+        'hover': '#333333',           # Hover backgrounds
+        'pressed': '#404040',         # Pressed states
+        'selected': '#2d5016',        # Selected items
+        'focus': '#00d4aa',           # Focus rings
+
+        # Borders & Dividers
+        'border_light': '#404040',    # Subtle borders
+        'border_medium': '#555555',   # Medium borders
+        'border_strong': '#777777',   # Strong borders
+
+        # Special Effects
+        'glow_primary': 'rgba(0, 212, 170, 0.3)',
+        'glow_error': 'rgba(255, 107, 107, 0.3)',
+        'shadow': 'rgba(0, 0, 0, 0.5)',
+    }
+
+    @classmethod
+    def get_main_window_style(cls):
+        """Main window stylesheet with modern dark theme"""
+        return f"""
+            QMainWindow {{
+                background-color: {cls.COLORS['bg_primary']};
+                color: {cls.COLORS['text_primary']};
+                border: none;
+            }}
+
+            /* Remove any default margins/padding */
+            QMainWindow QWidget {{
+                font-family: 'Segoe UI', 'Consolas', monospace;
+                font-size: 10pt;
+            }}
+        """
+
+    @classmethod
+    def get_button_style(cls, variant='primary'):
+        """Modern button styling with variants"""
+        base_style = f"""
+            QPushButton {{
+                background-color: {cls.COLORS['bg_tertiary']};
+                color: {cls.COLORS['text_primary']};
+                border: 1px solid {cls.COLORS['border_light']};
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-weight: 500;
+                min-height: 14px;
+            }}
+
+            QPushButton:hover {{
+                background-color: {cls.COLORS['hover']};
+                border-color: {cls.COLORS['accent_primary']};
+            }}
+
+            QPushButton:pressed {{
+                background-color: {cls.COLORS['pressed']};
+                border-color: {cls.COLORS['accent_primary']};
+            }}
+
+            QPushButton:disabled {{
+                background-color: {cls.COLORS['bg_secondary']};
+                color: {cls.COLORS['text_tertiary']};
+                border-color: {cls.COLORS['border_light']};
+            }}
+        """
+
+        if variant == 'accent':
+            return base_style.replace(
+                f"background-color: {cls.COLORS['bg_tertiary']};",
+                f"background-color: {cls.COLORS['accent_primary']};"
+            ).replace(
+                "color: {cls.COLORS['text_primary']};",
+                "color: #0f0f0f;"
+            )
+        elif variant == 'danger':
+            return base_style.replace(
+                f"border-color: {cls.COLORS['border_light']};",
+                f"border-color: {cls.COLORS['accent_secondary']};"
+            )
+
+        return base_style
+
+    @classmethod
+    def get_input_style(cls):
+        """Modern input field styling"""
+        return f"""
+            QLineEdit, QTextEdit, QSpinBox, QComboBox {{
+                background-color: {cls.COLORS['bg_secondary']};
+                color: {cls.COLORS['text_primary']};
+                border: 1px solid {cls.COLORS['border_light']};
+                border-radius: 6px;
+                padding: 8px 12px;
+                selection-background-color: {cls.COLORS['accent_primary']};
+                selection-color: #0f0f0f;
+            }}
+
+            QLineEdit:focus, QTextEdit:focus, QSpinBox:focus, QComboBox:focus {{
+                border-color: {cls.COLORS['focus']};
+            }}
+
+            QLineEdit:hover, QTextEdit:hover, QSpinBox:hover, QComboBox:hover {{
+                border-color: {cls.COLORS['border_medium']};
+            }}
+
+            /* Placeholder text */
+            QLineEdit::placeholder {{
+                color: {cls.COLORS['text_tertiary']};
+            }}
+
+            /* Dropdown arrow */
+            QComboBox::drop-down {{
+                border: none;
+                width: 20px;
+            }}
+
+            QComboBox::down-arrow {{
+                image: url(down_arrow.png);
+                width: 12px;
+                height: 12px;
+            }}
+        """
+
+    @classmethod
+    def get_table_style(cls):
+        """Modern table styling"""
+        return f"""
+            QTableWidget {{
+                background-color: {cls.COLORS['bg_secondary']};
+                color: {cls.COLORS['text_primary']};
+                border: 1px solid {cls.COLORS['border_light']};
+                border-radius: 8px;
+                gridline-color: {cls.COLORS['border_light']};
+                selection-background-color: {cls.COLORS['selected']};
+                selection-color: {cls.COLORS['text_primary']};
+            }}
+
+            QTableWidget::item {{
+                padding: 8px;
+                border-bottom: 1px solid {cls.COLORS['border_light']};
+            }}
+
+            QTableWidget::item:selected {{
+                background-color: {cls.COLORS['selected']};
+            }}
+
+            QTableWidget::item:hover {{
+                background-color: {cls.COLORS['hover']};
+            }}
+
+            QHeaderView::section {{
+                background-color: {cls.COLORS['bg_tertiary']};
+                color: {cls.COLORS['text_primary']};
+                padding: 12px 8px;
+                border: none;
+                border-bottom: 2px solid {cls.COLORS['accent_primary']};
+                font-weight: 600;
+            }}
+
+            QHeaderView::section:hover {{
+                background-color: {cls.COLORS['hover']};
+            }}
+        """
+
+    @classmethod
+    def get_label_style(cls):
+        """Modern label styling"""
+        return f"""
+            QLabel {{
+                color: {cls.COLORS['text_primary']};
+                font-size: 11pt;
+            }}
+
+            QLabel[secondary="true"] {{
+                color: {cls.COLORS['text_secondary']};
+                font-size: 10pt;
+            }}
+
+            QLabel[tertiary="true"] {{
+                color: {cls.COLORS['text_tertiary']};
+                font-size: 9pt;
+            }}
+        """
+
+    @classmethod
+    def get_progress_style(cls):
+        """Modern progress bar styling"""
+        return f"""
+            QProgressBar {{
+                background-color: {cls.COLORS['bg_secondary']};
+                color: {cls.COLORS['text_primary']};
+                border: 1px solid {cls.COLORS['border_light']};
+                border-radius: 6px;
+                text-align: center;
+                font-size: 9pt;
+                font-weight: 500;
+            }}
+
+            QProgressBar::chunk {{
+                background-color: {cls.COLORS['accent_primary']};
+                border-radius: 5px;
+            }}
+        """
+
+    @classmethod
+    def get_frame_style(cls):
+        """Modern frame/panel styling"""
+        return f"""
+            QFrame {{
+                background-color: {cls.COLORS['bg_tertiary']};
+                border: 1px solid {cls.COLORS['border_light']};
+                border-radius: 8px;
+            }}
+
+            QFrame[card="true"] {{
+                background-color: {cls.COLORS['bg_secondary']};
+                border: 1px solid {cls.COLORS['border_medium']};
+                border-radius: 10px;
+            }}
+        """
+
+    @classmethod
+    def get_scrollbar_style(cls):
+        """Modern scrollbar styling"""
+        return f"""
+            QScrollBar:vertical {{
+                background-color: {cls.COLORS['bg_secondary']};
+                width: 12px;
+                border-radius: 6px;
+            }}
+
+            QScrollBar::handle:vertical {{
+                background-color: {cls.COLORS['border_medium']};
+                border-radius: 6px;
+                min-height: 30px;
+            }}
+
+            QScrollBar::handle:vertical:hover {{
+                background-color: {cls.COLORS['accent_primary']};
+            }}
+
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                border: none;
+                background: none;
+            }}
+
+            QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {{
+                background: none;
+            }}
+        """
+
+    @classmethod
+    def apply_theme_to_app(cls, app):
+        """Apply the complete modern dark theme to QApplication"""
+        app.setStyleSheet(f"""
+            {cls.get_main_window_style()}
+            {cls.get_button_style()}
+            {cls.get_input_style()}
+            {cls.get_table_style()}
+            {cls.get_label_style()}
+            {cls.get_progress_style()}
+            {cls.get_frame_style()}
+            {cls.get_scrollbar_style()}
+
+            /* Dialog styling */
+            QDialog {{
+                background-color: {cls.COLORS['bg_primary']};
+                color: {cls.COLORS['text_primary']};
+                border-radius: 10px;
+            }}
+
+            /* Message box styling */
+            QMessageBox {{
+                background-color: {cls.COLORS['bg_primary']};
+                color: {cls.COLORS['text_primary']};
+            }}
+
+            QMessageBox QLabel {{
+                color: {cls.COLORS['text_primary']};
+            }}
+
+            /* Tooltips */
+            QToolTip {{
+                background-color: {cls.COLORS['bg_tertiary']};
+                color: {cls.COLORS['text_primary']};
+                border: 1px solid {cls.COLORS['border_medium']};
+                border-radius: 4px;
+                padding: 4px 8px;
+            }}
+        """)
+
+        # Set application-wide font
+        font = QFont('Segoe UI', 10)
+        font.setStyleHint(QFont.System)
+        app.setFont(font)
+
+
 class BatchWorker(QThread):
     progress = Signal(int)
     finished = Signal(list)
@@ -141,30 +460,35 @@ class SettingsDialog(QDialog):
         return label
 
     def setup_dark_theme(self):
-        """Apply the same dark theme as the main window."""
-        palette = QPalette()
-        accent = self.parent().config.get('accent_color', '#C49A6C') if self.parent() else '#C49A6C'
-        palette.setColor(QPalette.Window, QColor(40, 42, 45))
-        palette.setColor(QPalette.WindowText, QColor(230, 230, 230))
-        palette.setColor(QPalette.Base, QColor(50, 52, 56))
-        palette.setColor(QPalette.AlternateBase, QColor(43, 45, 48))
-        palette.setColor(QPalette.ToolTipBase, QColor(230, 230, 230))
-        palette.setColor(QPalette.ToolTipText, QColor(20, 20, 20))
-        palette.setColor(QPalette.Text, QColor(225, 225, 225))
-        palette.setColor(QPalette.Button, QColor(60, 62, 66))
-        palette.setColor(QPalette.ButtonText, QColor(230, 230, 230))
-        palette.setColor(QPalette.BrightText, QColor(220, 80, 80))
-        try:
-            r = int(accent[1:3], 16)
-            g = int(accent[3:5], 16)
-            b = int(accent[5:7], 16)
-            palette.setColor(QPalette.Link, QColor(r, g, b))
-            palette.setColor(QPalette.Highlight, QColor(r, g, b))
-            palette.setColor(QPalette.HighlightedText, QColor(20, 20, 20))
-        except Exception:
-            pass
-        self.setPalette(palette)
-        self.setStyleSheet("QDialog{background-color: #28282D;}")
+        """Apply modern dark theme to settings dialog"""
+        # Apply the comprehensive modern theme
+        ModernDarkTheme.apply_theme_to_app(QApplication.instance())
+
+        # Set dialog-specific styling
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {ModernDarkTheme.COLORS['bg_primary']};
+                color: {ModernDarkTheme.COLORS['text_primary']};
+                border-radius: 12px;
+                border: 1px solid {ModernDarkTheme.COLORS['border_light']};
+            }}
+
+            QDialog QGroupBox {{
+                font-weight: bold;
+                border: 2px solid {ModernDarkTheme.COLORS['accent_primary']};
+                border-radius: 8px;
+                margin-top: 1ex;
+                color: {ModernDarkTheme.COLORS['text_primary']};
+            }}
+
+            QDialog QGroupBox::title {{
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 10px 0 10px;
+                color: {ModernDarkTheme.COLORS['accent_primary']};
+                font-weight: bold;
+            }}
+        """)
 
     def save(self):
         config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json')
@@ -181,51 +505,140 @@ class SettingsDialog(QDialog):
 
 
 class HeaderBar(QWidget):
-    """Custom header bar for frameless window with drag-to-move and window controls."""
+    """Modern header bar for frameless window with drag-to-move and window controls."""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent_window = parent
-        self.setFixedHeight(40)
-        self.setObjectName('HeaderBar')
+        self.setFixedHeight(50)
+        self.setObjectName('ModernHeaderBar')
+
+        # Modern gradient background
+        self.setStyleSheet(f"""
+            QWidget#ModernHeaderBar {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 {ModernDarkTheme.COLORS['bg_tertiary']},
+                    stop:1 {ModernDarkTheme.COLORS['bg_secondary']});
+                border-bottom: 1px solid {ModernDarkTheme.COLORS['border_light']};
+            }}
+        """)
+
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 4, 8, 4)
-        layout.setSpacing(8)
+        layout.setContentsMargins(16, 8, 16, 8)
+        layout.setSpacing(12)
 
-        # Title label
+        # App icon and title section
+        title_section = QHBoxLayout()
+        title_section.setSpacing(12)
+
+        # App icon placeholder (you can add a real icon later)
+        icon_label = QLabel("🔍")
+        icon_label.setStyleSheet(f"color: {ModernDarkTheme.COLORS['accent_primary']}; font-size: 18pt;")
+        title_section.addWidget(icon_label)
+
+        # Title label (removed version suffix)
         self.title = QLabel('KS Seamless Checker')
-        self.title.setStyleSheet('color: #e6e6e6;')
-        title_font = QFont('Segoe UI', 12, QFont.Bold)
-        self.title.setFont(title_font)
-        layout.addWidget(self.title, stretch=1)
+        self.title.setStyleSheet(f"""
+            color: {ModernDarkTheme.COLORS['text_primary']};
+            background: transparent;
+            padding: 4px 8px;
+            font-size: 14pt;
+            font-weight: 700;
+            font-family: 'Segoe UI', sans-serif;
+        """)
+        title_section.addWidget(self.title)
+        title_section.addStretch()
 
-        # Window control buttons
-        base = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons')
+        layout.addLayout(title_section, stretch=1)
+
+        # Window control buttons with modern styling
+        controls_layout = QHBoxLayout()
+        controls_layout.setSpacing(8)
+
+        # icons directory
+        icons_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons')
+
+        # Minimize button (use SVG icon)
         self.min_btn = QPushButton()
-        self.min_btn.setIcon(QIcon(os.path.join(base, 'minimize.svg')))
-        self.min_btn.setFixedSize(32, 28)
-        self.min_btn.setFlat(True)
+        self.min_btn.setFixedSize(36, 36)
         self.min_btn.setToolTip('Minimize')
-        layout.addWidget(self.min_btn)
+        self.min_btn.setFlat(False)
+        self.min_btn.setFocusPolicy(Qt.NoFocus)
+        # Make icon visible by default: semi-opaque background and white icon
+        self.min_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: rgba(255,255,255,0.06);
+                color: {ModernDarkTheme.COLORS['text_primary']};
+                border: 1px solid rgba(255,255,255,0.04);
+                border-radius: 6px;
+                padding: 6px;
+            }}
+            QPushButton:hover {{
+                background: {ModernDarkTheme.COLORS['hover']};
+                border-color: {ModernDarkTheme.COLORS['accent_primary']};
+            }}
+            QPushButton:pressed {{
+                background: {ModernDarkTheme.COLORS['pressed']};
+            }}
+        """)
+        min_icon_path = os.path.join(icons_dir, 'minimize.svg')
+        if os.path.exists(min_icon_path):
+            self.min_btn.setIcon(QIcon(min_icon_path))
+            self.min_btn.setIconSize(QSize(18, 18))
+        controls_layout.addWidget(self.min_btn)
 
+        # Maximize / Restore button (icon toggles tooltip and icon if available)
         self.max_btn = QPushButton()
-        self.max_btn.setIcon(QIcon(os.path.join(base, 'maximize.svg')))
-        self.max_btn.setFixedSize(32, 28)
-        self.max_btn.setFlat(True)
+        self.max_btn.setFixedSize(36, 36)
         self.max_btn.setToolTip('Maximize')
-        layout.addWidget(self.max_btn)
+        self.max_btn.setFlat(False)
+        self.max_btn.setFocusPolicy(Qt.NoFocus)
+        self.max_btn.setStyleSheet(self.min_btn.styleSheet())
+        max_icon_path = os.path.join(icons_dir, 'maximize.svg')
+        if os.path.exists(max_icon_path):
+            self.max_btn.setIcon(QIcon(max_icon_path))
+            self.max_btn.setIconSize(QSize(18, 18))
+        controls_layout.addWidget(self.max_btn)
 
+        # Close button with danger styling (use SVG icon)
         self.close_btn = QPushButton()
-        self.close_btn.setIcon(QIcon(os.path.join(base, 'close.svg')))
-        self.close_btn.setFixedSize(32, 28)
-        self.close_btn.setFlat(True)
+        self.close_btn.setFixedSize(36, 36)
         self.close_btn.setToolTip('Close')
-        layout.addWidget(self.close_btn)
+        self.close_btn.setFlat(False)
+        self.close_btn.setFocusPolicy(Qt.NoFocus)
+        self.close_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: rgba(255,255,255,0.06);
+                color: {ModernDarkTheme.COLORS['text_primary']};
+                border: 1px solid rgba(255,255,255,0.04);
+                border-radius: 6px;
+                padding: 6px;
+            }}
+            QPushButton:hover {{
+                background: {ModernDarkTheme.COLORS['accent_secondary']};
+                border-color: {ModernDarkTheme.COLORS['accent_secondary']};
+            }}
+            QPushButton:pressed {{
+                background: {ModernDarkTheme.COLORS['pressed']};
+            }}
+        """)
+        close_icon_path = os.path.join(icons_dir, 'close.svg')
+        if os.path.exists(close_icon_path):
+            self.close_btn.setIcon(QIcon(close_icon_path))
+            self.close_btn.setIconSize(QSize(18, 18))
+        controls_layout.addWidget(self.close_btn)
 
-        # Connect signals (parent should be main window)
+        layout.addLayout(controls_layout)
+
+        # Connect signals
         if self.parent_window is not None:
             self.min_btn.clicked.connect(self.parent_window.showMinimized)
             self.max_btn.clicked.connect(self._toggle_max_restore)
             self.close_btn.clicked.connect(self.parent_window.close)
+            # Install event filter to detect window state changes
+            self.parent_window.installEventFilter(self)
+
+        # Initial button state update
+        self._update_max_button_text()
 
         # Dragging state
         self._mouse_pressed = False
@@ -238,6 +651,18 @@ class HeaderBar(QWidget):
             self.parent_window.showNormal()
         else:
             self.parent_window.showMaximized()
+        self._update_max_button_text()
+
+    def _update_max_button_text(self):
+        """Update maximize button text based on window state"""
+        if not self.parent_window:
+            return
+        if self.parent_window.isMaximized():
+            self.max_btn.setText('🗗')  # Restore down symbol
+            self.max_btn.setToolTip('Restore Down')
+        else:
+            self.max_btn.setText('🗖')  # Maximize symbol
+            self.max_btn.setToolTip('Maximize')
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -260,6 +685,17 @@ class HeaderBar(QWidget):
         # Double click toggles maximize/restore
         self._toggle_max_restore()
         event.accept()
+
+    def resizeEvent(self, event):
+        """Update button states when window is resized externally"""
+        super().resizeEvent(event)
+        self._update_max_button_text()
+
+    def eventFilter(self, obj, event):
+        """Filter events from parent window to detect state changes"""
+        if obj == self.parent_window and event.type() == event.Type.WindowStateChange:
+            self._update_max_button_text()
+        return super().eventFilter(obj, event)
 
 
 class PreviewWindow(QDialog):
@@ -303,6 +739,9 @@ class PreviewWindow(QDialog):
         self.image_label.mousePressEvent = self._on_mouse_press
         self.image_label.mouseMoveEvent = self._on_mouse_move
         self.image_label.mouseReleaseEvent = self._on_mouse_release
+
+        # Apply modern dark theme
+        self.setup_dark_theme()
 
     def set_results(self, results):
         self.results = results or []
@@ -421,6 +860,45 @@ class PreviewWindow(QDialog):
         # Rescale current image to new size
         self._update_image()
 
+    def setup_dark_theme(self):
+        """Apply modern dark theme to preview window"""
+        # Apply the comprehensive modern theme
+        ModernDarkTheme.apply_theme_to_app(QApplication.instance())
+
+        # Set window-specific styling
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {ModernDarkTheme.COLORS['bg_primary']};
+                color: {ModernDarkTheme.COLORS['text_primary']};
+                border-radius: 12px;
+                border: 1px solid {ModernDarkTheme.COLORS['border_light']};
+            }}
+
+            QLabel {{
+                color: {ModernDarkTheme.COLORS['text_primary']};
+                font-size: 12px;
+            }}
+
+            QPushButton {{
+                background-color: {ModernDarkTheme.COLORS['bg_secondary']};
+                color: {ModernDarkTheme.COLORS['text_primary']};
+                border: 1px solid {ModernDarkTheme.COLORS['border_light']};
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-size: 14px;
+                font-weight: bold;
+            }}
+
+            QPushButton:hover {{
+                background-color: {ModernDarkTheme.COLORS['hover']};
+                border-color: {ModernDarkTheme.COLORS['accent_primary']};
+            }}
+
+            QPushButton:pressed {{
+                background-color: {ModernDarkTheme.COLORS['pressed']};
+            }}
+        """)
+
 
 class SeamlessCheckerGUI(QMainWindow):
     def __init__(self):
@@ -470,98 +948,54 @@ class SeamlessCheckerGUI(QMainWindow):
             json.dump(self.config, f, indent=2)
 
     def setup_dark_theme(self):
-        palette = QPalette()
-        accent = self.config.get('accent_color', '#C49A6C')
-        palette.setColor(QPalette.Window, QColor(40, 42, 45))
-        palette.setColor(QPalette.WindowText, QColor(230, 230, 230))
-        palette.setColor(QPalette.Base, QColor(50, 52, 56))
-        palette.setColor(QPalette.AlternateBase, QColor(43, 45, 48))
-        palette.setColor(QPalette.ToolTipBase, QColor(230, 230, 230))
-        palette.setColor(QPalette.ToolTipText, QColor(20, 20, 20))
-        palette.setColor(QPalette.Text, QColor(225, 225, 225))
-        palette.setColor(QPalette.Button, QColor(60, 62, 66))
-        palette.setColor(QPalette.ButtonText, QColor(230, 230, 230))
-        palette.setColor(QPalette.BrightText, QColor(220, 80, 80))
-        try:
-            r = int(accent[1:3], 16)
-            g = int(accent[3:5], 16)
-            b = int(accent[5:7], 16)
-            palette.setColor(QPalette.Link, QColor(r, g, b))
-            palette.setColor(QPalette.Highlight, QColor(r, g, b))
-            palette.setColor(QPalette.HighlightedText, QColor(20, 20, 20))
-        except Exception:
-            pass
-        self.setPalette(palette)
-        # Apply dark background to ensure no light border shows
-        self.setStyleSheet("QMainWindow{background-color: #28282D;}")
+        """Apply modern dark theme with sci-fi aesthetics"""
+        # Apply the comprehensive modern theme
+        ModernDarkTheme.apply_theme_to_app(QApplication.instance())
+
+        # Set window properties for modern look
+        self.setWindowTitle("KS Seamless Checker v2.0")
+        self.setMinimumSize(1000, 700)
+        self.resize(1200, 800)
+
+        # Remove window frame for custom title bar
+        self.setWindowFlags(self.windowFlags() | Qt.FramelessWindowHint)
+
+        # Optional: Add subtle drop shadow effect
+        # Note: This requires additional setup for proper shadow rendering
 
     def setup_ui(self):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
-        # tighten margins to reduce visible top border
-        layout.setContentsMargins(8, 6, 8, 8)
-        layout.setSpacing(12)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(16)
 
-        # Add custom header bar
+        # Add custom header bar with modern styling
         header = HeaderBar(self)
-        header.setStyleSheet('QWidget#HeaderBar{background: transparent;}')
+        header.setProperty("card", True)  # Apply card styling
         layout.addWidget(header)
 
-        folder_layout = QHBoxLayout()
-        folder_label = QLabel('Select Folder:')
-        folder_label.setStyleSheet('color: #dcdcdc;')
-        folder_layout.addWidget(folder_label)
-
-        self.folder_entry = QLineEdit()
-        self.folder_entry.setPlaceholderText('Enter or browse folder path')
-        self.folder_entry.setToolTip('Path to folder containing images')
-        self.folder_entry.setStyleSheet('background: #35363a; color: #e6e6e6; padding:6px; border-radius:6px;')
-        # Enable drag and drop on the folder entry
-        self.folder_entry.setAcceptDrops(True)
-        self.folder_entry.dragEnterEvent = self._folder_drag_enter
-        self.folder_entry.dropEvent = self._folder_drop
-        # Load last folder path
-        last_path = self.config.get('last_folder_path', '')
-        if last_path:
-            self.folder_entry.setText(last_path)
-        folder_layout.addWidget(self.folder_entry)
-
-        browse_btn = QPushButton()
-        browse_btn.setToolTip('Open folder dialog')
-        browse_btn.setFixedSize(36, 28)
-        browse_icon = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons', 'browse.svg')
-        browse_btn.setIcon(QIcon(browse_icon))
-        browse_btn.clicked.connect(self.browse_folder)
-        browse_btn.setStyleSheet("QPushButton{background:#4b5056;color:#e6e6e6;border-radius:6px;} QPushButton:hover{background:#5a6066}")
-        folder_layout.addWidget(browse_btn)
-
-        layout.addLayout(folder_layout)
-
-        actions_layout = QHBoxLayout()
-        process_button = QPushButton()
-        process_button.setCursor(Qt.PointingHandCursor)
-        process_button.setFixedSize(180, 40)
-        proc_icon = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons', 'process.svg')
-        process_button.setIcon(QIcon(proc_icon))
-        process_button.setText('  Process Batch')
-        process_button.clicked.connect(self.process_batch)
-        accent = self.config.get('accent_color', '#C49A6C')
-        process_button.setStyleSheet(f"QPushButton{{background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 {accent}, stop:1 {accent}); color:#0f1416; padding:8px 12px; border-radius:8px;}} QPushButton:hover{{opacity:0.95;}}")
-        actions_layout.addWidget(process_button)
-
-        layout.addLayout(actions_layout)
-
-        # Remove old progress_bar and export_button, they will be in footer
-
+        # Main content area with card styling
+        main_card = QFrame()
+        main_card.setProperty("card", True)
+        main_layout = QVBoxLayout(main_card)
         results_layout = QHBoxLayout()
+        results_layout.setSpacing(16)
 
-        left_frame = QFrame()
-        left_layout = QVBoxLayout(left_frame)
-        results_label = QLabel('Results:')
-        results_label.setStyleSheet('color: #dcdcdc;')
-        left_layout.addWidget(results_label)
-        # Results table: thumbnail, filename, status
+        # Left panel - Results table
+        left_panel = QFrame()
+        left_panel.setProperty("card", True)
+        left_layout = QVBoxLayout(left_panel)
+        left_layout.setContentsMargins(16, 16, 16, 16)
+
+        results_header = QHBoxLayout()
+        results_label = QLabel('📊 Results:')
+        results_label.setProperty("secondary", True)
+        results_header.addWidget(results_label)
+        results_header.addStretch()
+        left_layout.addLayout(results_header)
+
+        # Results table with modern styling
         self.results_table = QTableWidget(0, 4)
         self.results_table.setHorizontalHeaderLabels(['Preview', 'File', 'Status', 'Details'])
         self.results_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
@@ -572,57 +1006,71 @@ class SeamlessCheckerGUI(QMainWindow):
         self.results_table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.results_table.verticalHeader().setVisible(False)
         self.results_table.setShowGrid(False)
-        self.results_table.setStyleSheet('QTableWidget{background:#2f3134;color:#e6e6e6;border-radius:6px;} QHeaderView::section{background:#35363a;color:#dcdcdc;border:0px;}')
         self.results_table.setIconSize(QSize(64, 64))
-        left_layout.addWidget(self.results_table)
         # Connect click to preview
         self.results_table.cellClicked.connect(self._on_table_click)
+        left_layout.addWidget(self.results_table)
 
-        right_frame = QFrame()
-        right_layout = QVBoxLayout(right_frame)
-        preview_label = QLabel('Preview:')
-        preview_label.setStyleSheet('color: #dcdcdc;')
+        # Right panel - Preview
+        right_panel = QFrame()
+        right_panel.setProperty("card", True)
+        right_layout = QVBoxLayout(right_panel)
+        right_layout.setContentsMargins(16, 16, 16, 16)
+
+        preview_label = QLabel('👁️ Preview:')
+        preview_label.setProperty("secondary", True)
         right_layout.addWidget(preview_label)
+
         self.preview_label = QLabel()
-        self.preview_label.setFixedSize(240, 240)
-        self.preview_label.setStyleSheet('background:#35363a;border:1px solid #505357;border-radius:6px;')
+        self.preview_label.setFixedSize(280, 280)
+        self.preview_label.setAlignment(Qt.AlignCenter)
         self.preview_label.setToolTip('Tiled preview of last processed image')
         right_layout.addWidget(self.preview_label, alignment=Qt.AlignTop)
+        right_layout.addStretch()
+
+        results_layout.addWidget(left_panel, stretch=3)
+        results_layout.addWidget(right_panel, stretch=1)
+        main_layout.addLayout(results_layout)
+
+        layout.addWidget(main_card)
+
+        # Footer bar with modern styling
+        footer_card = QFrame()
+        footer_card.setProperty("card", True)
+        footer_layout = QHBoxLayout(footer_card)
+        footer_layout.setContentsMargins(16, 12, 16, 12)
+
+        self.footer_label = QLabel('✨ Ready to process images')
+        self.footer_label.setProperty("secondary", True)
+        footer_layout.addWidget(self.footer_label)
+
+        footer_layout.addStretch()
+
+        self.footer_progress = QProgressBar()
+        self.footer_progress.setVisible(False)
+        self.footer_progress.setFixedWidth(200)
+        footer_layout.addWidget(self.footer_progress)
+
+        export_btn = QPushButton('💾 Export CSV')
+        export_btn.setToolTip('Export last batch results to CSV file')
+        export_btn.clicked.connect(self.export_csv)
+        footer_layout.addWidget(export_btn)
+
+        settings_btn = QPushButton()
+        settings_btn.setFixedSize(40, 32)
+        settings_icon = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons', 'settings.svg')
+        if os.path.exists(settings_icon):
+            settings_btn.setIcon(QIcon(settings_icon))
+        else:
+            settings_btn.setText('⚙️')
+        settings_btn.setToolTip('Open settings')
+        settings_btn.clicked.connect(self.open_settings)
+        footer_layout.addWidget(settings_btn)
+
+        layout.addWidget(footer_card)
 
         # Floating preview window (initially hidden)
         self.preview_window = PreviewWindow(parent=self)
-
-        results_layout.addWidget(left_frame, stretch=3)
-        results_layout.addWidget(right_frame, stretch=1)
-        layout.addLayout(results_layout)
-
-        # Footer bar
-        footer_layout = QHBoxLayout()
-        self.footer_label = QLabel('Ready')
-        self.footer_label.setStyleSheet('color: #dcdcdc;')
-        footer_layout.addWidget(self.footer_label)
-        footer_layout.addStretch()
-        self.footer_progress = QProgressBar()
-        self.footer_progress.setVisible(False)
-        self.footer_progress.setStyleSheet(f"QProgressBar{{background:#3b3b3b; color:#e6e6e6; border-radius:6px; height:12px;}} QProgressBar::chunk{{background:{accent}; border-radius:6px}}")
-        footer_layout.addWidget(self.footer_progress)
-        export_btn = QPushButton('Export CSV')
-        export_btn.setToolTip('Export last batch results to CSV')
-        export_btn.clicked.connect(self.export_csv)
-        export_btn.setStyleSheet("QPushButton{background:#4b5056;color:#e6e6e6;padding:8px;border-radius:6px;} QPushButton:hover{background:#5a6066}")
-        footer_layout.addWidget(export_btn)
-        footer_widget = QWidget()
-        footer_widget.setLayout(footer_layout)
-        layout.addWidget(footer_widget)
-
-        settings_btn = QPushButton()
-        settings_btn.setFixedSize(36, 28)
-        settings_icon = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons', 'settings.svg')
-        settings_btn.setIcon(QIcon(settings_icon))
-        settings_btn.setToolTip('Open settings')
-        settings_btn.clicked.connect(self.open_settings)
-        settings_btn.setStyleSheet("QPushButton{background:#3b3b3b;border-radius:6px;} QPushButton:hover{background:#47494b}")
-        layout.addWidget(settings_btn, alignment=Qt.AlignRight)
 
     def browse_folder(self):
         folder = QFileDialog.getExistingDirectory(self, 'Select Folder')

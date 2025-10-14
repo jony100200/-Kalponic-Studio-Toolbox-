@@ -31,6 +31,17 @@ class OpenCVSegmenter(Segmenter):
         """
         height, width = image.shape[:2]
 
+        # Convert to uint8 if needed (OpenCV GrabCut requires uint8)
+        if image.dtype != np.uint8:
+            if image.max() <= 1.0:
+                # Assume normalized float image
+                image_uint8 = (image * 255).astype(np.uint8)
+            else:
+                # Assume already in 0-255 range
+                image_uint8 = image.astype(np.uint8)
+        else:
+            image_uint8 = image
+
         # Create initial rectangle (center 60% of image)
         margin_h = int(height * 0.2)
         margin_w = int(width * 0.2)
@@ -44,7 +55,7 @@ class OpenCVSegmenter(Segmenter):
         fgd_model = np.zeros((1, 65), np.float64)
 
         # Apply GrabCut
-        cv2.grabCut(image, mask, rect, bgd_model, fgd_model, self.iterations, cv2.GC_INIT_WITH_RECT)
+        cv2.grabCut(image_uint8, mask, rect, bgd_model, fgd_model, self.iterations, cv2.GC_INIT_WITH_RECT)
 
         # Convert mask to binary (foreground = 1, background = 0)
         binary_mask = np.where((mask == 2) | (mask == 0), 0, 1).astype(np.uint8)
@@ -70,45 +81,54 @@ class OpenCVSegmenter(Segmenter):
         }]
 
 
-class GuidedFilterMatter(Matter):
+class SimpleMatter(Matter):
     """
-    Real matting using Guided Filter refinement.
+    Simple matting using morphological operations and Gaussian blur.
 
-    Refines hard masks into soft alpha mattes using guided filtering.
+    Creates soft edges around hard masks using basic image processing.
     """
 
     def __init__(self):
-        self.radius = 8
-        self.eps = 0.01
+        self.blur_kernel = 5
+        self.morph_kernel = 3
 
     def refine(self, image: np.ndarray, mask: np.ndarray, band_px: int = 5) -> np.ndarray:
         """
-        Refine hard mask using guided filtering.
+        Refine hard mask using morphological operations and blurring.
 
         Args:
             image: RGB image (H, W, 3)
             mask: Hard mask (H, W) boolean
-            band_px: Transition band width (unused in this implementation)
+            band_px: Transition band width in pixels
 
         Returns:
             Soft alpha matte (H, W) float32 [0, 1]
         """
-        # Convert mask to float
-        mask_float = mask.astype(np.float32)
+        # Convert mask to uint8
+        mask_uint8 = mask.astype(np.uint8) * 255
 
-        # Use grayscale version of image as guidance
-        guidance = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY).astype(np.float32) / 255.0
+        # Apply morphological operations to create transition band
+        kernel = np.ones((self.morph_kernel, self.morph_kernel), np.uint8)
 
-        # Apply guided filter
-        refined = cv2.ximgproc.guidedFilter(
-            guide=guidance,
-            src=mask_float,
-            radius=self.radius,
-            eps=self.eps
-        )
+        # Erode to create inner mask
+        eroded = cv2.erode(mask_uint8, kernel, iterations=band_px//2)
 
-        # Ensure values are in [0, 1]
-        return np.clip(refined, 0.0, 1.0)
+        # Dilate to create outer mask
+        dilated = cv2.dilate(mask_uint8, kernel, iterations=band_px//2)
+
+        # Create transition band
+        transition = dilated - eroded
+
+        # Apply Gaussian blur to transition band
+        blurred = cv2.GaussianBlur(transition.astype(np.float32), (self.blur_kernel, self.blur_kernel), 0)
+
+        # Normalize to [0, 1]
+        matte = blurred / 255.0
+
+        # Combine with original mask
+        final_matte = np.where(mask, 1.0, matte)
+
+        return np.clip(final_matte, 0.0, 1.0)
 
 
 class HeuristicPartSplitter(PartSplitter):
@@ -180,5 +200,5 @@ class HeuristicPartSplitter(PartSplitter):
 
 # Register real backends
 register_segmenter_backend('opencv', OpenCVSegmenter)
-register_matte_backend('guided', GuidedFilterMatter)
+register_matte_backend('guided', SimpleMatter)
 register_part_backend('heuristic', HeuristicPartSplitter)
