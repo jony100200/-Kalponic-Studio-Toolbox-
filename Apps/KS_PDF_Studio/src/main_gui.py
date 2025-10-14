@@ -1059,14 +1059,87 @@ class KSPDFStudioApp:
         self.ai_panel.notebook.select(2)  # Tutorial Generation tab
 
     def _ai_suggest_images(self):
-        """Suggest images for content."""
+        """Suggest images for content using AI."""
         content = self.editor_text.get('1.0', tk.END).strip()
         if not content:
             messagebox.showwarning("No Content", "Please enter some content first.")
             return
 
-        # This would integrate with AI image suggestion
-        messagebox.showinfo("Image Suggestions", "Image suggestion feature coming soon!")
+        # Ask user to select image directory
+        image_dir = filedialog.askdirectory(
+            title="Select Image Directory",
+            mustexist=True
+        )
+
+        if not image_dir:
+            return
+
+        # Find image files
+        import glob
+        image_extensions = ['*.jpg', '*.jpeg', '*.png', '*.gif', '*.bmp', '*.webp']
+        image_paths = []
+
+        for ext in image_extensions:
+            image_paths.extend(glob.glob(os.path.join(image_dir, ext)))
+            image_paths.extend(glob.glob(os.path.join(image_dir, ext.upper())))
+
+        if not image_paths:
+            messagebox.showwarning("No Images", "No image files found in the selected directory.")
+            return
+
+        # Switch to AI tab and show suggestions
+        self.preview_notebook.select(1)  # AI Enhancement tab
+
+        def suggest_worker():
+            try:
+                # Use ImageMatcher to suggest placements
+                matcher = self.ai_enhancer.image_matcher
+                suggestions = matcher.suggest_image_placement(content, image_paths)
+
+                if not suggestions:
+                    messagebox.showinfo("No Suggestions",
+                                      "No suitable image placements found for your content.\n\n"
+                                      "Try adding more descriptive section headers or ensure your images are relevant to the content.")
+                    return
+
+                # Format suggestions for display
+                suggestion_text = "📸 AI Image Placement Suggestions\n\n"
+                suggestion_text += f"Found {len(image_paths)} images in directory\n"
+                suggestion_text += f"Generated {len(suggestions)} placement suggestions\n\n"
+
+                for i, suggestion in enumerate(suggestions, 1):
+                    suggestion_text += f"{i}. Section: {suggestion['section_title']}\n"
+                    suggestion_text += f"   Suggested Image: {os.path.basename(suggestion['suggested_image'])}\n"
+                    suggestion_text += f"   Confidence: {suggestion['confidence']:.2f}\n"
+
+                    if suggestion.get('alternatives'):
+                        suggestion_text += f"   Alternatives: {', '.join(os.path.basename(alt) for alt in suggestion['alternatives'])}\n"
+
+                    suggestion_text += "\n"
+
+                # Add usage instructions
+                suggestion_text += "💡 Usage Tips:\n"
+                suggestion_text += "• Copy the image filename to use in markdown: ![alt text](filename.jpg)\n"
+                suggestion_text += "• Place images near relevant sections for better reader engagement\n"
+                suggestion_text += "• Consider image size and resolution for PDF output\n"
+
+                # Update suggestions tab
+                self.ai_panel.suggestions_text.delete('1.0', tk.END)
+                self.ai_panel.suggestions_text.insert('1.0', suggestion_text)
+
+                # Switch to suggestions tab in AI panel
+                self.ai_panel.notebook.select(1)  # Suggestions tab
+
+                messagebox.showinfo("Image Suggestions Complete",
+                                  f"Found {len(suggestions)} image placement suggestions!\n\n"
+                                  "Check the 'Suggestions' tab in the AI Enhancement panel.")
+
+            except Exception as e:
+                messagebox.showerror("Image Suggestion Error",
+                                   f"Failed to generate image suggestions: {e}")
+
+        thread = threading.Thread(target=suggest_worker, daemon=True)
+        thread.start()
 
     # View operations
     def _preview_pdf(self):
