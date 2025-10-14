@@ -1,8 +1,8 @@
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QLabel, QPushButton, QLineEdit, QFileDialog, QMessageBox,
-                               QProgressBar, QFrame, QDialog, QFormLayout, QSpinBox, QDialogButtonBox,
-                               QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView)
-from PySide6.QtGui import QPalette, QColor, QFont, QPixmap, QIcon
+                               QProgressBar, QFrame, QDialog, QFormLayout, QSpinBox, QDialogButtonBox, QComboBox,
+                               QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QDialogButtonBox)
+from PySide6.QtGui import QPalette, QColor, QFont, QPixmap, QIcon, QKeySequence
 from PySide6.QtCore import Qt, QThread, Signal, QSize
 import cv2
 import os
@@ -70,6 +70,28 @@ class SettingsDialog(QDialog):
         self.preview_line.setText(self.config.get('preview_folder', 'previews'))
         layout.addRow('Preview folder', self.preview_line)
 
+    # Preview mode: memory or disk
+    self.preview_mode_combo = QComboBox()
+    self.preview_mode_combo.addItems(['memory', 'disk'])
+    self.preview_mode_combo.setCurrentText(self.config.get('preview_mode', 'memory'))
+    layout.addRow('Preview mode', self.preview_mode_combo)
+
+    # Auto-start on drop
+    from PySide6.QtWidgets import QCheckBox
+    self.auto_start_cb = QCheckBox('Auto-start when file/folder dropped')
+    self.auto_start_cb.setChecked(self.config.get('auto_start_on_drop', True))
+    layout.addRow(self.auto_start_cb)
+
+    # Thumbnail settings: keep thumbnails in memory only and max size
+    self.thumb_only_cb = QCheckBox('Keep only thumbnails in memory (save RAM)')
+    self.thumb_only_cb.setChecked(self.config.get('thumbnail_only_in_memory', True))
+    layout.addRow(self.thumb_only_cb)
+
+    self.thumb_size_spin = QSpinBox()
+    self.thumb_size_spin.setRange(32, 2048)
+    self.thumb_size_spin.setValue(int(self.config.get('thumbnail_max_size', 256)))
+    layout.addRow('Thumbnail max size (px)', self.thumb_size_spin)
+
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.save)
         buttons.rejected.connect(self.reject)
@@ -79,6 +101,10 @@ class SettingsDialog(QDialog):
         config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json')
         self.config['seam_threshold'] = int(self.spin.value())
         self.config['preview_folder'] = self.preview_line.text()
+        self.config['preview_mode'] = self.preview_mode_combo.currentText()
+        self.config['auto_start_on_drop'] = bool(self.auto_start_cb.isChecked())
+        self.config['thumbnail_only_in_memory'] = bool(self.thumb_only_cb.isChecked())
+        self.config['thumbnail_max_size'] = int(self.thumb_size_spin.value())
         with open(config_path, 'w') as f:
             json.dump(self.config, f, indent=2)
         self.accept()
@@ -166,6 +192,89 @@ class HeaderBar(QWidget):
         event.accept()
 
 
+class PreviewWindow(QDialog):
+    """Floating, resizable preview window with next/previous navigation."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('Preview')
+        self.setWindowFlags(self.windowFlags() | Qt.Window)
+        self.setMinimumSize(480, 480)
+        self.results = []
+        self.current_index = 0
+
+        layout = QVBoxLayout(self)
+        nav = QHBoxLayout()
+        self.prev_btn = QPushButton('\u25C0')
+        self.next_btn = QPushButton('\u25B6')
+        nav.addWidget(self.prev_btn)
+        nav.addStretch()
+        nav.addWidget(self.next_btn)
+        layout.addLayout(nav)
+
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setStyleSheet('background:#2f3134;border:1px solid #505357;border-radius:6px;')
+        layout.addWidget(self.image_label, stretch=1)
+
+        self.prev_btn.clicked.connect(self.show_prev)
+        self.next_btn.clicked.connect(self.show_next)
+
+    def set_results(self, results):
+        self.results = results or []
+
+    def show_index(self, idx):
+        if not self.results:
+            return
+        if idx < 0:
+            idx = 0
+        if idx >= len(self.results):
+            idx = len(self.results) - 1
+        self.current_index = idx
+        self._update_image()
+        self.show()
+
+    def _update_image(self):
+        if not self.results:
+            self.image_label.clear()
+            return
+        preview_bytes = self.results[self.current_index].get('preview_bytes', b'')
+        if preview_bytes:
+            pix = QPixmap()
+            pix.loadFromData(preview_bytes, format='PNG')
+            w = max(20, self.width() - 40)
+            h = max(20, self.height() - 80)
+            self.image_label.setPixmap(pix.scaled(w, h, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        else:
+            self.image_label.clear()
+
+    def show_prev(self):
+        if not self.results:
+            return
+        self.current_index = max(0, self.current_index - 1)
+        self._update_image()
+
+    def show_next(self):
+        if not self.results:
+            return
+        self.current_index = min(len(self.results) - 1, self.current_index + 1)
+        self._update_image()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Left:
+            self.show_prev()
+        elif event.key() == Qt.Key_Right:
+            self.show_next()
+        elif event.key() == Qt.Key_Escape:
+            self.close()
+        else:
+            super().keyPressEvent(event)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        # Rescale current image to new size
+        self._update_image()
+
+
 class SeamlessCheckerGUI(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -177,7 +286,12 @@ class SeamlessCheckerGUI(QMainWindow):
         self.setWindowFlag(Qt.FramelessWindowHint, True)
         self.config = self.load_config()
         self.checker = ImageChecker(self.config.get('seam_threshold', 10))
-        self.processor = BatchProcessor(self.checker, self.config.get('supported_formats', ['.png', '.jpg', '.jpeg']), self.config.get('preview_folder', 'previews'))
+    self.processor = BatchProcessor(self.checker, self.config.get('supported_formats', ['.png', '.jpg', '.jpeg']), self.config.get('preview_folder', 'previews'))
+    # Apply preview_mode from config (memory or disk)
+    self.processor.preview_mode = self.config.get('preview_mode', 'memory')
+    # Thumbnail settings
+    self.processor.thumbnail_only_in_memory = self.config.get('thumbnail_only_in_memory', True)
+    self.processor.thumbnail_max_size = int(self.config.get('thumbnail_max_size', 256))
         self.worker = None
         self.last_results = []
         self.setup_dark_theme()
@@ -315,6 +429,9 @@ class SeamlessCheckerGUI(QMainWindow):
         self.preview_label.setToolTip('Tiled preview of last processed image')
         right_layout.addWidget(self.preview_label, alignment=Qt.AlignTop)
 
+        # Floating preview window (initially hidden)
+        self.preview_window = PreviewWindow(parent=self)
+
         results_layout.addWidget(left_frame, stretch=3)
         results_layout.addWidget(right_frame, stretch=1)
         layout.addLayout(results_layout)
@@ -349,8 +466,11 @@ class SeamlessCheckerGUI(QMainWindow):
         path = urls[0].toLocalFile()
         # If a file was dropped, set it; if a folder, set folder
         self.folder_entry.setText(path)
-        # Auto-start processing for convenience
-        self.process_batch()
+        # Auto-start processing for convenience only if enabled in settings
+        # reload config in case settings changed externally
+        self.config = self.load_config()
+        if self.config.get('auto_start_on_drop', True):
+            self.process_batch()
 
     def process_batch(self):
         path = self.folder_entry.text()
@@ -373,19 +493,27 @@ class SeamlessCheckerGUI(QMainWindow):
         for row, res in enumerate(results):
             status = 'Seamless' if res.get('seamless') else 'Not Seamless'
             filename = res.get('file')
-            preview_path = res.get('preview_path')
+            preview_bytes = res.get('preview_bytes', b'')
+            thumb_bytes = res.get('thumb_bytes', b'')
 
-            # Thumbnail cell
+            # Thumbnail cell (use in-memory bytes if available)
             thumb_item = QTableWidgetItem()
-            if preview_path and os.path.exists(preview_path):
-                pix = QPixmap(preview_path).scaled(64, 64, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-                thumb_item.setIcon(QIcon(pix))
+            # Use thumbnail bytes for table (smaller)
+            if thumb_bytes:
+                pix = QPixmap()
+                pix.loadFromData(thumb_bytes, format='PNG')
+                thumb_item.setIcon(QIcon(pix.scaled(64, 64, Qt.KeepAspectRatio, Qt.SmoothTransformation)))
+            elif preview_bytes:
+                pix = QPixmap()
+                pix.loadFromData(preview_bytes, format='PNG')
+                thumb_item.setIcon(QIcon(pix.scaled(64, 64, Qt.KeepAspectRatio, Qt.SmoothTransformation)))
             thumb_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
             self.results_table.setItem(row, 0, thumb_item)
 
-            # Filename cell (store preview_path in UserRole)
+            # Filename cell (store preview_bytes in UserRole)
             file_item = QTableWidgetItem(filename)
-            file_item.setData(Qt.UserRole, preview_path)
+            # store both bytes in UserRole as a small dict-like tuple (thumb, preview)
+            file_item.setData(Qt.UserRole, (thumb_bytes, preview_bytes))
             file_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
             self.results_table.setItem(row, 1, file_item)
 
@@ -397,17 +525,26 @@ class SeamlessCheckerGUI(QMainWindow):
             # adjust row height
             self.results_table.setRowHeight(row, 72)
 
-        QMessageBox.information(self, 'Done', f'Processed {len(results)} images. Previews saved.')
+    QMessageBox.information(self, 'Done', f'Processed {len(results)} images.')
 
     def _on_table_click(self, row, column):
         # get preview_path stored in filename cell's UserRole
         item = self.results_table.item(row, 1)
         if not item:
             return
-        preview_path = item.data(Qt.UserRole)
-        if preview_path and os.path.exists(preview_path):
-            pixmap = QPixmap(preview_path)
+        data = item.data(Qt.UserRole)
+        if not data:
+            return
+        # data is (thumb_bytes, preview_bytes)
+        thumb_bytes, preview_bytes = data if isinstance(data, tuple) else (b'', data)
+        use_bytes = preview_bytes if preview_bytes else thumb_bytes
+        if use_bytes:
+            pixmap = QPixmap()
+            pixmap.loadFromData(use_bytes, format='PNG')
             self.preview_label.setPixmap(pixmap.scaled(220, 220, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            # also open/refresh floating preview window at selected index
+            self.preview_window.set_results(self.last_results)
+            self.preview_window.show_index(row)
 
     def export_csv(self):
         if not self.last_results:
@@ -425,6 +562,10 @@ class SeamlessCheckerGUI(QMainWindow):
             self.config = self.load_config()
             self.checker = ImageChecker(self.config.get('seam_threshold', 10))
             self.processor.preview_folder = self.config.get('preview_folder', 'previews')
+            self.processor.preview_mode = self.config.get('preview_mode', 'memory')
+            # apply thumbnail settings
+            self.processor.thumbnail_only_in_memory = self.config.get('thumbnail_only_in_memory', True)
+            self.processor.thumbnail_max_size = int(self.config.get('thumbnail_max_size', 256))
             self.setup_dark_theme()
 
 
