@@ -562,11 +562,12 @@ class SeamlessCheckerGUI(QMainWindow):
         results_label.setStyleSheet('color: #dcdcdc;')
         left_layout.addWidget(results_label)
         # Results table: thumbnail, filename, status
-        self.results_table = QTableWidget(0, 3)
-        self.results_table.setHorizontalHeaderLabels(['Preview', 'File', 'Status'])
+        self.results_table = QTableWidget(0, 4)
+        self.results_table.setHorizontalHeaderLabels(['Preview', 'File', 'Status', 'Details'])
         self.results_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.results_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.results_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        self.results_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
         self.results_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.results_table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.results_table.verticalHeader().setVisible(False)
@@ -735,6 +736,19 @@ class SeamlessCheckerGUI(QMainWindow):
             status_item = QTableWidgetItem(status)
             status_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
             self.results_table.setItem(row, 2, status_item)
+
+            # Details cell - show seamless type
+            seamless_type = res.get('seamless_type', 'unknown')
+            type_display = {
+                'fully_seamless': 'Fully Seamless',
+                'horizontal_only': 'X-Axis Only',
+                'vertical_only': 'Y-Axis Only',
+                'not_seamless': 'Not Seamless'
+            }.get(seamless_type, seamless_type.title())
+
+            details_item = QTableWidgetItem(type_display)
+            details_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+            self.results_table.setItem(row, 3, details_item)
 
             # adjust row height
             self.results_table.setRowHeight(row, 72)
