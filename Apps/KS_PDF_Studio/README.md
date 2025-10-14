@@ -34,6 +34,7 @@ KS PDF Studio is a comprehensive tool for creating high-quality, professional tu
 - **Batch Processing**: Process multiple files simultaneously
 - **Live Preview**: Real-time PDF preview as you edit
 - **PDF Text Extraction**: Extract and repurpose content from existing PDFs
+- **Web Interface**: Browser-based access from any device
 
 ## 🚀 Quick Start
 
@@ -50,8 +51,9 @@ KS PDF Studio is a comprehensive tool for creating high-quality, professional tu
    pip install -r requirements.txt
    ```
 3. **Run the Application**:
-   - Double-click `run_ks_pdf_studio.bat`
-   - Or run: `python src/main_gui.py`
+   - **Desktop App**: Double-click `run_ks_pdf_studio.bat`
+   - **Web Interface**: Double-click `run_web_interface.bat` then open http://localhost:8080
+   - **Command Line**: `python src/main_gui.py`
 
 ### First Tutorial
 
@@ -115,7 +117,34 @@ KS PDF Studio is a comprehensive tool for creating high-quality, professional tu
 - **CLIP**: ~600MB (Image matching)
 - **Total AI Size**: ~900MB (Downloaded on-demand)
 
-## 📖 User Guide
+## 🌐 Web Interface
+
+Access KS PDF Studio from any browser! The web interface provides the same powerful features as the desktop application with cross-platform accessibility.
+
+### Features
+- **Browser-Based**: Works on Windows, Mac, Linux, tablets, and mobile devices
+- **Real-Time Collaboration**: Multiple users can work simultaneously
+- **Cloud Integration**: Save and access documents from anywhere
+- **Responsive Design**: Optimized for all screen sizes
+- **Same AI Features**: Full AI enhancement and content generation
+
+### Getting Started
+```bash
+# Launch web interface
+run_web_interface.bat
+
+# Access in browser
+http://localhost:8080
+```
+
+### Web Features
+- **Live Markdown Editor** with syntax highlighting
+- **Real-Time Preview** of PDF output
+- **AI Content Enhancement** with one-click improvement
+- **PDF Text Extraction** from uploaded files
+- **Watermark Application** for content protection
+- **Document Management** with cloud sync
+- **Analytics Dashboard** for usage insights
 
 ### Interface Overview
 
@@ -231,6 +260,37 @@ Create `config.json` in the application directory:
 
 ### Project Structure
 ```
+KS_PDF_Studio/
+├── src/                    # Core application modules
+│   ├── core/               # Core functionality
+│   │   ├── pdf_engine.py       # PDF generation
+│   │   ├── pdf_extractor.py   # PDF text extraction
+│   │   ├── markdown_parser.py # Markdown processing
+│   │   ├── image_handler.py   # Image processing
+│   │   └── code_formatter.py  # Code formatting
+│   ├── templates/          # PDF templates
+│   │   └── base_template.py
+│   ├── utils/              # Utility functions
+│   │   └── file_utils.py
+│   ├── ai/                 # AI integration
+│   │   ├── ai_manager.py
+│   │   ├── ai_enhancement.py
+│   │   └── ai_controls.py
+│   ├── monetization/       # Monetization tools
+│   │   ├── watermarking.py
+│   │   ├── license_manager.py
+│   │   └── analytics.py
+│   └── main_gui.py         # Desktop GUI application
+├── web/                    # Web interface
+│   ├── templates/          # HTML templates
+│   │   └── index.html
+│   └── static/             # CSS, JS, images
+├── web_interface.py        # Web server application
+├── run_ks_pdf_studio.bat   # Desktop app launcher
+├── run_web_interface.bat   # Web interface launcher
+└── requirements.txt        # Python dependencies
+```
+```
 src/
 ├── core/           # Core functionality
 │   ├── pdf_engine.py      # PDF generation
@@ -275,10 +335,10 @@ cryptography>=41.0.0
 
 ## 📈 Roadmap
 
-### Phase 3: Advanced Features (Q2 2024)
-- [ ] Web-based interface
-- [ ] Collaborative editing
-- [ ] Advanced AI models
+### Phase 3: Advanced Features (Q2 2024) ✅
+- ✅ Web-based interface for browser accessibility
+- [ ] Collaborative editing with real-time sync
+- [ ] Advanced AI models integration
 - [ ] Video tutorial integration
 
 ### Phase 4: Monetization Tools (Q3 2024)
