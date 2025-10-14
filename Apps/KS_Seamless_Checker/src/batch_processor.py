@@ -41,7 +41,7 @@ class BatchProcessor:
         img = cv2.imread(file_path)
         if img is None:
             return None
-        seamless = self.checker.is_seamless(img)
+        seamless = self.checker.is_seamless(img, file_path)
         preview = self.checker.create_tiled_preview(img)
         # Full tiled preview bytes
         buf = BytesIO()

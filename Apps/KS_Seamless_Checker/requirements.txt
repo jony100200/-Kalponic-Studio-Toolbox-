@@ -2,3 +2,9 @@ opencv-python==4.8.1.78
 Pillow==10.0.1
 numpy==1.24.3
 PySide6==6.5.1
+torch==2.4.1
+torchvision==0.19.1
+scikit-learn==1.5.1
+scikit-image==0.25.2
+QDarkStyle==3.2.3
+scikit-image==0.21.0
