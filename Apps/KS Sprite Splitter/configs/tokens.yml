@@ -1,0 +1,87 @@
+# KS Sprite Splitter UI Theme Tokens
+# Dark theme color palette and styling constants
+
+# Color palette
+colors:
+  primary: "#C49A6C"        # Kalponic gold
+  secondary: "#2D3748"      # Dark slate
+  accent: "#4A90E2"         # Blue accent
+  success: "#48BB78"        # Green
+  warning: "#ED8936"        # Orange
+  error: "#E53E3E"          # Red
+
+  # Background colors
+  bg_primary: "#1A202C"     # Dark background
+  bg_secondary: "#2D3748"   # Card background
+  bg_tertiary: "#4A5568"    # Input background
+
+  # Text colors
+  text_primary: "#F7FAFC"   # Light text
+  text_secondary: "#A0AEC0" # Muted text
+  text_tertiary: "#718096"  # Disabled text
+
+  # Border colors
+  border_light: "#4A5568"
+  border_medium: "#2D3748"
+  border_dark: "#1A202C"
+
+# Typography
+typography:
+  font_family: "Segoe UI, sans-serif"
+  font_size:
+    xs: 10px
+    sm: 12px
+    base: 14px
+    lg: 16px
+    xl: 18px
+    "2xl": 20px
+  font_weight:
+    normal: 400
+    medium: 500
+    semibold: 600
+    bold: 700
+
+# Spacing
+spacing:
+  xs: 4px
+  sm: 8px
+  md: 16px
+  lg: 24px
+  xl: 32px
+  "2xl": 48px
+
+# Border radius
+border_radius:
+  none: 0px
+  sm: 2px
+  md: 4px
+  lg: 6px
+  xl: 8px
+  full: 9999px
+
+# Shadows
+shadows:
+  sm: "0 1px 2px 0 rgba(0, 0, 0, 0.05)"
+  md: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
+  lg: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)"
+
+# Component tokens
+components:
+  button:
+    height: 32px
+    padding_x: 16px
+    border_radius: 4px
+
+  input:
+    height: 32px
+    padding_x: 12px
+    border_radius: 4px
+
+  card:
+    border_radius: 8px
+    padding: 16px
+
+  dialog:
+    border_radius: 8px
+    padding: 24px
+    max_width: 600px
