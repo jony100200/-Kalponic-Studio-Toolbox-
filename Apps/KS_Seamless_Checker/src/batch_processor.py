@@ -9,7 +9,23 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from .image_checker import ImageChecker
 
 class BatchProcessor:
+    """
+    Handles batch processing of images for seamless texture detection.
+
+    Processes multiple images from folders or individual files, generates
+    previews, and exports results to CSV. Supports both memory and disk-based
+    preview modes for performance optimization.
+    """
+
     def __init__(self, checker, supported_formats, preview_folder):
+        """
+        Initialize the batch processor.
+
+        Args:
+            checker (ImageChecker): Image analysis checker instance
+            supported_formats (list): List of supported file extensions
+            preview_folder (str): Folder for storing previews (if disk mode)
+        """
         self.checker = checker
         self.supported_formats = supported_formats
         # preview_folder kept for backward compatibility (CSV default location),
