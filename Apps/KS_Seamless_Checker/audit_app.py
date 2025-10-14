@@ -272,6 +272,8 @@ class ApplicationAuditor:
             self.log_pass('Functionality', "All main modules import successfully")
         except ImportError as e:
             self.log_issue('Functionality', f"Import error: {e}")
+        except Exception as e:
+            self.log_issue('Functionality', f"Unexpected error during import: {e}")
 
         # Test basic instantiation
         try:
