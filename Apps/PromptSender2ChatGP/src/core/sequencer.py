@@ -148,6 +148,35 @@ class PromptSequencer:
         except Exception as e:
             self._log_message(f"Failed to move file {file_path}: {e}", "error")
     
+    def _save_sent_prompt(self, prompt_text: str, prompt_title: str, source_file: str):
+        """Save a successfully sent prompt to a file"""
+        try:
+            # Create sent directory if it doesn't exist
+            sent_dir = "sent_prompts"
+            os.makedirs(sent_dir, exist_ok=True)
+            
+            # Create filename based on prompt title and timestamp
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            safe_title = "".join(c for c in prompt_title if c.isalnum() or c in (' ', '-', '_')).rstrip()
+            safe_title = safe_title.replace(' ', '_')[:50]  # Limit length
+            
+            filename = f"sent_{timestamp}_{safe_title}.txt"
+            filepath = os.path.join(sent_dir, filename)
+            
+            # Write the prompt to file
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(f"Title: {prompt_title}\n")
+                f.write(f"Source: {os.path.basename(source_file)}\n")
+                f.write(f"Sent: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write("-" * 50 + "\n")
+                f.write(prompt_text)
+            
+            self._log_message(f"Saved sent prompt to: {filepath}")
+            
+        except Exception as e:
+            self._log_message(f"Failed to save sent prompt: {e}", "error")
+    
     def _focus_target_window(self) -> bool:
         """Focus the target window and input box with manual intervention fallback"""
         if not self.config.target_window:
@@ -233,7 +262,9 @@ class PromptSequencer:
         """Process a single text file with enhanced prompt parsing"""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read().strip()
+                original_content = f.read()
+            
+            content = original_content.strip()
             
             if not content:
                 self._log_message(f"Empty file: {os.path.basename(file_path)}", "warning")
@@ -248,6 +279,7 @@ class PromptSequencer:
             
             self.total_items = len(prompts)
             file_failed = False
+            remaining_content = original_content  # Start with full content
             
             for i, prompt_data in enumerate(prompts):
                 if self.state == SequencerState.STOPPING:
@@ -263,16 +295,36 @@ class PromptSequencer:
                 # Extract prompt text and metadata
                 prompt_text = prompt_data['text']
                 prompt_title = prompt_data.get('title', f"Prompt {i + 1}")
+                original_segment = prompt_data.get('original_segment', prompt_text)
                 
                 self._log_message(f"Processing: {prompt_title}")
                 
                 success = self._send_text_prompt(prompt_text, i + 1, prompt_title)
-                if not success:
+                
+                if success:
+                    # Save the sent prompt
+                    self._save_sent_prompt(prompt_text, prompt_title, file_path)
+                    
+                    # Remove the original segment from the remaining content
+                    remaining_content = remaining_content.replace(original_segment, '', 1)
+                    
+                    # Update the file with remaining content
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(remaining_content.strip())
+                    
+                    self._log_message(f"Successfully sent and removed prompt: {prompt_title}")
+                else:
                     file_failed = True
                     break
             
-            # Move file to appropriate directory
-            self._move_file_to_sent(file_path, is_image=False, failed=file_failed)
+            # Handle file disposition
+            remaining_content = remaining_content.strip()
+            if remaining_content:
+                # Move remaining content to appropriate directory
+                self._move_file_to_sent(file_path, is_image=False, failed=file_failed)
+            else:
+                # File is empty, just move it to sent_prompts
+                self._move_file_to_sent(file_path, is_image=False, failed=False)
             
         except Exception as e:
             self._log_message(f"Error processing file {file_path}: {e}", "error")
@@ -289,28 +341,35 @@ class PromptSequencer:
         
         # Method 2: Try separator-based format (---)
         if '---' in content:
-            sections = [p.strip() for p in content.split('---') if p.strip()]
+            sections = content.split('---')
             for i, section in enumerate(sections):
-                prompts.append({
-                    'text': section,
-                    'title': f"Section {i + 1}"
-                })
+                section = section.strip()
+                if section:
+                    prompts.append({
+                        'text': section,
+                        'title': f"Section {i + 1}",
+                        'original_segment': section
+                    })
             return prompts
         
         # Method 3: Try double newline separation
-        sections = [p.strip() for p in content.split('\n\n') if p.strip()]
+        sections = content.split('\n\n')
         if len(sections) > 1:
             for i, section in enumerate(sections):
-                prompts.append({
-                    'text': section,
-                    'title': f"Paragraph {i + 1}"
-                })
+                section = section.strip()
+                if section:
+                    prompts.append({
+                        'text': section,
+                        'title': f"Paragraph {i + 1}",
+                        'original_segment': section
+                    })
             return prompts
         
         # Method 4: Single prompt
         prompts.append({
             'text': content,
-            'title': "Single Prompt"
+            'title': "Single Prompt",
+            'original_segment': content
         })
         
         return prompts
@@ -338,8 +397,14 @@ class PromptSequencer:
                 
                 # Get content until next numbered section or end
                 content_part = ""
+                original_segment = ""
                 if i + 2 < len(sections):
                     content_part = sections[i + 2]
+                    # Reconstruct the original segment: "1. Title" + content_part
+                    original_segment = f"{number}. {title}{content_part}"
+                else:
+                    # Last section
+                    original_segment = f"{number}. {title}"
                 
                 # Extract actual prompt from content
                 prompt_variations = self._extract_prompt_variations(content_part)
@@ -354,7 +419,8 @@ class PromptSequencer:
                         prompts.append({
                             'text': prompt_text,
                             'title': full_title,
-                            'number': int(number)
+                            'number': int(number),
+                            'original_segment': original_segment
                         })
                 
                 i += 3  # Move to next section
