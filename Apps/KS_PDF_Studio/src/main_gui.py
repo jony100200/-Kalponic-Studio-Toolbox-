@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 import os
 import sys
+import fnmatch
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
@@ -879,9 +880,162 @@ class KSPDFStudioApp:
         self.extract_status = ttk.Label(extractor_tab, text="", background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_secondary'])
         self.extract_status.pack(fill=tk.X, pady=(4, 0))
 
+    def _themed_open_file(self, title="Open", filetypes=None, initialdir=None) -> Optional[str]:
+        """A minimal, themed file-open dialog implemented as a Toplevel to avoid native OS chrome.
+        Returns the selected full path or None if cancelled.
+        filetypes: list of (desc, pattern) e.g. [("PDF files","*.pdf")]
+        """
+        if filetypes is None:
+            filetypes = [("All files", "*")]
+
+        dlg = tk.Toplevel(self.root)
+        dlg.transient(self.root)
+        dlg.grab_set()
+        dlg.title(title)
+        dlg.configure(bg=DarkTheme.COLORS['bg_primary'])
+        dlg.geometry('720x420')
+
+        sel = {'path': None}
+
+        path_var = tk.StringVar(value=initialdir or os.getcwd())
+
+        top_bar = ttk.Frame(dlg)
+        top_bar.pack(fill=tk.X, padx=8, pady=8)
+        ttk.Label(top_bar, text='Path:', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary']).pack(side=tk.LEFT)
+        path_entry = ttk.Entry(top_bar, textvariable=path_var)
+        path_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(6, 6))
+
+        def list_dir(path):
+            try:
+                entries = sorted(os.listdir(path), key=lambda x: (not os.path.isdir(os.path.join(path, x)), x.lower()))
+            except Exception:
+                entries = []
+            lb.delete(0, tk.END)
+            # parent dir
+            parent = os.path.dirname(path)
+            if parent and parent != path:
+                lb.insert(tk.END, '..')
+            for name in entries:
+                full = os.path.join(path, name)
+                if os.path.isdir(full):
+                    lb.insert(tk.END, f'[D] {name}')
+                else:
+                    # filter by filetypes
+                    keep = False
+                    for _, pat in filetypes:
+                        if pat == '*' or fnmatch.fnmatch(name, pat.replace('*', '*')):
+                            keep = True
+                            break
+                    if keep:
+                        lb.insert(tk.END, name)
+
+        body = ttk.Frame(dlg)
+        body.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0, 8))
+
+        lb = tk.Listbox(body, bg=DarkTheme.COLORS['text_bg'], fg=DarkTheme.COLORS['text_fg'], selectbackground=DarkTheme.COLORS.get('select_bg', DarkTheme.COLORS['fg_accent']), selectforeground=DarkTheme.COLORS.get('select_fg', DarkTheme.COLORS['bg_primary']))
+        vscroll = ttk.Scrollbar(body, orient=tk.VERTICAL, command=lb.yview)
+        lb.config(yscrollcommand=vscroll.set)
+        lb.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        vscroll.pack(side=tk.LEFT, fill=tk.Y)
+
+        def on_refresh(_=None):
+            p = path_var.get()
+            if not p:
+                p = os.getcwd()
+                path_var.set(p)
+            list_dir(p)
+
+        def on_activate(evt=None):
+            sel_idx = lb.curselection()
+            if not sel_idx:
+                return
+            name = lb.get(sel_idx[0])
+            cur = path_var.get()
+            if name == '..':
+                newp = os.path.dirname(cur) or cur
+                path_var.set(newp)
+                on_refresh()
+                return
+            if name.startswith('[D] '):
+                dirname = name[4:]
+                newp = os.path.join(cur, dirname)
+                path_var.set(newp)
+                on_refresh()
+                return
+            # file selected
+            selected = os.path.join(cur, name)
+            sel['path'] = selected
+            dlg.destroy()
+
+        lb.bind('<Double-Button-1>', on_activate)
+
+        btn_bar = ttk.Frame(dlg)
+        btn_bar.pack(fill=tk.X, padx=8, pady=(0, 8))
+        ttk.Button(btn_bar, text='Refresh', command=on_refresh).pack(side=tk.LEFT)
+        ttk.Button(btn_bar, text='Open', command=on_activate).pack(side=tk.RIGHT)
+        ttk.Button(btn_bar, text='Cancel', command=dlg.destroy).pack(side=tk.RIGHT, padx=(0, 6))
+
+        # initial populate
+        on_refresh()
+
+        # allow Enter to open
+        dlg.bind('<Return>', on_activate)
+
+        self.root.wait_window(dlg)
+        return sel['path']
+
+    def _themed_save_as(self, title='Save As', defaultextension='.md', initialdir=None) -> Optional[str]:
+        """Minimal themed Save As dialog. Returns full path or None."""
+        dlg = tk.Toplevel(self.root)
+        dlg.transient(self.root)
+        dlg.grab_set()
+        dlg.title(title)
+        dlg.configure(bg=DarkTheme.COLORS['bg_primary'])
+        dlg.geometry('640x220')
+
+        result = {'path': None}
+
+        dir_var = tk.StringVar(value=initialdir or os.getcwd())
+        name_var = tk.StringVar(value='untitled' + (defaultextension or ''))
+
+        frm = ttk.Frame(dlg)
+        frm.pack(fill=tk.BOTH, expand=True, padx=12, pady=12)
+        ttk.Label(frm, text='Folder:', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary']).grid(row=0, column=0, sticky=tk.W)
+        dir_entry = ttk.Entry(frm, textvariable=dir_var)
+        dir_entry.grid(row=0, column=1, sticky='we', padx=6)
+        ttk.Label(frm, text='Filename:', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary']).grid(row=1, column=0, sticky=tk.W, pady=(8,0))
+        name_entry = ttk.Entry(frm, textvariable=name_var)
+        name_entry.grid(row=1, column=1, sticky='we', padx=6, pady=(8,0))
+
+        frm.columnconfigure(1, weight=1)
+
+        def on_ok():
+            folder = dir_var.get() or os.getcwd()
+            name = name_var.get() or ('untitled' + (defaultextension or ''))
+            if not os.path.isdir(folder):
+                try:
+                    os.makedirs(folder, exist_ok=True)
+                except Exception:
+                    messagebox.showerror('Save Error', 'Cannot create folder')
+                    return
+            full = os.path.join(folder, name)
+            # append extension if missing
+            if defaultextension and not full.lower().endswith(defaultextension.lower()):
+                full = full + defaultextension
+            result['path'] = full
+            dlg.destroy()
+
+        btns = ttk.Frame(dlg)
+        btns.pack(fill=tk.X, padx=12, pady=(0,12))
+        ttk.Button(btns, text='Save', command=on_ok).pack(side=tk.RIGHT)
+        ttk.Button(btns, text='Cancel', command=dlg.destroy).pack(side=tk.RIGHT, padx=(0,8))
+
+        self.root.wait_window(dlg)
+        return result['path']
+
     def _open_pdf_for_extraction(self):
         """Open a PDF and extract text into the extractor preview."""
-        pdf_path = filedialog.askopenfilename(title="Open PDF for Extraction", filetypes=[("PDF files", "*.pdf")])
+        pdf_path = self._themed_open_file(title="Open PDF for Extraction", filetypes=[("PDF files", "*.pdf")])
         if not pdf_path:
             return
 
@@ -947,7 +1101,8 @@ class KSPDFStudioApp:
         fmt = self.extract_format_var.get()
         default_ext = '.md' if fmt == 'md' else ('.txt' if fmt == 'txt' else '.docx')
 
-        file_path = filedialog.asksaveasfilename(defaultextension=default_ext, filetypes=[(f"{fmt.upper()} files", f"*{default_ext}"), ("All files", "*.*")])
+        # Use themed save-as to avoid native save dialog chrome
+        file_path = self._themed_save_as(defaultextension=default_ext, initialdir=os.path.dirname(self._last_extracted.get('path', os.getcwd())))
         if not file_path:
             return
 
