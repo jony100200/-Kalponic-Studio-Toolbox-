@@ -189,7 +189,6 @@ class AIModelManager:
             model=model_name,
             framework='pt',
             device=0 if self.device == 'cuda' else -1,
-            cache_dir=str(self.cache_dir)
         )
 
     def _download_clip(self, show_progress: bool = True) -> None:
@@ -251,7 +250,6 @@ class AIModelManager:
                 model=model_name,
                 framework='pt',
                 device=0 if self.device == 'cuda' else -1,
-                cache_dir=str(self.cache_dir)
             )
 
     def _load_clip(self) -> None:

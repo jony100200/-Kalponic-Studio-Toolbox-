@@ -199,6 +199,15 @@ class KSPDFStudioApp:
         self.root.geometry("1200x800")
         self.root.minsize(800, 600)
 
+        # Remove native Windows title bar and borders for custom dark header
+        self.root.overrideredirect(True)
+
+        # Track window state for custom controls
+        self.is_maximized = False
+        self.previous_geometry = None
+        self.drag_start_x = 0
+        self.drag_start_y = 0
+
         # Apply dark theme
         DarkTheme.apply_theme(root)
 
@@ -252,7 +261,10 @@ class KSPDFStudioApp:
 
     def _setup_ui(self):
         """Set up the main user interface."""
-        # Create custom dark menubar (instead of native OS menu)
+        # Create custom title bar (replaces native Windows title bar)
+        self._create_custom_title_bar()
+
+        # Create custom dark menubar (replaces native OS menu)
         self._create_dark_menubar()
 
         # Create main container
@@ -367,6 +379,118 @@ class KSPDFStudioApp:
         self.root.bind('<Control-y>', lambda e: self._redo())
         self.root.bind('<Control-f>', lambda e: self._find())
         self.root.bind('<Control-h>', lambda e: self._replace())
+
+        # Window control shortcuts
+        self.root.bind('<Alt-F4>', lambda e: self._on_closing())
+        self.root.bind('<F11>', lambda e: self._toggle_maximize())
+
+    def _create_custom_title_bar(self):
+        """Create a custom dark title bar to replace the native Windows title bar."""
+        title_bg = DarkTheme.COLORS.get('bg_secondary', '#2d2d2d')
+        title_fg = DarkTheme.COLORS.get('fg_primary', '#e0e0e0')
+        hover_bg = DarkTheme.COLORS.get('bg_tertiary', '#3a3a3a')
+        button_bg = DarkTheme.COLORS.get('button_bg', '#404040')
+        button_hover = DarkTheme.COLORS.get('highlight', '#505050')
+
+        # Title bar container
+        self.title_bar = tk.Frame(self.root, bg=title_bg, height=32)
+        self.title_bar.pack(fill=tk.X)
+        self.title_bar.pack_propagate(False)  # Maintain exact height
+
+        # Drag functionality for the title bar
+        def start_drag(event):
+            self.drag_start_x = event.x_root - self.root.winfo_x()
+            self.drag_start_y = event.y_root - self.root.winfo_y()
+
+        def do_drag(event):
+            if not self.is_maximized:
+                x = event.x_root - self.drag_start_x
+                y = event.y_root - self.drag_start_y
+                self.root.geometry(f"+{x}+{y}")
+
+        def double_click_maximize(event):
+            self._toggle_maximize()
+
+        self.title_bar.bind('<Button-1>', start_drag)
+        self.title_bar.bind('<B1-Motion>', do_drag)
+        self.title_bar.bind('<Double-Button-1>', double_click_maximize)
+
+        # Left section: Icon and title
+        left_frame = tk.Frame(self.title_bar, bg=title_bg)
+        left_frame.pack(side=tk.LEFT, padx=(8, 0))
+
+        # App icon (simple colored square)
+        icon_canvas = tk.Canvas(left_frame, width=16, height=16, bg=title_bg, highlightthickness=0)
+        icon_canvas.create_rectangle(2, 2, 14, 14, fill=DarkTheme.COLORS.get('fg_accent', '#4a9eff'), outline='')
+        icon_canvas.pack(side=tk.LEFT, pady=(8, 0))
+
+        # App title
+        title_label = tk.Label(left_frame, text="KS PDF Studio", bg=title_bg, fg=title_fg,
+                              font=('Segoe UI', 10, 'bold'), anchor='w')
+        title_label.pack(side=tk.LEFT, padx=(8, 0), pady=(6, 0))
+        title_label.bind('<Button-1>', start_drag)
+        title_label.bind('<B1-Motion>', do_drag)
+        title_label.bind('<Double-Button-1>', double_click_maximize)
+
+        # Center section: Filename display (clickable to open file)
+        center_frame = tk.Frame(self.title_bar, bg=title_bg)
+        center_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        self.title_file_var = tk.StringVar(value='No file open')
+        file_label = tk.Label(center_frame, textvariable=self.title_file_var, bg=title_bg,
+                             fg=DarkTheme.COLORS.get('fg_secondary', '#b0b0b0'),
+                             font=('Segoe UI', 9), anchor='w')
+        file_label.pack(fill=tk.X, padx=(16, 0), pady=(6, 0))
+        file_label.bind('<Button-1>', lambda e: self._open_file())
+
+        # Right section: Window control buttons
+        right_frame = tk.Frame(self.title_bar, bg=title_bg)
+        right_frame.pack(side=tk.RIGHT)
+
+        # Minimize button
+        def create_button(text, command):
+            btn = tk.Button(right_frame, text=text, bg=button_bg, fg=title_fg,
+                           font=('Segoe UI', 10), bd=0, padx=12, pady=2,
+                           command=command, cursor='hand2')
+            btn.pack(side=tk.LEFT)
+            # Hover effects
+            def on_enter(e): btn.config(bg=button_hover)
+            def on_leave(e): btn.config(bg=button_bg)
+            btn.bind('<Enter>', on_enter)
+            btn.bind('<Leave>', on_leave)
+            return btn
+
+        minimize_btn = create_button('─', self._minimize_window)
+        maximize_btn = create_button('□', self._toggle_maximize)
+        close_btn = tk.Button(right_frame, text='✕', bg=button_bg, fg=title_fg,
+                             font=('Segoe UI', 10), bd=0, padx=12, pady=2,
+                             command=self._on_closing, cursor='hand2')
+        close_btn.pack(side=tk.LEFT)
+        # Special hover for close button (red tint)
+        def close_enter(e): close_btn.config(bg='#9e4a4a')
+        def close_leave(e): close_btn.config(bg=button_bg)
+        close_btn.bind('<Enter>', close_enter)
+        close_btn.bind('<Leave>', close_leave)
+
+    def _minimize_window(self):
+        """Minimize the window."""
+        self.root.iconify()
+
+    def _toggle_maximize(self):
+        """Toggle between maximized and restored window state."""
+        if self.is_maximized:
+            # Restore
+            if self.previous_geometry:
+                self.root.geometry(self.previous_geometry)
+            self.is_maximized = False
+        else:
+            # Maximize
+            self.previous_geometry = self.root.geometry()
+            # Get screen dimensions
+            screen_width = self.root.winfo_screenwidth()
+            screen_height = self.root.winfo_screenheight()
+            self.root.geometry(f"{screen_width}x{screen_height}+0+0")
+            self.is_maximized = True
 
     def _create_dark_menubar(self):
         """Create a VS Code-like dark menubar made of buttons/labels so it takes theme colors and avoids white OS chrome."""
@@ -1341,7 +1465,16 @@ class KSPDFStudioApp:
         else:
             self.status_file.config(text="Untitled")
 
-        # Mirror the filename into the top header for quick visibility
+        # Update both title bar and header filename displays
+        try:
+            if getattr(self, 'title_file_var', None) is not None:
+                if self.current_file:
+                    self.title_file_var.set(str(self.current_file))
+                else:
+                    self.title_file_var.set('No file open')
+        except Exception:
+            pass
+
         try:
             if getattr(self, 'header_file_var', None) is not None:
                 if self.current_file:
