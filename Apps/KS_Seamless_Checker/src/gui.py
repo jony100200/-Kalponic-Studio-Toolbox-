@@ -423,17 +423,6 @@ class PreviewWindow(QDialog):
 
 
 class SeamlessCheckerGUI(QMainWindow):
-    """
-    Main GUI application for KS Seamless Checker.
-
-    Provides a dark-themed interface for seamless texture detection with:
-    - Drag & drop file/folder support
-    - Batch processing capabilities
-    - Real-time preview with zoom controls
-    - CSV export functionality
-    - Customizable settings
-    """
-
     def __init__(self):
         super().__init__()
         self.setWindowTitle('KS Seamless Checker')
@@ -445,8 +434,8 @@ class SeamlessCheckerGUI(QMainWindow):
         self.config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json')
         self.config = self.load_config()
         self.checker = ImageChecker(
-            threshold=self.config.get('threshold', 20.0),
-            use_ai=self.config.get('use_ai', False)
+            threshold=self.config.get('seam_threshold', 10),
+            use_ai=self.config.get('use_ai_seam_detection', False)
         )
         self.processor = BatchProcessor(self.checker, self.config.get('supported_formats', ['.png', '.jpg', '.jpeg']), self.config.get('preview_folder', 'previews'))
         # Apply preview_mode from config (memory or disk)
@@ -672,7 +661,7 @@ class SeamlessCheckerGUI(QMainWindow):
             with open(self.config_path, 'w') as f:
                 json.dump(config, f, indent=4)
         except Exception as e:
-            pass  # Silently ignore config save errors
+            print(f"Error saving last path: {e}")
 
     def _folder_drag_enter(self, event):
         """Handle drag enter event for folder_entry"""
