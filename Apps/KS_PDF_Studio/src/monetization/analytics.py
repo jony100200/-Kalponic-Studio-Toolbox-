@@ -86,13 +86,25 @@ class AnalyticsDatabase:
         Args:
             db_path: Path to SQLite database file
         """
-        self.db_path = Path(db_path)
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.db_path = db_path
+        self._persistent_conn = None
+        if db_path != ":memory:":
+            self.db_path = Path(db_path)
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            # For in-memory databases, keep a persistent connection
+            self._persistent_conn = sqlite3.connect(":memory:")
         self._init_db()
+
+    def _get_connection(self):
+        """Get database connection."""
+        if self._persistent_conn:
+            return self._persistent_conn
+        return sqlite3.connect(self.db_path)
 
     def _init_db(self):
         """Initialize database tables."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             cursor = conn.cursor()
 
             # Usage events table
@@ -147,7 +159,7 @@ class AnalyticsDatabase:
 
     def insert_usage_event(self, event: UsageEvent):
         """Insert usage event."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 INSERT OR REPLACE INTO usage_events
@@ -168,7 +180,7 @@ class AnalyticsDatabase:
 
     def insert_revenue_event(self, event: RevenueEvent):
         """Insert revenue event."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 INSERT OR REPLACE INTO revenue_events
@@ -189,7 +201,7 @@ class AnalyticsDatabase:
 
     def update_content_metadata(self, content_id: str, metadata: Dict[str, Any]):
         """Update content metadata."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 INSERT OR REPLACE INTO content_metadata
@@ -211,7 +223,7 @@ class AnalyticsDatabase:
     def get_usage_stats(self, start_date: datetime, end_date: datetime,
                        content_id: Optional[str] = None) -> Dict[str, Any]:
         """Get usage statistics."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             cursor = conn.cursor()
 
             query = '''
@@ -261,7 +273,7 @@ class AnalyticsDatabase:
     def get_revenue_stats(self, start_date: datetime, end_date: datetime,
                          currency: str = 'USD') -> Dict[str, Any]:
         """Get revenue statistics."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             cursor = conn.cursor()
 
             # Total revenue
@@ -305,7 +317,7 @@ class AnalyticsDatabase:
     def get_top_content(self, start_date: datetime, end_date: datetime,
                        limit: int = 10) -> List[Dict[str, Any]]:
         """Get top content by usage."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             cursor = conn.cursor()
 
             cursor.execute('''
@@ -339,7 +351,7 @@ class AnalyticsDatabase:
 
     def get_user_engagement(self, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
         """Get user engagement metrics."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             cursor = conn.cursor()
 
             # Daily active users
