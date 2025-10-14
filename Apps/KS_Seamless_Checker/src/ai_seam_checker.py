@@ -44,7 +44,6 @@ class AISeamChecker:
                 _, predicted = torch.max(outputs, 1)
                 return predicted.item() == 1  # 1 = seamless, 0 = not seamless
         except Exception as e:
-            print(f"AI check failed: {e}")
             return None
 
     def download_model(self, url, save_path):
