@@ -1,0 +1,86 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ks-sprite-splitter"
+version = "0.1.0"
+description = "Auto-separate 2D sprites into semantic parts with soft mattes"
+authors = [
+    {name = "Kalponic Studio", email = "info@kalponic.com"}
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
+dependencies = [
+    "numpy>=1.21.0",
+    "opencv-python>=4.5.0",
+    "Pillow>=9.0.0",
+    "PyYAML>=6.0",
+    "tqdm>=4.62.0",
+    "scikit-image>=0.19.0",
+    "onnxruntime>=1.12.0",
+    "torch>=1.12.0",
+    "torchvision>=0.13.0",
+    "scipy>=1.7.0",
+    "watchdog>=2.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=22.0.0",
+    "isort>=5.10.0",
+    "mypy>=1.0.0",
+    "flake8>=4.0.0",
+]
+ui = [
+    "PySide6>=6.4.0",
+    "QDarkStyle>=3.0.0",
+]
+
+[project.scripts]
+ks-splitter = "cli.ks_splitter:main"
+
+[project.urls]
+Homepage = "https://github.com/jony100200/-Kalponic-Studio-Toolbox-"
+Repository = "https://github.com/jony100200/-Kalponic-Studio-Toolbox-"
+Issues = "https://github.com/jony100200/-Kalponic-Studio-Toolbox-/issues"
+
+[tool.setuptools]
+packages = ["ks_splitter", "app"]
+package-dir = {"" = "."}
+
+[tool.setuptools.package-data]
+ks_splitter = ["*.yml", "*.yaml"]
+app = ["*.qss", "*.svg", "*.png"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true

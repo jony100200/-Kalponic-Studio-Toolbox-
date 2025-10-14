@@ -1,0 +1,45 @@
+# KS Sprite Splitter Configuration
+# Global defaults and backend settings
+
+# Backend selections
+objects_backend: sam2          # sam2, m2f (Mask2Former), yolo
+matte_backend: modnet          # modnet, fba, guided
+parts_backend: heuristics       # heuristics, tiny_partnet
+
+# Template settings
+parts:
+  default_template: auto        # auto, tree, flag, char, arch, vfx
+  templates_dir: "./templates"
+
+# Export settings
+export:
+  pack: "rgba"                  # rgba, bgra
+  write_previews: true
+  write_aux_maps: false         # normals, roughness, AO
+  preview_format: "png"         # png, jpg
+  matte_format: "png"           # png, tga
+
+# Performance settings
+performance:
+  workers: 4                    # number of worker threads
+  proxy_max_px: 2048            # max dimension for processing
+  batch_size: 1                 # images per batch (for future GPU batching)
+
+# Runtime settings
+runtimes:
+  onnx:
+    prefer: "cuda"              # cuda, cpu, directml
+    cuda_version_min: "11.0"    # minimum CUDA version
+    cpu_threads: 4              # CPU threads for inference
+
+# Logging
+logging:
+  level: "INFO"                 # DEBUG, INFO, WARNING, ERROR
+  file: "run.log"
+  json_lines: false             # structured logging for integration
+
+# Error handling
+error_handling:
+  on_segmentation_failure: "skip"  # skip, retry, fallback
+  max_retries: 3
+  fallback_backend: "cpu_guided"

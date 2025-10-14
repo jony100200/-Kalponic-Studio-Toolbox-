@@ -1,0 +1,10 @@
+name: tree
+parts: [Leaves, Branches, Trunk]
+heuristics:
+  kmeans_k: 4
+  freq_window: [3, 9]
+  trunk_skeleton: true
+matting:
+  band_px: 6
+extras:
+  wind_gradient: true
