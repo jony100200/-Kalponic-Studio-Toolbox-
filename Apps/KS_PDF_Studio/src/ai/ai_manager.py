@@ -187,6 +187,7 @@ class AIModelManager:
         self._models['distilbart'] = pipeline(
             'summarization',
             model=model_name,
+            framework='pt',
             device=0 if self.device == 'cuda' else -1,
             cache_dir=str(self.cache_dir)
         )
@@ -248,15 +249,18 @@ class AIModelManager:
             self._models['distilbart'] = pipeline(
                 'summarization',
                 model=model_name,
-                device=0 if self.device == 'cuda' else -1
+                framework='pt',
+                device=0 if self.device == 'cuda' else -1,
+                cache_dir=str(self.cache_dir)
             )
 
     def _load_clip(self) -> None:
         """Load CLIP model."""
         if 'clip' not in self._models:
             model_name = self.MODELS['clip']['name']
-            self._models['clip'] = CLIPModel.from_pretrained(model_name)
-            self._processors['clip'] = CLIPProcessor.from_pretrained(model_name)
+            # Use cache_dir to ensure model files are loaded from project cache
+            self._models['clip'] = CLIPModel.from_pretrained(model_name, cache_dir=str(self.cache_dir))
+            self._processors['clip'] = CLIPProcessor.from_pretrained(model_name, cache_dir=str(self.cache_dir))
 
             if self.device == 'cuda':
                 self._models['clip'] = self._models['clip'].to('cuda')
