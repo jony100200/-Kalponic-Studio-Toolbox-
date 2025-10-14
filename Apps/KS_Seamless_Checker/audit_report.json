@@ -1,7 +1,7 @@
 {
-  "score": 13.253012048192772,
-  "passed": 11,
-  "warnings": 71,
+  "score": 18.84057971014493,
+  "passed": 13,
+  "warnings": 55,
   "issues": 1,
   "details": {
     "passed": [
@@ -42,6 +42,14 @@
         "message": "Found 10 dependencies in requirements.txt"
       },
       {
+        "category": "Configuration",
+        "message": "Found config key: threshold"
+      },
+      {
+        "category": "Configuration",
+        "message": "Found config key: use_ai"
+      },
+      {
         "category": "Documentation",
         "message": "README.md found and contains content"
       },
@@ -51,21 +59,6 @@
       }
     ],
     "warnings": [
-      {
-        "category": "File Structure",
-        "message": "Unnecessary file found: __pycache__\\test_import.cpython-313-pytest-8.4.1.pyc",
-        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\__pycache__\\test_import.cpython-313-pytest-8.4.1.pyc"
-      },
-      {
-        "category": "File Structure",
-        "message": "Unnecessary file found: __pycache__\\test_smoke.cpython-313.pyc",
-        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\__pycache__\\test_smoke.cpython-313.pyc"
-      },
-      {
-        "category": "File Structure",
-        "message": "Unnecessary file found: tests\\__pycache__\\test_batch_processor.cpython-313-pytest-8.4.1.pyc",
-        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\tests\\__pycache__\\test_batch_processor.cpython-313-pytest-8.4.1.pyc"
-      },
       {
         "category": "File Structure",
         "message": "Unnecessary file found: src\\__pycache__\\ai_seam_checker.cpython-313.pyc",
@@ -90,26 +83,6 @@
         "category": "File Structure",
         "message": "Unnecessary file found: src\\__pycache__\\__init__.cpython-313.pyc",
         "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\__pycache__\\__init__.cpython-313.pyc"
-      },
-      {
-        "category": "File Structure",
-        "message": "Unnecessary file found: test_fully_seamless.png",
-        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\test_fully_seamless.png"
-      },
-      {
-        "category": "File Structure",
-        "message": "Unnecessary file found: test_horizontal_only.png",
-        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\test_horizontal_only.png"
-      },
-      {
-        "category": "File Structure",
-        "message": "Unnecessary file found: test_non_seamless.png",
-        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\test_non_seamless.png"
-      },
-      {
-        "category": "File Structure",
-        "message": "Unnecessary file found: test_vertical_only.png",
-        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\test_vertical_only.png"
       },
       {
         "category": "Code Quality",
@@ -148,11 +121,6 @@
       },
       {
         "category": "Code Quality",
-        "message": "Potential debug code found in ai_seam_checker.py: print\\s*\\(",
-        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\ai_seam_checker.py"
-      },
-      {
-        "category": "Code Quality",
         "message": "Missing docstring for AISeamChecker in ai_seam_checker.py",
         "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\ai_seam_checker.py"
       },
@@ -163,32 +131,12 @@
       },
       {
         "category": "Code Quality",
-        "message": "Missing docstring for BatchProcessor in batch_processor.py",
-        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\batch_processor.py"
-      },
-      {
-        "category": "Code Quality",
-        "message": "Missing docstring for __init__ in batch_processor.py",
-        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\batch_processor.py"
-      },
-      {
-        "category": "Code Quality",
-        "message": "Potential debug code found in gui.py: print\\s*\\(",
-        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
-      },
-      {
-        "category": "Code Quality",
         "message": "Missing docstring for BatchWorker in gui.py",
         "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
       },
       {
         "category": "Code Quality",
         "message": "Missing docstring for SettingsDialog in gui.py",
-        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
-      },
-      {
-        "category": "Code Quality",
-        "message": "Missing docstring for SeamlessCheckerGUI in gui.py",
         "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
       },
       {
@@ -343,16 +291,6 @@
       },
       {
         "category": "Code Quality",
-        "message": "Missing docstring for ImageChecker in image_checker.py",
-        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\image_checker.py"
-      },
-      {
-        "category": "Code Quality",
-        "message": "Missing docstring for __init__ in image_checker.py",
-        "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\image_checker.py"
-      },
-      {
-        "category": "Code Quality",
         "message": "Missing docstring for make_temp_image in test_batch_processor.py",
         "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\tests\\test_batch_processor.py"
       },
@@ -368,43 +306,33 @@
       },
       {
         "category": "Dependencies",
-        "message": "Potentially unused imports in audit_app.py: pathlib, batch_processor, MainWindow, Set, BatchProcessor, gui, Tuple, image_checker, typing, os, List, subprocess, Dict, importlib",
+        "message": "Potentially unused imports in audit_app.py: Set, MainWindow, os, gui, typing, importlib, subprocess, image_checker, batch_processor, List, BatchProcessor, Dict, pathlib, Tuple",
         "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\audit_app.py"
       },
       {
         "category": "Dependencies",
-        "message": "Potentially unused imports in main.py: PySide6, src",
+        "message": "Potentially unused imports in main.py: src, PySide6",
         "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\main.py"
       },
       {
         "category": "Dependencies",
-        "message": "Potentially unused imports in ai_seam_checker.py: numpy, torchvision, PIL",
+        "message": "Potentially unused imports in ai_seam_checker.py: torchvision, numpy, PIL",
         "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\ai_seam_checker.py"
       },
       {
         "category": "Dependencies",
-        "message": "Potentially unused imports in batch_processor.py: ImageChecker, image_checker, io, PIL",
+        "message": "Potentially unused imports in batch_processor.py: ImageChecker, PIL, io, image_checker",
         "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\batch_processor.py"
       },
       {
         "category": "Dependencies",
-        "message": "Potentially unused imports in gui.py: QKeySequence, PySide6, batch_processor, image_checker, cv2",
+        "message": "Potentially unused imports in gui.py: QKeySequence, PySide6, cv2, image_checker, batch_processor",
         "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\gui.py"
       },
       {
         "category": "Dependencies",
-        "message": "Potentially unused imports in image_checker.py: skimage, PIL, numpy, structural_similarity, scipy, ai_seam_checker, os",
+        "message": "Potentially unused imports in image_checker.py: skimage, os, PIL, structural_similarity, ai_seam_checker, scipy, numpy",
         "file": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Apps\\KS_Seamless_Checker\\src\\image_checker.py"
-      },
-      {
-        "category": "Configuration",
-        "message": "Missing config key: threshold",
-        "file": null
-      },
-      {
-        "category": "Configuration",
-        "message": "Missing config key: use_ai",
-        "file": null
       }
     ],
     "issues": [
