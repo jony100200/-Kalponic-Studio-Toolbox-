@@ -16,6 +16,21 @@ from pathlib import Path
 from .ai_manager import AIModelManager
 from .ai_enhancement import AIEnhancer
 
+# Theme import: try absolute import first (when running as script), then relative (package),
+# finally fall back to sensible defaults to avoid import-time crashes in tests.
+try:
+    from theme import COLORS as THEME_COLORS
+except Exception:
+    try:
+        from ..theme import COLORS as THEME_COLORS
+    except Exception:
+        # Fallback tokens (should be overridden by centralized theme in normal runs)
+        THEME_COLORS = {
+            'text_bg': '#1a1a1a',
+            'text_fg': '#e0e0e0',
+            'fg_primary': '#e0e0e0'
+        }
+
 
 class AIControlPanel(ttk.Frame):
     """
@@ -141,8 +156,8 @@ class AIControlPanel(ttk.Frame):
 
         # Text input
         self.enhancement_text = scrolledtext.ScrolledText(input_frame, height=10,
-                                                         bg='#1a1a1a', fg='#e0e0e0',
-                                                         insertbackground='#e0e0e0')
+                                                         bg=THEME_COLORS['text_bg'], fg=THEME_COLORS['text_fg'],
+                                                         insertbackground=THEME_COLORS['fg_primary'])
         self.enhancement_text.pack(fill=tk.BOTH, expand=True)
 
         # Enhancement options frame
@@ -185,8 +200,8 @@ class AIControlPanel(ttk.Frame):
         results_notebook.add(enhanced_frame, text="Enhanced Content")
 
         self.enhanced_text = scrolledtext.ScrolledText(enhanced_frame, height=15,
-                                                      bg='#1a1a1a', fg='#e0e0e0',
-                                                      insertbackground='#e0e0e0')
+                                                      bg=THEME_COLORS['text_bg'], fg=THEME_COLORS['text_fg'],
+                                                      insertbackground=THEME_COLORS['fg_primary'])
         self.enhanced_text.pack(fill=tk.BOTH, expand=True)
 
         # Suggestions tab
@@ -194,8 +209,8 @@ class AIControlPanel(ttk.Frame):
         results_notebook.add(suggestions_frame, text="Suggestions")
 
         self.suggestions_text = scrolledtext.ScrolledText(suggestions_frame, height=15,
-                                                        bg='#1a1a1a', fg='#e0e0e0',
-                                                        insertbackground='#e0e0e0')
+                                                        bg=THEME_COLORS['text_bg'], fg=THEME_COLORS['text_fg'],
+                                                        insertbackground=THEME_COLORS['fg_primary'])
         self.suggestions_text.pack(fill=tk.BOTH, expand=True)
 
     def _create_tutorial_tab(self):
@@ -236,9 +251,9 @@ class AIControlPanel(ttk.Frame):
         self.tutorial_text = scrolledtext.ScrolledText(
             tutorial_frame,
             height=20,
-            bg='#1a1a1a',
-            fg='#e0e0e0',
-            insertbackground='#e0e0e0'
+            bg=THEME_COLORS['text_bg'],
+            fg=THEME_COLORS['text_fg'],
+            insertbackground=THEME_COLORS['fg_primary']
         )
         self.tutorial_text.pack(fill=tk.BOTH, expand=True)
 
