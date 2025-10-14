@@ -121,6 +121,9 @@ class DarkTheme:
         try:
             style.configure('Vertical.TScrollbar', background=DarkTheme.COLORS.get('scroll_thumb', DarkTheme.COLORS['scrollbar_fg']), troughcolor=DarkTheme.COLORS.get('scroll_track', DarkTheme.COLORS['bg_secondary']))
             style.configure('Horizontal.TScrollbar', background=DarkTheme.COLORS.get('scroll_thumb', DarkTheme.COLORS['scrollbar_fg']), troughcolor=DarkTheme.COLORS.get('scroll_track', DarkTheme.COLORS['bg_secondary']))
+            # Dark variant we will explicitly use in our custom text areas
+            style.configure('Dark.Vertical.TScrollbar', background=DarkTheme.COLORS.get('scroll_thumb', '#505050'), troughcolor=DarkTheme.COLORS.get('scroll_track', '#2d2d2d'), arrowcolor=DarkTheme.COLORS.get('fg_primary', '#e0e0e0'))
+            style.map('Dark.Vertical.TScrollbar', background=[('active', DarkTheme.COLORS.get('highlight', '#505050'))])
         except Exception:
             pass
 
@@ -249,8 +252,8 @@ class KSPDFStudioApp:
 
     def _setup_ui(self):
         """Set up the main user interface."""
-        # Create main menu
-        self._create_menu()
+        # Create custom dark menubar (instead of native OS menu)
+        self._create_dark_menubar()
 
         # Create main container
         main_container = ttk.Frame(self.root)
@@ -270,8 +273,8 @@ class KSPDFStudioApp:
         self.ai_status_bar.pack(fill=tk.X, side=tk.BOTTOM)
 
     def _create_menu(self):
-        """Create the main menu bar."""
-        menubar = tk.Menu(self.root)
+        """Deprecated: native menu replaced by _create_dark_menubar."""
+        menubar = tk.Menu(self.root)  # keep for fallback if needed
         self.root.config(menu=menubar)
 
         # File menu
@@ -365,6 +368,103 @@ class KSPDFStudioApp:
         self.root.bind('<Control-f>', lambda e: self._find())
         self.root.bind('<Control-h>', lambda e: self._replace())
 
+    def _create_dark_menubar(self):
+        """Create a VS Code-like dark menubar made of buttons/labels so it takes theme colors and avoids white OS chrome."""
+        bar_bg = DarkTheme.COLORS.get('bg_secondary', '#2d2d2d')
+        bar_fg = DarkTheme.COLORS.get('fg_primary', '#e0e0e0')
+        hover_bg = DarkTheme.COLORS.get('bg_tertiary', '#3a3a3a')
+
+        container = tk.Frame(self.root, bg=bar_bg)
+        container.pack(fill=tk.X)
+
+        def make_menu(label, items):
+            btn = tk.Label(container, text=label, bg=bar_bg, fg=bar_fg, padx=10, pady=4, cursor='hand2')
+            btn.pack(side=tk.LEFT)
+
+            menu = tk.Toplevel(self.root, bg=bar_bg)
+            menu.withdraw()
+            menu.overrideredirect(True)
+            # menu items
+            def add_item(text, cmd=None):
+                it = tk.Label(menu, text=text, bg=bar_bg, fg=bar_fg, anchor='w', padx=12, pady=4)
+                it.pack(fill=tk.X)
+                it.bind('<Enter>', lambda e, w=it: w.configure(bg=hover_bg))
+                it.bind('<Leave>', lambda e, w=it: w.configure(bg=bar_bg))
+                if cmd:
+                    it.bind('<Button-1>', lambda e: (cmd(), hide_all()))
+            for text, cmd in items:
+                add_item(text, cmd)
+
+            def show_menu(event=None):
+                x = btn.winfo_rootx()
+                y = btn.winfo_rooty() + btn.winfo_height()
+                menu.geometry(f"200x{menu.winfo_reqheight()}+{x}+{y}")
+                menu.deiconify()
+                menu.lift(aboveThis=self.root)
+
+            def hide_menu(event=None):
+                menu.withdraw()
+
+            def hide_all():
+                for child in container.winfo_children():
+                    pass  # menus are Toplevels; we close in on_focus_out
+                hide_menu()
+
+            btn.bind('<Button-1>', show_menu)
+            menu.bind('<FocusOut>', hide_menu)
+            return btn, menu
+
+        # File
+        make_menu('File', [
+            ('New Project	Ctrl+N', self._new_project),
+            ('Open...	Ctrl+O', self._open_file),
+            ('Save	Ctrl+S', self._save_file),
+            ('Save As...	Ctrl+Shift+S', self._save_file_as),
+            ('Export PDF	Ctrl+E', self._export_pdf),
+            ('Exit', self._on_closing),
+        ])
+        # Edit
+        make_menu('Edit', [
+            ('Undo	Ctrl+Z', self._undo),
+            ('Redo	Ctrl+Y', self._redo),
+            ('Find	Ctrl+F', self._find),
+            ('Replace	Ctrl+H', self._replace),
+        ])
+        # View
+        make_menu('View', [
+            ('Preview PDF', self._preview_pdf),
+            ('Show AI Panel', self._show_ai_panel),
+            ('Templates', self._show_templates),
+        ])
+        # Tools
+        make_menu('Tools', [
+            ('Batch Process', self._batch_process),
+            ('Image Optimizer', self._image_optimizer),
+            ('Code Formatter', self._code_formatter),
+            ('Extract PDF Text', lambda: self.preview_notebook.select(self._find_tab_index_by_name('PDF Extractor'))),
+        ])
+        # AI
+        make_menu('AI', [
+            ('Enhance Content', self._ai_enhance_content),
+            ('Generate Tutorial', self._ai_generate_tutorial),
+            ('Suggest Images', self._ai_suggest_images),
+            ('AI Settings', self._show_ai_panel),
+        ])
+        # Monetization
+        make_menu('Monetization', [
+            ('Add Watermark', self._add_watermark),
+            ('Create License', self._create_license),
+            ('Validate License', self._validate_license),
+            ('Analytics Dashboard', self._show_analytics),
+            ('Export Analytics', self._export_analytics),
+        ])
+        # Help
+        make_menu('Help', [
+            ('Documentation', self._show_docs),
+            ('Keyboard Shortcuts', self._show_shortcuts),
+            ('About', self._show_about),
+        ])
+
     def _create_toolbar(self, parent):
         """Create the main toolbar."""
         toolbar = ttk.Frame(parent)
@@ -395,6 +495,12 @@ class KSPDFStudioApp:
         ttk.Button(toolbar, text="👁️ Preview", command=self._preview_pdf).pack(side=tk.LEFT, padx=2)
         ttk.Button(toolbar, text="⚙️ AI Panel", command=self._show_ai_panel).pack(side=tk.LEFT, padx=2)
 
+        # Add a compact VS Code-like header bar beneath the toolbar
+        try:
+            self._create_top_header(parent)
+        except Exception:
+            pass
+
     def _create_main_content(self, parent):
         """Create the main content area."""
         # Create paned window for resizable panels
@@ -422,16 +528,23 @@ class KSPDFStudioApp:
         ttk.Button(editor_toolbar, text="📋 Paste", command=self._paste_content).pack(side=tk.RIGHT, padx=2)
         ttk.Button(editor_toolbar, text="📄 Format", command=self._format_markdown).pack(side=tk.RIGHT, padx=2)
 
-        # Main editor
-        self.editor_text = scrolledtext.ScrolledText(
-            editor_frame,
+        # Main editor (Text + dark ttk scrollbar for full control)
+        editor_container = ttk.Frame(editor_frame)
+        editor_container.pack(fill=tk.BOTH, expand=True)
+        self.editor_text = tk.Text(
+            editor_container,
             wrap=tk.WORD,
             font=('Consolas', 10),
             bg=DarkTheme.COLORS['text_bg'],
             fg=DarkTheme.COLORS['text_fg'],
             insertbackground=DarkTheme.COLORS['fg_primary'],
+            relief='flat',
+            padx=6, pady=6,
         )
-        self.editor_text.pack(fill=tk.BOTH, expand=True)
+        self.editor_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        editor_scroll = ttk.Scrollbar(editor_container, orient=tk.VERTICAL, style='Dark.Vertical.TScrollbar', command=self.editor_text.yview)
+        editor_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        self.editor_text.configure(yscrollcommand=editor_scroll.set)
 
         # Bind events
         self.editor_text.bind('<KeyRelease>', self._on_editor_change)
@@ -445,6 +558,7 @@ class KSPDFStudioApp:
         # Preview notebook
         self.preview_notebook = ttk.Notebook(preview_frame)
         self.preview_notebook.pack(fill=tk.BOTH, expand=True)
+
 
         # PDF Preview tab
         self._create_pdf_preview_tab()
@@ -467,6 +581,47 @@ class KSPDFStudioApp:
             pass
         return 0
 
+    def _create_top_header(self, parent):
+        """Create a compact, themed header bar beneath the toolbar similar to VS Code's title area."""
+        # Use tk widgets for the header so background colors reliably apply
+        header_bg = DarkTheme.COLORS.get('bg_secondary', DarkTheme.COLORS['bg_primary'])
+        fg = DarkTheme.COLORS.get('fg_primary', '#e0e0e0')
+        fg_muted = DarkTheme.COLORS.get('fg_secondary', fg)
+
+        header = tk.Frame(parent, bg=header_bg)
+        header.pack(fill=tk.X, pady=(0, 0))
+
+        # Left: small icon + title
+        left = tk.Frame(header, bg=header_bg)
+        left.pack(side=tk.LEFT, padx=(8, 8))
+        icon = tk.Canvas(left, width=18, height=18, highlightthickness=0, bg=header_bg)
+        icon.create_rectangle(2, 2, 16, 16, fill=DarkTheme.COLORS.get('fg_accent', '#4a9eff'), outline='')
+        icon.pack(side=tk.LEFT)
+        title = tk.Label(left, text='KS PDF Studio', font=('Segoe UI', 9, 'bold'), bg=header_bg, fg=fg)
+        title.pack(side=tk.LEFT, padx=(6, 0))
+
+        # Middle: filename / breadcrumb
+        self.header_file_var = tk.StringVar(value='No file open')
+        file_lbl = tk.Label(header, textvariable=self.header_file_var, bg=header_bg, fg=fg_muted, anchor='w')
+        file_lbl.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.header_file_label = file_lbl
+
+        # Right: compact action buttons (flat, small)
+        right = tk.Frame(header, bg=header_bg)
+        right.pack(side=tk.RIGHT, padx=8)
+        def make_small_btn(text, cmd):
+            b = tk.Button(right, text=text, command=cmd, bg=DarkTheme.COLORS.get('button_bg', '#404040'), fg=DarkTheme.COLORS.get('button_fg', '#e0e0e0'), relief='flat', bd=0, padx=6, pady=2)
+            return b
+
+        btn_preview = make_small_btn('Preview', self._preview_pdf)
+        btn_preview.pack(side=tk.LEFT, padx=4)
+        btn_ai = make_small_btn('AI Panel', self._show_ai_panel)
+        btn_ai.pack(side=tk.LEFT, padx=4)
+
+        # Thin separator line under the header (use border color)
+        sep_line = tk.Frame(parent, height=1, bg=DarkTheme.COLORS.get('border', '#404040'))
+        sep_line.pack(fill=tk.X)
+
     def _create_pdf_preview_tab(self):
         """Create PDF preview tab."""
         preview_tab = ttk.Frame(self.preview_notebook)
@@ -479,16 +634,22 @@ class KSPDFStudioApp:
         ttk.Button(controls_frame, text="🔄 Refresh", command=self._refresh_preview).pack(side=tk.LEFT, padx=2)
         ttk.Button(controls_frame, text="📖 Open PDF", command=self._open_pdf).pack(side=tk.LEFT, padx=2)
 
-        # Preview area (placeholder for now)
-        self.preview_text = scrolledtext.ScrolledText(
-            preview_tab,
+        # Preview area (Text + dark scrollbar)
+        pv_container = ttk.Frame(preview_tab)
+        pv_container.pack(fill=tk.BOTH, expand=True)
+        self.preview_text = tk.Text(
+            pv_container,
             wrap=tk.WORD,
             font=('Arial', 10),
             bg=DarkTheme.COLORS['text_bg'],
             fg=DarkTheme.COLORS['text_fg'],
             insertbackground=DarkTheme.COLORS['fg_primary'],
+            relief='flat', padx=6, pady=6,
         )
-        self.preview_text.pack(fill=tk.BOTH, expand=True)
+        self.preview_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        pv_scroll = ttk.Scrollbar(pv_container, orient=tk.VERTICAL, style='Dark.Vertical.TScrollbar', command=self.preview_text.yview)
+        pv_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        self.preview_text.configure(yscrollcommand=pv_scroll.set)
         self.preview_text.insert('1.0', "PDF preview will appear here...\n\nClick 'Refresh' to generate preview.")
 
     def _create_ai_enhancement_tab(self):
@@ -863,16 +1024,22 @@ class KSPDFStudioApp:
         self.extract_format_var = tk.StringVar(value='md')
         ttk.Combobox(ctrl, textvariable=self.extract_format_var, values=['md', 'txt', 'docx'], width=6, state='readonly').pack(side=tk.LEFT)
 
-        # Preview area
-        self.extract_preview = scrolledtext.ScrolledText(
-            extractor_tab,
+        # Preview area (Text + dark scrollbar)
+        ext_container = ttk.Frame(extractor_tab)
+        ext_container.pack(fill=tk.BOTH, expand=True, pady=(5,0))
+        self.extract_preview = tk.Text(
+            ext_container,
             wrap=tk.WORD,
             font=('Consolas', 10),
             bg=DarkTheme.COLORS['text_bg'],
             fg=DarkTheme.COLORS['text_fg'],
-            insertbackground=DarkTheme.COLORS['fg_primary']
+            insertbackground=DarkTheme.COLORS['fg_primary'],
+            relief='flat', padx=6, pady=6,
         )
-        self.extract_preview.pack(fill=tk.BOTH, expand=True, pady=(5, 0))
+        self.extract_preview.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        ext_scroll = ttk.Scrollbar(ext_container, orient=tk.VERTICAL, style='Dark.Vertical.TScrollbar', command=self.extract_preview.yview)
+        ext_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        self.extract_preview.configure(yscrollcommand=ext_scroll.set)
 
         # Internal state
         self._last_extracted = None
@@ -1173,6 +1340,16 @@ class KSPDFStudioApp:
             self.status_file.config(text=file_name)
         else:
             self.status_file.config(text="Untitled")
+
+        # Mirror the filename into the top header for quick visibility
+        try:
+            if getattr(self, 'header_file_var', None) is not None:
+                if self.current_file:
+                    self.header_file_var.set(str(self.current_file))
+                else:
+                    self.header_file_var.set('No file open')
+        except Exception:
+            pass
 
         if self.is_modified:
             self.status_modified.config(text="Modified")
