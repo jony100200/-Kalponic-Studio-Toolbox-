@@ -56,6 +56,7 @@ ui = [
 
 [project.scripts]
 ks-splitter = "cli.ks_splitter:main"
+ks-splitter-gui = "app.main_gui:main"
 
 [project.urls]
 Homepage = "https://github.com/jony100200/-Kalponic-Studio-Toolbox-"

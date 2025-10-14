@@ -1,29 +1,35 @@
 # KS Sprite Splitter UI Theme Tokens
-# Dark theme color palette and styling constants
+# Enhanced dark theme color palette following modern UI design principles
 
-# Color palette
+# Color palette - Following 60-30-10 rule with sci-fi accents
 colors:
-  primary: "#C49A6C"        # Kalponic gold
-  secondary: "#2D3748"      # Dark slate
-  accent: "#4A90E2"         # Blue accent
-  success: "#48BB78"        # Green
-  warning: "#ED8936"        # Orange
-  error: "#E53E3E"          # Red
+  primary: "#00D4FF"         # Cyan accent for sci-fi feel
+  secondary: "#262E38"       # Dark slate (avoiding pure black)
+  accent: "#FF6B6B"          # Coral pink for highlights
+  success: "#00FF88"         # Neon green
+  warning: "#FFA500"         # Orange
+  error: "#FF4444"           # Bright red
 
-  # Background colors
-  bg_primary: "#1A202C"     # Dark background
-  bg_secondary: "#2D3748"   # Card background
-  bg_tertiary: "#4A5568"    # Input background
+  # Background colors - Layered darkness for depth
+  bg_primary: "#19232D"      # Primary dark background
+  bg_secondary: "#2D3748"    # Card/panel background
+  bg_tertiary: "#374151"     # Input field background
 
-  # Text colors
-  text_primary: "#F7FAFC"   # Light text
-  text_secondary: "#A0AEC0" # Muted text
-  text_tertiary: "#718096"  # Disabled text
+  # Text colors - Off-white for better contrast
+  text_primary: "#F8FAFC"    # Near-white text
+  text_secondary: "#CBD5E0"  # Muted text
+  text_tertiary: "#94A3B8"   # Disabled text
 
-  # Border colors
-  border_light: "#4A5568"
-  border_medium: "#2D3748"
-  border_dark: "#1A202C"
+  # Border colors - Subtle gradients
+  border_light: "#475569"
+  border_medium: "#334155"
+  border_dark: "#1E293B"
+
+  # Sci-fi accent colors
+  neon_blue: "#00D4FF"
+  neon_pink: "#FF6B6B"
+  neon_green: "#00FF88"
+  neon_purple: "#A855F7"
 
 # Typography
 typography:

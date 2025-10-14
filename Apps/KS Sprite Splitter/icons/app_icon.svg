@@ -1,0 +1,33 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e1e1e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2d2d2d;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#007acc;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4fc3f7;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="30" fill="url(#bg)" stroke="#404040" stroke-width="2"/>
+
+  <!-- Sprite sheet representation -->
+  <rect x="16" y="16" width="12" height="12" fill="#666" rx="2"/>
+  <rect x="36" y="16" width="12" height="12" fill="#666" rx="2"/>
+  <rect x="16" y="36" width="12" height="12" fill="#666" rx="2"/>
+  <rect x="36" y="36" width="12" height="12" fill="#666" rx="2"/>
+
+  <!-- Split lines -->
+  <line x1="28" y1="16" x2="28" y2="28" stroke="url(#accent)" stroke-width="3" stroke-linecap="round"/>
+  <line x1="16" y1="28" x2="28" y2="28" stroke="url(#accent)" stroke-width="3" stroke-linecap="round"/>
+  <line x1="36" y1="28" x2="48" y2="28" stroke="url(#accent)" stroke-width="3" stroke-linecap="round"/>
+  <line x1="28" y1="36" x2="28" y2="48" stroke="url(#accent)" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Scissors icon -->
+  <g transform="translate(32,32)">
+    <path d="M-8,-8 L-2,-8 L0,-6 L2,-8 L8,-8 L8,-4 L2,0 L8,4 L8,8 L2,8 L0,6 L-2,8 L-8,8 L-8,4 L-2,0 L-8,-4 Z"
+          fill="url(#accent)" opacity="0.8"/>
+  </g>
+</svg>
