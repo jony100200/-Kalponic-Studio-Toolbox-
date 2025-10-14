@@ -42,6 +42,7 @@ class BatchProcessor:
         if img is None:
             return None
         seamless = self.checker.is_seamless(img, file_path)
+        detailed_info = self.checker.get_detailed_seamless_info(img, file_path)
         preview = self.checker.create_tiled_preview(img)
         # Full tiled preview bytes
         buf = BytesIO()
@@ -68,6 +69,11 @@ class BatchProcessor:
         result = {
             'file': filename,
             'seamless': seamless,
+            'seamless_type': detailed_info['seamless_type'],
+            'horizontal_seamless': detailed_info['horizontal_seamless'],
+            'vertical_seamless': detailed_info['vertical_seamless'],
+            'horizontal_score': detailed_info['horizontal_score'],
+            'vertical_score': detailed_info['vertical_score'],
             # full tiled preview bytes (may be omitted if thumbnail_only_in_memory=True)
             'preview_bytes': preview_bytes,
             # thumbnail bytes (smaller, used for table and optionally preview)
@@ -100,11 +106,20 @@ class BatchProcessor:
         os.makedirs(os.path.dirname(csv_path), exist_ok=True)
         with open(csv_path, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            writer.writerow(['file', 'seamless', 'preview_path'])
+            writer.writerow(['file', 'seamless', 'seamless_type', 'horizontal_seamless', 'vertical_seamless', 'horizontal_score', 'vertical_score', 'preview_path'])
             for r in results:
                 # preview_path may be empty since previews are in-memory; if so but thumbnail exists, mark as <in-memory>
                 p = r.get('preview_path', '')
                 if not p and r.get('thumb_bytes'):
                     p = '<in-memory>'
-                writer.writerow([r.get('file'), r.get('seamless'), p])
+                writer.writerow([
+                    r.get('file'),
+                    r.get('seamless'),
+                    r.get('seamless_type'),
+                    r.get('horizontal_seamless'),
+                    r.get('vertical_seamless'),
+                    f"{r.get('horizontal_score', 0):.4f}",
+                    f"{r.get('vertical_score', 0):.4f}",
+                    p
+                ])
         return csv_path
