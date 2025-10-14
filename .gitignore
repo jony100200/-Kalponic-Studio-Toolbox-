@@ -74,6 +74,9 @@ outputs/
 output/
 Apps/PromptSender2ChatGP/sent_images/
 
+# ===== DEVELOPMENT DOCUMENTS =====
+Development Documents/
+
 # Ignore private development content for Universal Model Launcher
 Apps/Universal Model Launcher/References/
 Apps/Universal Model Launcher/Testing/
