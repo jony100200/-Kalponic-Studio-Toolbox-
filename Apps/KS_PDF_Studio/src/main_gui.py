@@ -271,6 +271,9 @@ class KSPDFStudioApp:
         main_container = ttk.Frame(self.root)
         main_container.pack(fill=tk.BOTH, expand=True)
 
+        # Initialize template selection
+        self.selected_template = tk.StringVar(value='professional')
+
         # Create toolbar
         self._create_toolbar(main_container)
 
@@ -619,6 +622,16 @@ class KSPDFStudioApp:
         ttk.Button(toolbar, text="👁️ Preview", command=self._preview_pdf).pack(side=tk.LEFT, padx=2)
         ttk.Button(toolbar, text="⚙️ AI Panel", command=self._show_ai_panel).pack(side=tk.LEFT, padx=2)
 
+        ttk.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, padx=5, fill=tk.Y)
+
+        # Template selection
+        ttk.Label(toolbar, text="Template:").pack(side=tk.LEFT, padx=(5, 2))
+        self.template_combo = ttk.Combobox(toolbar, textvariable=self.selected_template,
+                                         values=self.template_manager.list_templates(),
+                                         state='readonly', width=12)
+        self.template_combo.pack(side=tk.LEFT, padx=2)
+        self.template_combo.bind('<<ComboboxSelected>>', self._on_template_selected)
+
         # Add a compact VS Code-like header bar beneath the toolbar
         try:
             self._create_top_header(parent)
@@ -954,13 +967,16 @@ class KSPDFStudioApp:
             try:
                 content = self.editor_text.get('1.0', tk.END)
 
-                # Parse markdown
-                parsed = self.markdown_parser.parse_markdown(content)
+                # Get selected template (default to professional)
+                template_name = getattr(self, 'selected_template', 'professional')
+                template = self.template_manager.get_template(template_name)
+                if not template:
+                    template = self.template_manager.get_template('professional')
 
-                # Generate PDF
+                # Generate PDF with template
                 success = self.pdf_engine.convert_markdown_to_pdf(
                     content, pdf_path,
-                    template_name="professional"
+                    template=template
                 )
 
                 if success:
@@ -1096,6 +1112,13 @@ class KSPDFStudioApp:
         self.preview_notebook.select(2)  # Templates tab
 
     # Template operations
+    def _on_template_selected(self, event=None):
+        """Handle template selection from toolbar dropdown."""
+        selected = self.selected_template.get()
+        if selected:
+            # Update the template selection - could add visual feedback here
+            pass
+
     def _apply_template(self):
         """Apply selected template."""
         selection = self.template_listbox.curselection()

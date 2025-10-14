@@ -34,6 +34,9 @@ from pygments import highlight
 from pygments.lexers import get_lexer_by_name, TextLexer
 from pygments.formatters import TerminalFormatter
 
+# Import template system
+from templates.base_template import KSPDFTemplate
+
 
 class KSPDFEngine:
     """
@@ -48,21 +51,28 @@ class KSPDFEngine:
     - Custom templates support
     """
 
-    def __init__(self, page_size=A4, margins=(1*inch, 1*inch, 1*inch, 1*inch)):
+    def __init__(self, page_size=A4, margins=(1*inch, 1*inch, 1*inch, 1*inch), template=None):
         """
         Initialize the PDF engine.
 
         Args:
             page_size: ReportLab page size (default: A4)
             margins: Page margins as (left, right, top, bottom) tuple
+            template: KSPDFTemplate instance for styling
         """
         self.page_size = page_size
         self.margins = margins
+        self.template = template
         self.styles = self._setup_styles()
         self.markdown_converter = self._setup_markdown()
 
     def _setup_styles(self) -> Dict[str, ParagraphStyle]:
         """Set up professional PDF styles."""
+        # Use template styles if available
+        if self.template and hasattr(self.template, 'styles'):
+            return self.template.styles
+
+        # Fallback to default styles
         styles = getSampleStyleSheet()
 
         # Custom styles for tutorial content
@@ -95,6 +105,14 @@ class KSPDFEngine:
         ))
 
         styles.add(ParagraphStyle(
+            name='TutorialBody',
+            parent=styles['Normal'],
+            fontSize=11,
+            lineHeight=1.4,
+            spaceAfter=12
+        ))
+
+        styles.add(ParagraphStyle(
             name='CodeBlock',
             parent=styles['Code'],
             fontSize=10,
@@ -104,14 +122,6 @@ class KSPDFEngine:
             borderWidth=1,
             borderPadding=5,
             spaceAfter=15
-        ))
-
-        styles.add(ParagraphStyle(
-            name='TutorialBody',
-            parent=styles['Normal'],
-            fontSize=11,
-            lineHeight=1.4,
-            spaceAfter=12
         ))
 
         return styles
@@ -136,7 +146,7 @@ class KSPDFEngine:
         output_path: Union[str, Path],
         title: Optional[str] = None,
         author: Optional[str] = None,
-        template: Optional[str] = None
+        template: Optional['KSPDFTemplate'] = None
     ) -> bool:
         """
         Convert markdown content to PDF.
