@@ -3,18 +3,10 @@
 A desktop app to check if images are seamless (tileable) and process them in batches.
 
 ## Features
-- Batch process folders of images
-- Check seamlessness with configurable threshold
-- Generate tiled previews for visual inspection
-- Dark theme with muted colors
-- Progress bar for batch processing
-- Inline preview display
-- Tooltips for usability
+ - Export batch results to CSV
 
 ## Installation
-1. Install Python 3.8+
-2. `pip install -r requirements.txt`
-3. Run `python main.py`
+ - Optionally click "Export CSV" to save results (after running a batch)
 
 ## Usage
 - Select a folder containing images

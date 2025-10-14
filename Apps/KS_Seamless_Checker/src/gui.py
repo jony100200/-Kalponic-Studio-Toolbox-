@@ -1,5 +1,7 @@
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QTextEdit, QFileDialog, QMessageBox, QScrollArea, QProgressBar, QFrame
-from PySide6.QtGui import QPalette, QColor, QFont, QPixmap
+from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+                               QLabel, QPushButton, QLineEdit, QTextEdit, QFileDialog, QMessageBox,
+                               QProgressBar, QFrame, QDialog, QFormLayout, QSpinBox, QDialogButtonBox)
+from PySide6.QtGui import QPalette, QColor, QFont, QPixmap, QIcon
 from PySide6.QtCore import Qt, QThread, Signal
 import cv2
 import os
@@ -8,154 +10,259 @@ import sys
 from .batch_processor import BatchProcessor
 from .image_checker import ImageChecker
 
+
 class BatchWorker(QThread):
     progress = Signal(int)
     finished = Signal(list)
 
-    def __init__(self, processor, folder):
+    def __init__(self, processor, path):
         super().__init__()
         self.processor = processor
-        self.folder = folder
+        # path may be a folder or a single file
+        self.path = path
 
     def run(self):
         results = []
-        files = [f for f in os.listdir(self.folder) if any(f.lower().endswith(ext) for ext in self.processor.supported_formats)]
+        # If path is a file, process single file
+        if os.path.isfile(self.path):
+            r = self.processor.process_file(self.path)
+            if r:
+                results.append(r)
+            self.progress.emit(100)
+            self.finished.emit(results)
+            return
+
+        # Otherwise treat as folder
+        try:
+            files = [f for f in os.listdir(self.path) if any(f.lower().endswith(ext) for ext in self.processor.supported_formats)]
+        except Exception:
+            files = []
         total = len(files)
         for i, file in enumerate(files):
-            img_path = os.path.join(self.folder, file)
-            img = cv2.imread(img_path)  # Assuming cv2 imported in processor
-            if img is not None:
-                seamless = self.processor.checker.is_seamless(img)
-                preview = self.processor.checker.create_tiled_preview(img)
-                preview_path = os.path.join(self.processor.preview_folder, f"tiled_{file}")
-                preview.save(preview_path)
-                results.append({
-                    'file': file,
-                    'seamless': seamless,
-                    'preview_path': preview_path
-                })
-            self.progress.emit(int((i + 1) / total * 100))
+            img_path = os.path.join(self.path, file)
+            r = self.processor.process_file(img_path)
+            if r:
+                results.append(r)
+            if total:
+                self.progress.emit(int((i + 1) / total * 100))
         self.finished.emit(results)
+
+
+class SettingsDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('Settings')
+        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json')
+        if not os.path.exists(config_path):
+            self.config = {}
+        else:
+            with open(config_path, 'r') as f:
+                self.config = json.load(f)
+
+        layout = QFormLayout(self)
+        self.spin = QSpinBox()
+        self.spin.setRange(0, 100000)
+        self.spin.setValue(self.config.get('seam_threshold', 10))
+        layout.addRow('Seam threshold', self.spin)
+
+        self.preview_line = QLineEdit()
+        self.preview_line.setText(self.config.get('preview_folder', 'previews'))
+        layout.addRow('Preview folder', self.preview_line)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.save)
+        buttons.rejected.connect(self.reject)
+        layout.addRow(buttons)
+
+    def save(self):
+        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json')
+        self.config['seam_threshold'] = int(self.spin.value())
+        self.config['preview_folder'] = self.preview_line.text()
+        with open(config_path, 'w') as f:
+            json.dump(self.config, f, indent=2)
+        self.accept()
+
 
 class SeamlessCheckerGUI(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("KS Seamless Checker")
-        self.setGeometry(100, 100, 800, 600)
+        self.setWindowTitle('KS Seamless Checker')
+        self.setGeometry(100, 100, 920, 640)
+        # Accept drops for files/folders
+        self.setAcceptDrops(True)
         self.config = self.load_config()
-        self.checker = ImageChecker(self.config['seam_threshold'])
-        self.processor = BatchProcessor(self.checker, self.config['supported_formats'], self.config['preview_folder'])
+        self.checker = ImageChecker(self.config.get('seam_threshold', 10))
+        self.processor = BatchProcessor(self.checker, self.config.get('supported_formats', ['.png', '.jpg', '.jpeg']), self.config.get('preview_folder', 'previews'))
+        self.worker = None
+        self.last_results = []
         self.setup_dark_theme()
         self.setup_ui()
-        self.worker = None
 
     def load_config(self):
-        with open('config.json', 'r') as f:
-            return json.load(f)
+        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json')
+        if os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                return json.load(f)
+        return {
+            'seam_threshold': 10,
+            'supported_formats': ['.png', '.jpg', '.jpeg'],
+            'preview_folder': 'previews',
+            'accent_color': '#C49A6C'
+        }
 
     def setup_dark_theme(self):
         palette = QPalette()
-        # Muted dark palette with softened text (avoid harsh pure white)
-        palette.setColor(QPalette.Window, QColor(40, 42, 45))        # main window
-        palette.setColor(QPalette.WindowText, QColor(230, 230, 230))  # soft off-white for labels
-        palette.setColor(QPalette.Base, QColor(50, 52, 56))          # input/text background
+        accent = self.config.get('accent_color', '#C49A6C')
+        palette.setColor(QPalette.Window, QColor(40, 42, 45))
+        palette.setColor(QPalette.WindowText, QColor(230, 230, 230))
+        palette.setColor(QPalette.Base, QColor(50, 52, 56))
         palette.setColor(QPalette.AlternateBase, QColor(43, 45, 48))
         palette.setColor(QPalette.ToolTipBase, QColor(230, 230, 230))
         palette.setColor(QPalette.ToolTipText, QColor(20, 20, 20))
-        palette.setColor(QPalette.Text, QColor(225, 225, 225))        # textarea text
-        palette.setColor(QPalette.Button, QColor(60, 62, 66))         # muted button background
-        palette.setColor(QPalette.ButtonText, QColor(230, 230, 230))  # muted button text
+        palette.setColor(QPalette.Text, QColor(225, 225, 225))
+        palette.setColor(QPalette.Button, QColor(60, 62, 66))
+        palette.setColor(QPalette.ButtonText, QColor(230, 230, 230))
         palette.setColor(QPalette.BrightText, QColor(220, 80, 80))
-        # Accent: slightly desaturated teal/blue for links and highlights
-        palette.setColor(QPalette.Link, QColor(88, 173, 212))
-        palette.setColor(QPalette.Highlight, QColor(88, 173, 212))
-        palette.setColor(QPalette.HighlightedText, QColor(20, 20, 20))
+        try:
+            r = int(accent[1:3], 16)
+            g = int(accent[3:5], 16)
+            b = int(accent[5:7], 16)
+            palette.setColor(QPalette.Link, QColor(r, g, b))
+            palette.setColor(QPalette.Highlight, QColor(r, g, b))
+            palette.setColor(QPalette.HighlightedText, QColor(20, 20, 20))
+        except Exception:
+            pass
         self.setPalette(palette)
+        # Apply dark background to ensure no light border shows
+        self.setStyleSheet("QMainWindow{background-color: #28282D;}")
 
     def setup_ui(self):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
-        layout.setContentsMargins(16, 12, 16, 12)
+        # tighten margins to reduce visible top border
+        layout.setContentsMargins(8, 6, 8, 8)
         layout.setSpacing(12)
 
-    title_label = QLabel("KS Seamless Checker")
-    title_font = QFont("Segoe UI", 16, QFont.Bold)
-    title_label.setFont(title_font)
-    title_label.setAlignment(Qt.AlignCenter)
-    title_label.setStyleSheet('color: #e6e6e6;')
-    layout.addWidget(title_label)
+        title_label = QLabel('KS Seamless Checker')
+        title_font = QFont('Segoe UI', 18, QFont.Bold)
+        title_label.setFont(title_font)
+        title_label.setAlignment(Qt.AlignCenter)
+        title_label.setStyleSheet('color: #e6e6e6;')
+        layout.addWidget(title_label)
 
-    folder_layout = QHBoxLayout()
-        folder_label = QLabel("Select Folder:")
-    folder_label.setStyleSheet('color: #dcdcdc;')
-    folder_layout.addWidget(folder_label)
+        folder_layout = QHBoxLayout()
+        folder_label = QLabel('Select Folder:')
+        folder_label.setStyleSheet('color: #dcdcdc;')
+        folder_layout.addWidget(folder_label)
+
         self.folder_entry = QLineEdit()
-        self.folder_entry.setPlaceholderText("Enter or browse folder path")
-        self.folder_entry.setToolTip("Path to folder containing images")
-    self.folder_entry.setStyleSheet("background: #35363a; color: #e6e6e6; padding:6px; border-radius:4px;")
-    folder_layout.addWidget(self.folder_entry)
-    browse_button = QPushButton("Browse")
-    browse_button.setToolTip("Open folder dialog")
-    browse_button.clicked.connect(self.browse_folder)
-    browse_button.setCursor(Qt.PointingHandCursor)
-    browse_button.setStyleSheet("QPushButton{background:#4b5056;color:#e6e6e6;padding:6px 10px;border-radius:6px;} QPushButton:hover{background:#5a6066}")
-    folder_layout.addWidget(browse_button)
+        self.folder_entry.setPlaceholderText('Enter or browse folder path')
+        self.folder_entry.setToolTip('Path to folder containing images')
+        self.folder_entry.setStyleSheet('background: #35363a; color: #e6e6e6; padding:6px; border-radius:6px;')
+        folder_layout.addWidget(self.folder_entry)
+
+        browse_btn = QPushButton()
+        browse_btn.setToolTip('Open folder dialog')
+        browse_btn.setFixedSize(36, 28)
+        browse_icon = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons', 'browse.svg')
+        browse_btn.setIcon(QIcon(browse_icon))
+        browse_btn.clicked.connect(self.browse_folder)
+        browse_btn.setStyleSheet("QPushButton{background:#4b5056;color:#e6e6e6;border-radius:6px;} QPushButton:hover{background:#5a6066}")
+        folder_layout.addWidget(browse_btn)
+
         layout.addLayout(folder_layout)
 
-        process_button = QPushButton("Process Batch")
-        process_button.setFont(QFont("Segoe UI", 10, QFont.Bold))
-        process_button.setToolTip("Start batch processing")
-        process_button.clicked.connect(self.process_batch)
+        actions_layout = QHBoxLayout()
+        process_button = QPushButton()
         process_button.setCursor(Qt.PointingHandCursor)
-        process_button.setStyleSheet(
-            "QPushButton{background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #5a9abf, stop:1 #4f88ad); color:#0f1416; padding:8px 12px; border-radius:8px;}"
-            "QPushButton:hover{background:#68a9d4;}"
-        )
-        layout.addWidget(process_button)
+        process_button.setFixedSize(180, 40)
+        proc_icon = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons', 'process.svg')
+        process_button.setIcon(QIcon(proc_icon))
+        process_button.setText('  Process Batch')
+        process_button.clicked.connect(self.process_batch)
+        accent = self.config.get('accent_color', '#C49A6C')
+        process_button.setStyleSheet(f"QPushButton{{background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 {accent}, stop:1 {accent}); color:#0f1416; padding:8px 12px; border-radius:8px;}} QPushButton:hover{{opacity:0.95;}}")
+        actions_layout.addWidget(process_button)
 
-    self.progress_bar = QProgressBar()
-    self.progress_bar.setVisible(False)
-    self.progress_bar.setStyleSheet("QProgressBar{background:#3b3b3b; color:#e6e6e6; border-radius:6px; height:12px;} QProgressBar::chunk{background:#58add0; border-radius:6px}")
-    layout.addWidget(self.progress_bar)
+        export_button = QPushButton('Export CSV')
+        export_button.setToolTip('Export last batch results to CSV')
+        export_button.clicked.connect(self.export_csv)
+        export_button.setStyleSheet("QPushButton{background:#4b5056;color:#e6e6e6;padding:8px;border-radius:6px;} QPushButton:hover{background:#5a6066}")
+        actions_layout.addWidget(export_button)
 
-    results_layout = QHBoxLayout()
+        layout.addLayout(actions_layout)
 
-    left_frame = QFrame()
-    left_layout = QVBoxLayout(left_frame)
-    results_label = QLabel("Results:")
-    results_label.setStyleSheet('color: #dcdcdc;')
-    left_layout.addWidget(results_label)
-    self.results_text = QTextEdit()
-    self.results_text.setReadOnly(True)
-    self.results_text.setToolTip("Processing results")
-    self.results_text.setStyleSheet("background:#2f3134;color:#e6e6e6;padding:8px;border-radius:6px;")
-    left_layout.addWidget(self.results_text)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        self.progress_bar.setStyleSheet(f"QProgressBar{{background:#3b3b3b; color:#e6e6e6; border-radius:6px; height:12px;}} QProgressBar::chunk{{background:{accent}; border-radius:6px}}")
+        layout.addWidget(self.progress_bar)
 
-    right_frame = QFrame()
-    right_layout = QVBoxLayout(right_frame)
-    preview_label = QLabel("Preview:")
-    preview_label.setStyleSheet('color: #dcdcdc;')
-    right_layout.addWidget(preview_label)
-    self.preview_label = QLabel()
-    self.preview_label.setFixedSize(220, 220)
-    self.preview_label.setStyleSheet("background:#35363a;border:1px solid #505357;border-radius:6px;")
-    self.preview_label.setToolTip("Tiled preview of last processed image")
-    right_layout.addWidget(self.preview_label, alignment=Qt.AlignTop)
+        results_layout = QHBoxLayout()
 
-    results_layout.addWidget(left_frame, stretch=3)
-    results_layout.addWidget(right_frame, stretch=1)
-    layout.addLayout(results_layout)
+        left_frame = QFrame()
+        left_layout = QVBoxLayout(left_frame)
+        results_label = QLabel('Results:')
+        results_label.setStyleSheet('color: #dcdcdc;')
+        left_layout.addWidget(results_label)
+        self.results_text = QTextEdit()
+        self.results_text.setReadOnly(True)
+        self.results_text.setToolTip('Processing results')
+        self.results_text.setStyleSheet('background:#2f3134;color:#e6e6e6;padding:8px;border-radius:6px;')
+        left_layout.addWidget(self.results_text)
+
+        right_frame = QFrame()
+        right_layout = QVBoxLayout(right_frame)
+        preview_label = QLabel('Preview:')
+        preview_label.setStyleSheet('color: #dcdcdc;')
+        right_layout.addWidget(preview_label)
+        self.preview_label = QLabel()
+        self.preview_label.setFixedSize(240, 240)
+        self.preview_label.setStyleSheet('background:#35363a;border:1px solid #505357;border-radius:6px;')
+        self.preview_label.setToolTip('Tiled preview of last processed image')
+        right_layout.addWidget(self.preview_label, alignment=Qt.AlignTop)
+
+        results_layout.addWidget(left_frame, stretch=3)
+        results_layout.addWidget(right_frame, stretch=1)
+        layout.addLayout(results_layout)
+
+        settings_btn = QPushButton()
+        settings_btn.setFixedSize(36, 28)
+        settings_icon = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons', 'settings.svg')
+        settings_btn.setIcon(QIcon(settings_icon))
+        settings_btn.setToolTip('Open settings')
+        settings_btn.clicked.connect(self.open_settings)
+        settings_btn.setStyleSheet("QPushButton{background:#3b3b3b;border-radius:6px;} QPushButton:hover{background:#47494b}")
+        layout.addWidget(settings_btn, alignment=Qt.AlignRight)
 
     def browse_folder(self):
-        folder = QFileDialog.getExistingDirectory(self, "Select Folder")
+        folder = QFileDialog.getExistingDirectory(self, 'Select Folder')
         if folder:
             self.folder_entry.setText(folder)
+
+    # Drag & drop support
+    def dragEnterEvent(self, event):
+        mime = event.mimeData()
+        if mime.hasUrls():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        mime = event.mimeData()
+        urls = mime.urls()
+        if not urls:
+            return
+        path = urls[0].toLocalFile()
+        # If a file was dropped, set it; if a folder, set folder
+        self.folder_entry.setText(path)
+        # Auto-start processing for convenience
+        self.process_batch()
 
     def process_batch(self):
         folder = self.folder_entry.text()
         if not os.path.isdir(folder):
-            QMessageBox.critical(self, "Error", "Invalid folder path")
+            QMessageBox.critical(self, 'Error', 'Invalid folder path')
             return
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
@@ -167,16 +274,36 @@ class SeamlessCheckerGUI(QMainWindow):
     def on_batch_finished(self, results):
         self.progress_bar.setVisible(False)
         self.results_text.clear()
+        self.last_results = results
         for res in results:
-            status = "Seamless" if res['seamless'] else "Not Seamless"
-            self.results_text.append(f"{res['file']}: {status}\nPreview: {res['preview_path']}\n")
-            # Show last preview
-            if res['preview_path']:
-                pixmap = QPixmap(res['preview_path'])
-                self.preview_label.setPixmap(pixmap.scaled(200, 200, Qt.KeepAspectRatio))
-        QMessageBox.information(self, "Done", f"Processed {len(results)} images. Previews saved.")
+            status = 'Seamless' if res.get('seamless') else 'Not Seamless'
+            self.results_text.append(f"{res.get('file')}: {status}\nPreview: {res.get('preview_path')}\n")
+            preview_path = res.get('preview_path')
+            if preview_path and os.path.exists(preview_path):
+                pixmap = QPixmap(preview_path)
+                self.preview_label.setPixmap(pixmap.scaled(220, 220, Qt.KeepAspectRatio))
+        QMessageBox.information(self, 'Done', f'Processed {len(results)} images. Previews saved.')
 
-if __name__ == "__main__":
+    def export_csv(self):
+        if not self.last_results:
+            QMessageBox.warning(self, 'No results', 'No batch results to export. Run a batch first.')
+            return
+        default = os.path.join(self.processor.preview_folder, 'results.csv')
+        path, _ = QFileDialog.getSaveFileName(self, 'Save CSV', default, 'CSV Files (*.csv)')
+        if path:
+            csv_path = self.processor.save_results_csv(self.last_results, csv_path=path)
+            QMessageBox.information(self, 'Exported', f'Results saved to {csv_path}')
+
+    def open_settings(self):
+        dlg = SettingsDialog(self)
+        if dlg.exec() == QDialog.Accepted:
+            self.config = self.load_config()
+            self.checker = ImageChecker(self.config.get('seam_threshold', 10))
+            self.processor.preview_folder = self.config.get('preview_folder', 'previews')
+            self.setup_dark_theme()
+
+
+if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = SeamlessCheckerGUI()
     window.show()
