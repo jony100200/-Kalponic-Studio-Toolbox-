@@ -3,9 +3,14 @@ import numpy as np
 from PIL import Image
 from skimage.metrics import structural_similarity as ssim
 import os
-from .ai_seam_checker import AISeamChecker
 from skimage import color
 from scipy import signal
+
+try:
+    from .ai_seam_checker import AISeamChecker
+except ImportError:
+    # Handle case when imported directly (not as part of package)
+    from ai_seam_checker import AISeamChecker
 
 class ImageChecker:
     def __init__(self, threshold=10, use_ai=False, model_path=None):
@@ -26,13 +31,71 @@ class ImageChecker:
         if img is None or img.size == 0:
             return False
 
-        # Use AI if enabled and image path is provided
+        # Get traditional method result
+        traditional_result = self._get_traditional_result(img)
+
+        # Get AI result if available
+        ai_result = None
         if self.use_ai and self.ai_checker and img_path:
             ai_result = self.ai_checker.is_seamless_ai(img_path)
-            if ai_result is not None:
-                return ai_result
 
+        # Combine results for ultra-precise detection
+        if ai_result is not None:
+            # Both methods agree - high confidence
+            if traditional_result == ai_result:
+                return ai_result
+            else:
+                # Methods disagree - use traditional method as it's more robust
+                # (AI might be overfitted or not trained well)
+                return traditional_result
+        else:
+            # Only traditional method available
+            return traditional_result
+
+    def _get_traditional_result(self, img):
+        """Get detailed results from traditional research-based method."""
         # Convert to Lab color space for perceptually uniform analysis
+        lab_img = self._convert_to_lab(img)
+
+        # Multi-scale analysis with image pyramid
+        scales = [1.0, 0.5, 0.25]  # Original, half, quarter resolution
+
+        horizontal_scores = []
+        vertical_scores = []
+
+        for scale in scales:
+            scaled_img = self._scale_image(lab_img, scale)
+            h_score, v_score = self._analyze_tileability_detailed(scaled_img)
+            horizontal_scores.append(h_score)
+            vertical_scores.append(v_score)
+
+        # Combine multi-scale scores (weighted towards full resolution)
+        weights = [0.5, 0.3, 0.2]
+
+        combined_horizontal = sum(s * w for s, w in zip(horizontal_scores, weights))
+        combined_vertical = sum(s * w for s, w in zip(vertical_scores, weights))
+
+        # Determine seamless status for each direction
+        horizontal_seamless = combined_horizontal < self.threshold
+        vertical_seamless = combined_vertical < self.threshold
+
+        # Determine overall seamless status
+        if horizontal_seamless and vertical_seamless:
+            return True  # Fully seamless
+        else:
+            return False  # Not fully seamless (could be X-only, Y-only, or neither)
+
+    def get_seamless_score(self, img, img_path=None):
+        """Get the actual seamless score from traditional method (for debugging)."""
+        if img is None or img.size == 0:
+            return float('inf')
+
+        # Get AI result if available
+        ai_result = None
+        if self.use_ai and self.ai_checker and img_path:
+            ai_result = self.ai_checker.is_seamless_ai(img_path)
+
+        # Always return traditional score for debugging, but note AI result
         lab_img = self._convert_to_lab(img)
 
         # Multi-scale analysis with image pyramid
@@ -48,8 +111,7 @@ class ImageChecker:
         weights = [0.5, 0.3, 0.2]
         combined_score = sum(s * w for s, w in zip(seamless_scores, weights))
 
-        # Lower threshold means more strict (better seamless detection)
-        return combined_score < self.threshold
+        return combined_score
 
     def _convert_to_lab(self, img):
         """Convert image to Lab color space for perceptually uniform analysis."""
@@ -105,6 +167,114 @@ class ImageChecker:
         # Overall tileability score
         overall_score = (combined_vertical + combined_horizontal) / 2
         return overall_score
+
+    def _analyze_tileability_detailed(self, lab_img):
+        """Analyze tileability and return separate horizontal and vertical scores."""
+        # Create 2x2 tiled composite (TexTile approach)
+        tiled_composite = self._create_tiled_composite(lab_img)
+
+        # Analyze seams in the composite
+        vertical_seam_score = self._analyze_composite_seam(tiled_composite, vertical=True)
+        horizontal_seam_score = self._analyze_composite_seam(tiled_composite, vertical=False)
+
+        # Also analyze direct edge comparison for additional insight
+        direct_vertical = self._analyze_direct_edges(lab_img, vertical=True)
+        direct_horizontal = self._analyze_direct_edges(lab_img, vertical=False)
+
+        # Combine scores with weights
+        composite_weight = 0.6  # More weight on composite analysis
+        direct_weight = 0.4
+
+        combined_vertical = (vertical_seam_score * composite_weight +
+                           direct_vertical * direct_weight)
+        combined_horizontal = (horizontal_seam_score * composite_weight +
+                             direct_horizontal * direct_weight)
+
+        # Additional check: ensure the image has meaningful variation in both directions
+        # If an image is uniform in one direction (like stripes), it shouldn't be considered seamless
+        variation_threshold = 5.0  # Minimum variation score to be considered "meaningful"
+
+        h_variation = self._calculate_direction_variation(lab_img, vertical=False)  # Horizontal variation
+        v_variation = self._calculate_direction_variation(lab_img, vertical=True)   # Vertical variation
+
+        # Penalize scores if variation is too low in either direction
+        if h_variation < variation_threshold:
+            combined_horizontal += 50.0  # Large penalty
+        if v_variation < variation_threshold:
+            combined_vertical += 50.0   # Large penalty
+
+        return combined_horizontal, combined_vertical
+
+    def get_detailed_seamless_info(self, img, img_path=None):
+        """Get detailed seamless information including direction-specific results."""
+        if img is None or img.size == 0:
+            return {
+                'is_seamless': False,
+                'seamless_type': 'invalid',
+                'horizontal_seamless': False,
+                'vertical_seamless': False,
+                'horizontal_score': float('inf'),
+                'vertical_score': float('inf'),
+                'ai_used': False
+            }
+
+        # Get traditional detailed results
+        lab_img = self._convert_to_lab(img)
+
+        # Multi-scale analysis with image pyramid
+        scales = [1.0, 0.5, 0.25]  # Original, half, quarter resolution
+
+        horizontal_scores = []
+        vertical_scores = []
+
+        for scale in scales:
+            scaled_img = self._scale_image(lab_img, scale)
+            h_score, v_score = self._analyze_tileability_detailed(scaled_img)
+            horizontal_scores.append(h_score)
+            vertical_scores.append(v_score)
+
+        # Combine multi-scale scores (weighted towards full resolution)
+        weights = [0.5, 0.3, 0.2]
+
+        combined_horizontal = sum(s * w for s, w in zip(horizontal_scores, weights))
+        combined_vertical = sum(s * w for s, w in zip(vertical_scores, weights))
+
+        # Determine seamless status for each direction
+        horizontal_seamless = combined_horizontal < self.threshold
+        vertical_seamless = combined_vertical < self.threshold
+
+        # Determine seamless type
+        if horizontal_seamless and vertical_seamless:
+            seamless_type = 'fully_seamless'
+            is_seamless = True
+        elif horizontal_seamless and not vertical_seamless:
+            seamless_type = 'horizontal_only'
+            is_seamless = False
+        elif not horizontal_seamless and vertical_seamless:
+            seamless_type = 'vertical_only'
+            is_seamless = False
+        else:
+            seamless_type = 'not_seamless'
+            is_seamless = False
+
+        # Check AI if available
+        ai_used = False
+        if self.use_ai and self.ai_checker and img_path:
+            ai_result = self.ai_checker.is_seamless_ai(img_path)
+            if ai_result is not None:
+                ai_used = True
+                # If AI disagrees with traditional method, prefer traditional for detailed analysis
+                # But for binary seamless check, use hybrid logic
+
+        return {
+            'is_seamless': is_seamless,
+            'seamless_type': seamless_type,
+            'horizontal_seamless': horizontal_seamless,
+            'vertical_seamless': vertical_seamless,
+            'horizontal_score': combined_horizontal,
+            'vertical_score': combined_vertical,
+            'ai_used': ai_used
+        }
 
     def _create_tiled_composite(self, img):
         """Create 2x2 tiled composite to expose internal seams."""

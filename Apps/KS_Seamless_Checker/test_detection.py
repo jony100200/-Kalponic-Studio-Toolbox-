@@ -12,23 +12,27 @@ import cv2
 
 def test_detection():
     """Test detection on some sample images."""
-    checker = ImageChecker(threshold=0.3)
+    checker = ImageChecker(threshold=20.0)
 
-    # Test with a simple pattern (should be seamless)
-    img = cv2.imread('test_seamless.png')  # You'll need to create this
-    if img is not None:
-        result = checker.is_seamless(img)
-        print(f"Seamless image result: {result}")
-    else:
-        print("No test image found")
+    test_files = [
+        'test_fully_seamless.png',
+        'test_horizontal_only.png',
+        'test_vertical_only.png',
+        'test_non_seamless.png'
+    ]
 
-    # Test with a non-seamless image
-    img2 = cv2.imread('test_non_seamless.png')  # You'll need to create this
-    if img2 is not None:
-        result2 = checker.is_seamless(img2)
-        print(f"Non-seamless image result: {result2}")
-    else:
-        print("No non-seamless test image found")
+    for filename in test_files:
+        img = cv2.imread(filename)
+        if img is not None:
+            info = checker.get_detailed_seamless_info(img, filename)
+            print(f'{filename}:')
+            print(f'  Type: {info["seamless_type"]}')
+            print(f'  Horizontal: {info["horizontal_seamless"]} (score: {info["horizontal_score"]:.2f})')
+            print(f'  Vertical: {info["vertical_seamless"]} (score: {info["vertical_score"]:.2f})')
+            print(f'  Overall: {info["is_seamless"]}')
+            print()
+        else:
+            print(f"Could not load {filename}")
 
 if __name__ == '__main__':
     test_detection()
