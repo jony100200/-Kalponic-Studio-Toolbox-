@@ -1,0 +1,10 @@
+name: flag
+parts: [Pole, Flag, Tassels, Rope]
+heuristics:
+  kmeans_k: 3
+  freq_window: [2, 6]
+  pole_detection: true
+matting:
+  band_px: 4
+extras:
+  wind_animation: true

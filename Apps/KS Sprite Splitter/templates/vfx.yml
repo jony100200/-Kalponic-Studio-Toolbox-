@@ -1,0 +1,10 @@
+name: vfx
+parts: [Core, Glow, Particles, Trails]
+heuristics:
+  kmeans_k: 6
+  freq_window: [1, 4]
+  alpha_threshold: 0.1
+matting:
+  band_px: 3
+extras:
+  animation_frames: true

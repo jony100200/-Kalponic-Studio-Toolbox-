@@ -37,11 +37,11 @@ MATTE_BACKENDS = {}
 
 def register_matte_backend(name: str, backend_class):
     """Register a matting backend implementation."""
-    MATTE_BACKENDS[name] = backend_class
+    MATTE_BACKENDS[name] = backend_class()
 
 
 def get_matte_backend(name: str) -> Matter:
     """Get a matting backend instance by name."""
     if name not in MATTE_BACKENDS:
         raise ValueError(f"Unknown matte backend: {name}")
-    return MATTE_BACKENDS[name]()
+    return MATTE_BACKENDS[name]

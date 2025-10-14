@@ -1,0 +1,10 @@
+name: arch
+parts: [Walls, Doors, Windows, Roof]
+heuristics:
+  kmeans_k: 4
+  freq_window: [5, 15]
+  structural_analysis: true
+matting:
+  band_px: 7
+extras:
+  modular_parts: true
