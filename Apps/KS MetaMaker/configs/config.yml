@@ -1,23 +1,5 @@
-export:
-  package_zip: true
-  paired_txt: true
-  rename_images: true
-  write_metadata: true
+profile_name: custom
 last_input_dir: E:\__Kalponic Studio Repositories\-Kalponic-Studio-Toolbox-\Apps\KS
   MetaMaker\samples
 last_output_dir: E:\__Kalponic Studio Repositories\-Kalponic-Studio-Toolbox-\Apps\KS
   MetaMaker\output
-main_prefix: kalponic studio background
-max_tags:
-  backgrounds: 25
-  characters: 30
-  props: 20
-models:
-  captioner: blip2.onnx
-  detector: yolov11.onnx
-  tagger: openclip_vith14.onnx
-performance:
-  batch_size: 4
-  threads: 4
-rename_pattern: '{category}_{top_tags}_{YYYYMMDD}_{index}'
-style_preset: cinematic lighting, 4k render

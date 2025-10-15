@@ -116,12 +116,13 @@ class ProfileManager:
 
     def __init__(self, profiles_dir: Optional[Path] = None):
         if profiles_dir is None:
-            # Default to configs/profiles relative to this file
-            self.profiles_dir = Path(__file__).parent.parent.parent / "configs" / "profiles"
+            # Default to configs/profiles relative to the project root
+            # __file__ is in ks_metamaker/, so parent.parent is the project root
+            self.profiles_dir = Path(__file__).parent.parent / "configs" / "profiles"
         else:
             self.profiles_dir = profiles_dir
 
-        self.profiles_dir.mkdir(exist_ok=True)
+        self.profiles_dir.mkdir(parents=True, exist_ok=True)
         self._loaded_profiles: Dict[str, ProfileSchema] = {}
 
     def load_profile(self, profile_name: str) -> ProfileSchema:

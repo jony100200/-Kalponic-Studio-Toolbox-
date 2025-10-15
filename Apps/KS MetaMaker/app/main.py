@@ -146,6 +146,15 @@ class MainWindow(QMainWindow):
         # Top toolbar
         toolbar_layout = QHBoxLayout()
 
+        # Profile selection
+        toolbar_layout.addWidget(QLabel("Profile:"))
+        self.profile_combo = QComboBox()
+        self.profile_combo.setMinimumWidth(150)
+        self.populate_profile_combo()
+        toolbar_layout.addWidget(self.profile_combo)
+
+        toolbar_layout.addSpacing(20)
+
         self.select_input_btn = QPushButton("Select Input Folder")
         self.select_input_btn.setMinimumHeight(35)
         toolbar_layout.addWidget(self.select_input_btn)
@@ -221,6 +230,33 @@ class MainWindow(QMainWindow):
         self.select_input_btn.clicked.connect(self.select_input_folder)
         self.select_output_btn.clicked.connect(self.select_output_folder)
         self.process_btn.clicked.connect(self.start_processing)
+        self.profile_combo.currentTextChanged.connect(self.on_profile_changed)
+
+    def populate_profile_combo(self):
+        """Populate the profile selection combo box"""
+        self.profile_combo.clear()
+        profiles = self.config.get_available_profiles()
+
+        for profile in profiles:
+            self.profile_combo.addItem(profile)
+
+        # Set current profile
+        current_profile = self.config.profile_name
+        index = self.profile_combo.findText(current_profile)
+        if index >= 0:
+            self.profile_combo.setCurrentIndex(index)
+
+    def on_profile_changed(self, profile_name: str):
+        """Handle profile selection change"""
+        try:
+            self.config.switch_profile(profile_name)
+            self.config.save()
+            self.status_bar.showMessage(f"Switched to profile: {profile_name}")
+            logger.info(f"Switched to profile: {profile_name}")
+        except ValueError as e:
+            QMessageBox.warning(self, "Profile Error", str(e))
+            # Reset to previous profile
+            self.populate_profile_combo()
 
     def select_input_folder(self):
         """Select input folder containing images"""

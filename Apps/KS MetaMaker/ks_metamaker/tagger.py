@@ -12,6 +12,13 @@ from .utils.config import Config
 from .dynamic_model_manager import DynamicModelManager, ModelType
 from .model_downloader import ModelManager
 
+# Import tag normalizer
+try:
+    from .tag_normalizer import TagNormalizer
+except ImportError:
+    TagNormalizer = None
+    logger.warning("TagNormalizer not available, running without normalization")
+
 logger = logging.getLogger(__name__)
 
 try:
@@ -58,6 +65,11 @@ class ImageTagger:
             "expression", "gender", "age", "style", "weapon", "magic"
         ]
 
+        # Initialize tag normalizer if profile has normalization config
+        self.normalizer = None
+        if TagNormalizer and self.config.normalization:
+            self.normalizer = TagNormalizer(self.config.normalization)
+
         logger.info(f"ImageTagger initialized with {self.model_manager.hardware_limits.memory_profile.value} profile")
 
     def tag(self, image_path: Path) -> List[str]:
@@ -94,13 +106,31 @@ class ImageTagger:
             if blip_caption:
                 all_tags.extend(self._extract_tags_from_caption(blip_caption))
 
-            # Determine category from tags
-            category = self._classify_from_tags(all_tags)
-            max_tags = self.config.max_tags.get(category, 20)
+            # Apply normalization if available
+            if self.normalizer:
+                # Create dummy confidences for now (would be improved with actual model confidences)
+                confidences = [0.8] * len(all_tags)  # Default confidence
+                normalized_tags = self.normalizer.normalize_tags(all_tags, confidences)
 
-            # Select best tags
-            selected_tags = self._select_best_tags(all_tags, max_tags - len(tags))
-            tags.extend(selected_tags)
+                # Apply budget filtering if available
+                if self.config.budget:
+                    normalized_tags = self.normalizer.filter_by_category_budget(
+                        normalized_tags, self.config.budget
+                    )
+
+                    # Apply diversity filtering
+                    normalized_tags = self.normalizer.apply_diversity_filter(
+                        normalized_tags, self.config.budget.diversity_weight
+                    )
+
+                # Extract final tag strings
+                all_tags = [tag.normalized for tag in normalized_tags]
+            else:
+                # Legacy tag selection without normalization
+                # Determine category from tags
+                category = self._classify_from_tags(all_tags)
+                max_tags = self.config.max_tags.get(category, 20)
+                all_tags = self._select_best_tags(all_tags, max_tags)
 
             # Add quality tags
             quality_tags = self._assess_quality(image_path)
