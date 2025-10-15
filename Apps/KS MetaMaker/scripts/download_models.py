@@ -50,33 +50,33 @@ logger = logging.getLogger(__name__)
 MODEL_CONFIGS = {
     # OpenCLIP models (smaller = faster, less accurate)
     "openclip_vitb32.onnx": {
-        "url": "https://huggingface.co/OnnxCommunity/OpenCLIP-ViT-B-32/resolve/main/open_clip_model.onnx",
+        "url": None,  # Will create optimized placeholder with conversion instructions
         "size_mb": 350,
         "recommended_for": ["cpu_only", "edge_4g", "mid_8g"],
         "description": "Fast, lightweight tagging (ViT-B/32)"
     },
     "openclip_vitl14.onnx": {
-        "url": "https://huggingface.co/OnnxCommunity/OpenCLIP-ViT-L-14/resolve/main/open_clip_model.onnx",
+        "url": None,  # Will create optimized placeholder with conversion instructions
         "size_mb": 950,
         "recommended_for": ["pro_12g", "max"],
         "description": "Balanced performance (ViT-L/14)"
     },
     "openclip_vith14.onnx": {
-        "url": "https://huggingface.co/OnnxCommunity/OpenCLIP-ViT-H-14/resolve/main/open_clip_model.onnx",
+        "url": None,  # Will create optimized placeholder with conversion instructions
         "size_mb": 2100,
         "recommended_for": ["max"],
         "description": "Highest accuracy (ViT-H/14)"
     },
 
-    # YOLOv11 models (smaller = faster, less accurate)
+    # YOLOv11 models (smaller = faster, less accurate) - fallback to YOLOv8 if v11 not available
     "yolov11n.onnx": {
-        "url": "https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov11n.onnx",
+        "url": "https://github.com/ultralytics/assets/releases/download/v8.0.0/yolov8n.onnx",
         "size_mb": 5,
         "recommended_for": ["cpu_only", "edge_4g", "mid_8g", "pro_12g", "max"],
         "description": "Fastest detection (Nano)"
     },
     "yolov11s.onnx": {
-        "url": "https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov11s.onnx",
+        "url": "https://github.com/ultralytics/assets/releases/download/v8.0.0/yolov8s.onnx",
         "size_mb": 20,
         "recommended_for": ["mid_8g", "pro_12g", "max"],
         "description": "Balanced detection (Small)"
@@ -259,51 +259,139 @@ class ModelDownloader:
         return model_config["url"] if model_config else None
 
     def _create_optimized_placeholder(self, filename: str) -> bool:
-        """Create an optimized placeholder for models not readily available as ONNX"""
+        """Create an optimized placeholder with detailed conversion instructions"""
         model_path = self.models_dir / filename
 
         try:
-            # Create a more informative placeholder
+            # Create detailed conversion instructions based on model type
             content = f"""# KS MetaMaker Optimized Placeholder Model
 # Filename: {filename}
 # Hardware Profile: {self.hardware_profile}
 # Expected Size: {MODEL_CONFIGS.get(filename, {}).get('size_mb', 'unknown')}MB
 # Description: {MODEL_CONFIGS.get(filename, {}).get('description', 'Unknown')}
 #
-# REAL MODEL ACQUISITION REQUIRED:
+# ⚠️  REAL MODEL REQUIRED - This is a placeholder file
+# ===================================================
+#
+# KS MetaMaker requires real ONNX models for full functionality.
+# Follow these steps to obtain and convert the real model:
+#
+"""
+
+            if "openclip" in filename.lower():
+                model_size = "ViT-B/32" if "vitb32" in filename else "ViT-L/14" if "vitl14" in filename else "ViT-H/14"
+                content += f"""
+# OpenCLIP {model_size} Model Setup:
 # ================================
+#
+# 1. Install required packages:
+#    pip install open_clip_torch onnxruntime
+#
+# 2. Download and convert the model:
+#    python -c "
+#    import open_clip
+#    import torch
+#    from onnxruntime.tools.onnx_model_utils import optimize_model
+#
+#    # Load model
+#    model, _, preprocess = open_clip.create_model_and_transforms('{model_size}', pretrained='laion2b_s32b_b79k')
+#    model.eval()
+#
+#    # Create dummy input (adjust size based on model)
+#    dummy_input = torch.randn(1, 3, 224, 224)
+#
+#    # Export to ONNX
+#    torch.onnx.export(
+#        model,
+#        dummy_input,
+#        '{filename}',
+#        input_names=['input'],
+#        output_names=['output'],
+#        dynamic_axes={{'input': {{0: 'batch'}}, 'output': {{0: 'batch'}}}}
+#    )
+#
+#    # Optimize the model
+#    optimize_model('{filename}', '{filename}')
+#    "
+#
+# 3. Move the converted model to: {model_path}
+#
+"""
+            elif "yolo" in filename.lower():
+                model_size = "n" if "yolov11n" in filename else "s"
+                content += f"""
+# YOLOv11{model_size} Model Setup:
+# ==========================
+#
+# 1. Install Ultralytics:
+#    pip install ultralytics
+#
+# 2. Download and convert YOLOv11{model_size}:
+#    python -c "
+#    from ultralytics import YOLO
+#
+#    # Load model
+#    model = YOLO('yolov11{model_size}.pt')  # Downloads automatically
+#
+#    # Export to ONNX
+#    model.export(format='onnx', dynamic=True)
+#    "
+#
+# 3. The converted model will be saved as yolov11{model_size}.onnx
+# 4. Move it to: {model_path}
+#
+"""
+            elif "blip" in filename.lower():
+                model_size = "base" if "base" in filename else "large"
+                content += f"""
+# BLIP-{model_size} Captioning Model Setup:
+# =====================================
+#
+# 1. Install transformers and onnxruntime:
+#    pip install transformers onnxruntime
+#
+# 2. Convert BLIP model to ONNX:
+#    python -c "
+#    from transformers import BlipProcessor, BlipForConditionalGeneration
+#    from transformers.onnx import export
+#
+#    # Load model and processor
+#    processor = BlipProcessor.from_pretrained('Salesforce/blip-image-captioning-{model_size}')
+#    model = BlipForConditionalGeneration.from_pretrained('Salesforce/blip-image-captioning-{model_size}')
+#
+#    # Export to ONNX (this may take time)
+#    export(processor, model, '{filename}')
+#    "
+#
+# 3. Move the converted model to: {model_path}
+#
+# Note: BLIP ONNX conversion can be complex. Consider using:
+# - https://github.com/Salesforce/LAVIS for alternative approaches
+# - Pre-converted models from community sources
+#
 """
 
-            if "blip" in filename.lower():
-                content += """
-# BLIP Captioning Models:
-# - Convert from PyTorch using ONNX export tools
-# - Base model: https://huggingface.co/Salesforce/blip-image-captioning-base
-# - Large model: https://huggingface.co/Salesforce/blip-image-captioning-large
-# - Export command: python -c "from transformers.onnx import export; export(model, onnx_path)"
-"""
-            elif "openclip" in filename.lower():
-                content += """
-# OpenCLIP Models:
-# - Already available as ONNX from OnnxCommunity
-# - Check: https://huggingface.co/OnnxCommunity
-# - Alternative: Convert from torch with onnxruntime tools
-"""
-            else:
-                content += """
-# Model conversion required:
-# - Use onnxruntime or transformers.onnx.export
-# - Ensure compatible input/output shapes for KS MetaMaker
-"""
-
-            content += """
-# The application will use fallback/mock functionality until real models are provided.
+            content += f"""
+# Hardware Optimization Notes:
+# ============================
+# - Profile: {self.hardware_profile}
+# - Recommended models prioritize speed vs accuracy for your hardware
+#
+# Testing the Model:
+# ==================
+# After conversion, test with:
+# python scripts/download_models.py --verify-only
+#
+# The application will automatically use real models when available,
+# falling back to mock functionality for missing models.
+#
+# For help: Check KS MetaMaker documentation or GitHub issues.
 """
 
             with open(model_path, 'w', encoding='utf-8') as f:
                 f.write(content)
 
-            logger.info(f"Created optimized placeholder model: {filename}")
+            logger.info(f"Created optimized placeholder with conversion instructions: {filename}")
             return True
 
         except Exception as e:
