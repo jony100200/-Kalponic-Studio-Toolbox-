@@ -531,11 +531,38 @@ class KSPDFStudioApp:
         center_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         self.title_file_var = tk.StringVar(value='No file open')
-        file_label = tk.Label(center_frame, textvariable=self.title_file_var, bg=title_bg,
-                             fg=DarkTheme.COLORS.get('fg_secondary', '#b0b0b0'),
-                             font=('Segoe UI', 9), anchor='w')
-        file_label.pack(fill=tk.X, padx=(16, 0), pady=(6, 0))
-        file_label.bind('<Button-1>', lambda e: self._open_file())
+        file_label = tk.Label(
+            center_frame,
+            textvariable=self.title_file_var,
+            bg=title_bg,
+            fg=DarkTheme.COLORS.get('fg_secondary', '#b0b0b0'),
+            font=('Segoe UI', 9),
+            anchor='w'
+        )
+        file_label.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(16, 0), pady=(6, 0))
+
+        browse_bg = DarkTheme.COLORS.get('button_bg', button_bg)
+        browse_fg = DarkTheme.COLORS.get('button_fg', title_fg)
+        browse_hover = DarkTheme.COLORS.get('button_active_bg', button_hover)
+
+        def on_browse_hover(event, target, colour):  # Compact helper to avoid nested defs below
+            target.config(bg=colour)
+
+        browse_btn = tk.Button(
+            center_frame,
+            text='Open...',
+            command=self._open_file,
+            bg=browse_bg,
+            fg=browse_fg,
+            font=('Segoe UI', 9),
+            bd=0,
+            padx=10,
+            pady=2,
+            cursor='hand2'
+        )
+        browse_btn.pack(side=tk.RIGHT, padx=(8, 12), pady=(6, 0))
+        browse_btn.bind('<Enter>', lambda e, btn=browse_btn: on_browse_hover(e, btn, browse_hover))
+        browse_btn.bind('<Leave>', lambda e, btn=browse_btn: on_browse_hover(e, btn, browse_bg))
 
         # Right section: Window control buttons
         right_frame = tk.Frame(self.title_bar, bg=title_bg)
