@@ -79,6 +79,11 @@ Apps/PromptSender2ChatGP/sent_images/
 # ===== DEVELOPMENT DOCUMENTS =====
 Development Documents/
 
+# ===== DESIGN DOCUMENTS =====
+**/*DesignDoc.md
+**/*WorkFlow.md
+**/*DesignDoc*
+
 # Ignore private development content for Universal Model Launcher
 Apps/Universal Model Launcher/References/
 Apps/Universal Model Launcher/Testing/
