@@ -8,6 +8,7 @@ Version: 2.0.0
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
+from tkinter import font as tkfont
 import threading
 import json
 import webbrowser
@@ -43,6 +44,52 @@ class DarkTheme:
     # so the class exists; the real values are loaded (and override this)
     # further down when importing the centralized theme.
     COLORS = {}
+    TOKENS = {}
+    _available_fonts = None
+
+    @staticmethod
+    def _ensure_fonts_loaded():
+        """Cache available font families so we can fall back gracefully."""
+        if DarkTheme._available_fonts is not None:
+            return
+        try:
+            DarkTheme._available_fonts = {name.lower() for name in tkfont.families()}
+        except tk.TclError:
+            DarkTheme._available_fonts = set()
+
+    @staticmethod
+    def _get_font_spec(role: str, fallback: tuple) -> tuple:
+        """
+        Build a Tk font tuple using typography tokens when available.
+        Falls back to the provided tuple if the desired family is missing.
+        """
+        spec = (DarkTheme.TOKENS.get('typography') or {}).get(role, {})
+        family = spec.get('family', fallback[0])
+        size = spec.get('size', fallback[1])
+        weight = spec.get('weight')
+
+        DarkTheme._ensure_fonts_loaded()
+        if DarkTheme._available_fonts and family.lower() not in DarkTheme._available_fonts:
+            family = fallback[0]
+
+        # Tk font tuples accept an optional style token (e.g. 'bold')
+        style = None
+        if weight is not None:
+            try:
+                style = 'bold' if int(weight) >= 600 else 'normal'
+            except (TypeError, ValueError):
+                style = None
+
+        if style in (None, 'normal'):
+            style = fallback[2] if len(fallback) > 2 else None
+
+        return (family, size, style) if style else (family, size)
+
+    @staticmethod
+    def _get_spacing(name: str, default: int) -> int:
+        """Return spacing tokens with sensible fallbacks."""
+        spacing_tokens = DarkTheme.TOKENS.get('spacing') or {}
+        return int(spacing_tokens.get(name, spacing_tokens.get('unit', default)))
 
     @staticmethod
     def apply_theme(root):
@@ -58,20 +105,44 @@ class DarkTheme:
         # Configure overall window
         root.configure(bg=DarkTheme.COLORS['bg_primary'])
 
-        # Global font and paddings
-        default_font = ('Segoe UI', 10)
+        # Global font and paddings derived from design tokens
+        spacing_unit = DarkTheme._get_spacing('element_padding', 8)
+        panel_padding = DarkTheme._get_spacing('panel_padding', max(12, spacing_unit * 2))
+        default_font = DarkTheme._get_font_spec('body', ('Segoe UI', 11))
+        heading_font = DarkTheme._get_font_spec('title', ('Segoe UI', 15, 'bold'))
+        mono_font = DarkTheme._get_font_spec('mono', ('Consolas', 11))
         root.option_add('*Font', default_font)
+        root.option_add('*Heading.Font', heading_font)
+        root.option_add('*Monospaced.Font', mono_font)
 
         # Ttk style base configuration
         style.configure('.', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary'])
 
         # Frame and label defaults
-        style.configure('TFrame', background=DarkTheme.COLORS['bg_primary'], relief='flat')
+        style.configure('TFrame', background=DarkTheme.COLORS['bg_primary'], relief='flat', padding=panel_padding)
         style.configure('TLabel', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary'])
 
         # Buttons
-        style.configure('TButton', background=DarkTheme.COLORS['button_bg'], foreground=DarkTheme.COLORS['button_fg'], borderwidth=0, focusthickness=3)
-        style.map('TButton', background=[('active', DarkTheme.COLORS.get('button_active_bg', DarkTheme.COLORS['highlight']))], foreground=[('disabled', DarkTheme.COLORS['fg_secondary'])])
+        button_padding = (spacing_unit * 2, max(spacing_unit, 8))
+        focus_colour = DarkTheme.COLORS.get('focus_ring', DarkTheme.COLORS.get('fg_accent', '#00C2FF'))
+        style.configure(
+            'TButton',
+            background=DarkTheme.COLORS['button_bg'],
+            foreground=DarkTheme.COLORS['button_fg'],
+            borderwidth=0,
+            focusthickness=2,
+            padding=button_padding
+        )
+        style.map(
+            'TButton',
+            background=[
+                ('pressed', DarkTheme.COLORS.get('button_active_bg', DarkTheme.COLORS['highlight'])),
+                ('active', DarkTheme.COLORS.get('button_active_bg', DarkTheme.COLORS['highlight'])),
+                ('disabled', DarkTheme.COLORS.get('bg_secondary', DarkTheme.COLORS['bg_primary'])),
+            ],
+            foreground=[('disabled', DarkTheme.COLORS['fg_secondary'])],
+            focuscolor=[('focus', focus_colour)]
+        )
 
         # Entries / Combobox
         style.configure('TEntry', fieldbackground=DarkTheme.COLORS['entry_bg'], foreground=DarkTheme.COLORS['entry_fg'])
@@ -81,12 +152,14 @@ class DarkTheme:
         root.option_add('*Entry.selectForeground', DarkTheme.COLORS.get('entry_select_fg', DarkTheme.COLORS.get('select_fg', DarkTheme.COLORS['bg_primary'])))
 
         # Notebook / Tabs
-        style.configure('TNotebook', background=DarkTheme.COLORS['bg_primary'], tabmargins=[2, 5, 2, 0], borderwidth=0)
-        style.configure('TNotebook.Tab', background=DarkTheme.COLORS['bg_secondary'], foreground=DarkTheme.COLORS['fg_primary'], padding=[8, 4])
+        tab_margin = [spacing_unit, spacing_unit, spacing_unit, 0]
+        tab_padding = (spacing_unit * 2, spacing_unit)
+        style.configure('TNotebook', background=DarkTheme.COLORS['bg_primary'], tabmargins=tab_margin, borderwidth=0)
+        style.configure('TNotebook.Tab', background=DarkTheme.COLORS['bg_secondary'], foreground=DarkTheme.COLORS['fg_primary'], padding=tab_padding)
         style.map('TNotebook.Tab', background=[('selected', DarkTheme.COLORS['bg_tertiary'])], foreground=[('selected', DarkTheme.COLORS['fg_primary'])])
 
         # LabelFrames, Checkbuttons, Progress
-        style.configure('TLabelFrame', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary'], borderwidth=1)
+        style.configure('TLabelFrame', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary'], borderwidth=1, padding=panel_padding)
         style.configure('TCheckbutton', background=DarkTheme.COLORS['bg_primary'], foreground=DarkTheme.COLORS['fg_primary'])
         style.configure('TProgressbar', troughcolor=DarkTheme.COLORS['bg_secondary'], background=DarkTheme.COLORS['bg_tertiary'])
 
@@ -143,8 +216,8 @@ class DarkTheme:
         root.option_add('*Frame.background', DarkTheme.COLORS['bg_primary'])
 
         # Remove focus highlight rings that can appear white on some Windows themes
-        root.option_add('*HighlightColor', DarkTheme.COLORS.get('focus_ring', DarkTheme.COLORS['bg_primary']))
-        root.option_add('*HighlightBackground', DarkTheme.COLORS.get('focus_ring', DarkTheme.COLORS['bg_primary']))
+        root.option_add('*HighlightColor', focus_colour)
+        root.option_add('*HighlightBackground', focus_colour)
 
 
 # Use centralized theme tokens when available
@@ -152,34 +225,52 @@ try:
     # Try importing as a top-level module (when src is on sys.path)
     import theme as _theme
     DarkTheme.COLORS = getattr(_theme, 'COLORS', {}) or DarkTheme.COLORS
+    DarkTheme.TOKENS = getattr(_theme, 'TOKENS', {}) or DarkTheme.TOKENS
 except Exception:
     try:
         # Try package-relative import (when running as package)
-        from .theme import COLORS as THEME_COLORS
+        from .theme import COLORS as THEME_COLORS, TOKENS as THEME_TOKENS
         DarkTheme.COLORS = THEME_COLORS
+        DarkTheme.TOKENS = THEME_TOKENS
     except Exception:
         # Fallback defaults to guarantee keys exist (used when running tests or imports from different CWDs)
         DarkTheme.COLORS = {
-            'bg_primary': '#1e1e1e',
-            'bg_secondary': '#2d2d2d',
-            'bg_tertiary': '#3a3a3a',
-            'fg_primary': '#e0e0e0',
-            'fg_secondary': '#b0b0b0',
-            'fg_accent': '#4a9eff',
-            'border': '#404040',
-            'highlight': '#505050',
-            'success': '#4a9e4a',
-            'warning': '#9e9e4a',
-            'error': '#9e4a4a',
-            'button_bg': '#404040',
-            'button_fg': '#e0e0e0',
-            'entry_bg': '#2d2d2d',
-            'entry_fg': '#e0e0e0',
-            'text_bg': '#1a1a1a',
-            'text_fg': '#e0e0e0',
-            'scrollbar_bg': '#404040',
-            'scrollbar_fg': '#606060',
+            'bg_primary': '#1C1F2A',
+            'bg_secondary': '#262E38',
+            'bg_tertiary': '#303B4C',
+            'fg_primary': '#D9D8D8',
+            'fg_secondary': '#A0A0A0',
+            'fg_accent': '#00C2FF',
+            'border': '#293346',
+            'highlight': '#1F2F3D',
+            'success': '#32CD32',
+            'warning': '#DFAA29',
+            'error': '#E45757',
+            'button_bg': '#262E38',
+            'button_fg': '#D9D8D8',
+            'entry_bg': '#262E38',
+            'entry_fg': '#D9D8D8',
+            'text_bg': '#161923',
+            'text_fg': '#D9D8D8',
+            'scrollbar_bg': '#262E38',
+            'scrollbar_fg': '#3F5264',
         }
+        DarkTheme.TOKENS = {}
+
+# Guarantee commonly used colour aliases exist even when tokens are missing
+DarkTheme.COLORS.setdefault('button_active_bg', '#133C4E')
+DarkTheme.COLORS.setdefault('button_active_fg', DarkTheme.COLORS.get('button_fg', '#D9D8D8'))
+DarkTheme.COLORS.setdefault('entry_select_bg', '#1F4E62')
+DarkTheme.COLORS.setdefault('entry_select_fg', DarkTheme.COLORS.get('fg_primary', '#D9D8D8'))
+DarkTheme.COLORS.setdefault('select_bg', '#1F4E62')
+DarkTheme.COLORS.setdefault('select_fg', DarkTheme.COLORS.get('fg_primary', '#D9D8D8'))
+DarkTheme.COLORS.setdefault('scroll_thumb', DarkTheme.COLORS.get('scrollbar_fg', '#3F5264'))
+DarkTheme.COLORS.setdefault('scroll_track', DarkTheme.COLORS.get('scrollbar_bg', '#262E38'))
+DarkTheme.COLORS.setdefault('menu_active_bg', DarkTheme.COLORS.get('highlight', '#1F2F3D'))
+DarkTheme.COLORS.setdefault('menu_active_fg', DarkTheme.COLORS.get('fg_primary', '#D9D8D8'))
+DarkTheme.COLORS.setdefault('focus_ring', DarkTheme.COLORS.get('fg_accent', '#00C2FF'))
+DarkTheme.COLORS.setdefault('tree_selected_bg', DarkTheme.COLORS.get('select_bg', '#1F4E62'))
+DarkTheme.COLORS.setdefault('tree_selected_fg', DarkTheme.COLORS.get('select_fg', DarkTheme.COLORS.get('fg_primary', '#D9D8D8')))
 
 
 class KSPDFStudioApp:

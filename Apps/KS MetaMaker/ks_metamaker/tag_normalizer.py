@@ -65,6 +65,12 @@ class TagNormalizer:
         self._nsfw_patterns = self._build_nsfw_patterns()
         self._banned_tags = set(taxonomy.banned_tags or [])
 
+        # Default values for normalization settings (can be overridden)
+        self.min_confidence = 0.1
+        self.remove_duplicates = True
+        self.sort_by_confidence = True
+        self.case_sensitive = False
+
     def _build_synonym_map(self) -> Dict[str, str]:
         """Build a mapping from synonyms to canonical tags"""
         synonym_map = {}
@@ -104,7 +110,7 @@ class TagNormalizer:
 
         for tag, confidence in zip(tags, confidences):
             # Skip if confidence is too low
-            if confidence < self.taxonomy.min_confidence:
+            if confidence < self.min_confidence:
                 continue
 
             # Check for banned tags
@@ -186,7 +192,7 @@ class TagNormalizer:
         tag = re.sub(r'[^\w\s-]', '', tag)
 
         # Convert to lowercase if not case sensitive
-        if not self.taxonomy.case_sensitive:
+        if not self.case_sensitive:
             tag = tag.lower()
 
         return tag
@@ -262,7 +268,7 @@ class TagNormalizer:
             # Adjust confidence by penalty
             adjusted_confidence = tag.confidence * (1 - similarity_penalty)
 
-            if adjusted_confidence >= self.taxonomy.min_confidence:
+            if adjusted_confidence >= self.min_confidence:
                 tag.confidence = adjusted_confidence
                 selected.append(tag)
 

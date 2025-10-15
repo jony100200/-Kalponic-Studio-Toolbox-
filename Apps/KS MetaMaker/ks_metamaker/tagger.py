@@ -68,7 +68,12 @@ class ImageTagger:
         # Initialize tag normalizer if profile has normalization config
         self.normalizer = None
         if TagNormalizer and self.config.normalization:
-            self.normalizer = TagNormalizer(self.config.normalization)
+            self.normalizer = TagNormalizer(self.config.normalization.taxonomy)
+            # Copy normalization settings
+            self.normalizer.min_confidence = self.config.normalization.min_confidence
+            self.normalizer.remove_duplicates = self.config.normalization.remove_duplicates
+            self.normalizer.sort_by_confidence = self.config.normalization.sort_by_confidence
+            self.normalizer.case_sensitive = self.config.normalization.case_sensitive
 
         logger.info(f"ImageTagger initialized with {self.model_manager.hardware_limits.memory_profile.value} profile")
 
