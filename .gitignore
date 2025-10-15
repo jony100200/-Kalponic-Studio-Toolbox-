@@ -42,6 +42,7 @@ MemoryCaptures/
 # Auto-generated VS/JetBrains Rider
 .vs/
 .idea/
+.vscode/
 
 # ===== WEB/JS/FRONTEND =====
 node_modules/
@@ -62,6 +63,7 @@ desktop.ini
 .env.*
 config.json
 config.yaml
+*security.json
 
 # ===== AI/MODEL FILES (if needed) =====
 models/
