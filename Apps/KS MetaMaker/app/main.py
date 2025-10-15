@@ -6,11 +6,14 @@ AI-assisted local utility for tagging, renaming, and organizing visual assets
 
 import sys
 import os
+import logging
 from pathlib import Path
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
+
+logger = logging.getLogger(__name__)
 
 try:
     from PyQt6.QtWidgets import (
@@ -39,17 +42,18 @@ class ProcessingWorker(QThread):
     finished = pyqtSignal(dict)  # results
     error = pyqtSignal(str)
 
-    def __init__(self, input_dir: Path, output_dir: Path, config: Config):
+    def __init__(self, input_dir: Path, output_dir: Path, config: Config, hardware_detector=None):
         super().__init__()
         self.input_dir = input_dir
         self.output_dir = output_dir
         self.config = config
+        self.hardware_detector = hardware_detector
 
     def run(self):
         try:
             # Initialize components
             ingester = ImageIngester(enable_quality_filter=True, enable_duplicate_detection=True)
-            tagger = ImageTagger(self.config)
+            tagger = ImageTagger(self.config, hardware_detector=self.hardware_detector)
             renamer = FileRenamer(self.config)
             organizer = FileOrganizer(self.config, self.output_dir)
             exporter = DatasetExporter(self.config)
@@ -97,10 +101,32 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.config = Config()
+        self.hardware_detector = None
         self.processing_worker = None
+
+        # Initialize hardware detection
+        self.init_hardware_detection()
 
         self.init_ui()
         self.setup_connections()
+
+    def init_hardware_detection(self):
+        """Initialize hardware detection and show setup dialog if needed"""
+        try:
+            from ks_metamaker.hardware_detector import HardwareDetector
+            self.hardware_detector = HardwareDetector()
+
+            # Show hardware setup dialog
+            setup_dialog = HardwareSetupDialog(self.hardware_detector, self)
+            if setup_dialog.exec():
+                logger.info("Hardware setup completed")
+            else:
+                logger.warning("Hardware setup cancelled or failed")
+
+        except Exception as e:
+            logger.error(f"Hardware detection initialization failed: {e}")
+            # Continue without hardware detection
+            self.hardware_detector = None
 
     def init_ui(self):
         """Initialize the user interface"""
@@ -249,7 +275,7 @@ class MainWindow(QMainWindow):
         self.status_label.setText("Processing images...")
 
         # Start worker thread
-        self.processing_worker = ProcessingWorker(self.input_dir, self.output_dir, self.config)
+        self.processing_worker = ProcessingWorker(self.input_dir, self.output_dir, self.config, self.hardware_detector)
         self.processing_worker.progress.connect(self.update_progress)
         self.processing_worker.finished.connect(self.processing_finished)
         self.processing_worker.error.connect(self.processing_error)
