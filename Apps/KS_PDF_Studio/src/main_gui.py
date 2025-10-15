@@ -35,16 +35,16 @@ from monetization.watermarking import PDFWatermarker, WatermarkConfig
 from monetization.license_manager import LicenseManager, LicenseEnforcement, create_personal_license, create_commercial_license, create_enterprise_license
 from monetization.analytics import AnalyticsTracker, AnalyticsDashboard
 
+# Import centralized theme
+from theme import COLORS as THEME_COLORS, TOKENS as THEME_TOKENS
+
 
 class DarkTheme:
     """Dark theme configuration for KS PDF Studio."""
 
-    # Color palette - muted colors easy on eyes
-    # COLORS are centralized in src/theme.py. Keep an empty placeholder here
-    # so the class exists; the real values are loaded (and override this)
-    # further down when importing the centralized theme.
-    COLORS = {}
-    TOKENS = {}
+    # Color palette - imported from centralized theme
+    COLORS = THEME_COLORS
+    TOKENS = THEME_TOKENS
     _available_fonts = None
 
     @staticmethod
