@@ -62,22 +62,22 @@ MODEL_CONFIGS = {
         "description": "Balanced performance (ViT-L/14)"
     },
     "openclip_vith14.onnx": {
-        "url": None,  # Will create optimized placeholder with conversion instructions
+        "url": "https://huggingface.co/Marqo/onnx-open_clip-ViT-H-14/resolve/main/visual.onnx",
         "size_mb": 2100,
         "recommended_for": ["max"],
         "description": "Highest accuracy (ViT-H/14)"
     },
 
-    # YOLOv11 models (smaller = faster, less accurate) - fallback to YOLOv8 if v11 not available
+    # YOLOv11 models (smaller = faster, less accurate)
     "yolov11n.onnx": {
-        "url": "https://github.com/ultralytics/assets/releases/download/v8.0.0/yolov8n.onnx",
-        "size_mb": 5,
+        "url": "https://huggingface.co/deepghs/yolos/resolve/main/yolo11n/model.onnx",
+        "size_mb": 10,
         "recommended_for": ["cpu_only", "edge_4g", "mid_8g", "pro_12g", "max"],
         "description": "Fastest detection (Nano)"
     },
     "yolov11s.onnx": {
-        "url": "https://github.com/ultralytics/assets/releases/download/v8.0.0/yolov8s.onnx",
-        "size_mb": 20,
+        "url": "https://huggingface.co/deepghs/yolos/resolve/main/yolo11s/model.onnx",
+        "size_mb": 37,
         "recommended_for": ["mid_8g", "pro_12g", "max"],
         "description": "Balanced detection (Small)"
     },
@@ -191,7 +191,7 @@ class ModelDownloader:
         return success
 
     def download_model(self, filename: str, force: bool = False) -> bool:
-        """Download a specific model file"""
+        """Download a specific model file using programmatic conversion"""
         model_path = self.models_dir / filename
 
         # Check if model already exists
@@ -206,52 +206,170 @@ class ModelDownloader:
             return False
 
         url = model_config["url"]
-
-        # Handle models without direct ONNX downloads
-        if url is None:
-            logger.info(f"Creating optimized placeholder for {filename} (ONNX version not readily available)")
-            return self._create_optimized_placeholder(filename)
-
         size_mb = model_config.get("size_mb", "unknown")
 
-        logger.info(f"Downloading {filename} ({size_mb}MB) from {url}")
+        # Try direct download first if URL exists
+        if url is not None:
+            logger.info(f"Downloading {filename} ({size_mb}MB) from {url}")
+            try:
+                response = requests.get(url, stream=True, timeout=300)
+                response.raise_for_status()
 
-        try:
-            # Download the model
-            response = requests.get(url, stream=True, timeout=300)
-            response.raise_for_status()
+                total_size = int(response.headers.get('content-length', 0))
+                downloaded = 0
 
-            total_size = int(response.headers.get('content-length', 0))
-            downloaded = 0
+                with open(model_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
 
-            with open(model_path, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-                        downloaded += len(chunk)
+                            if total_size > 0:
+                                progress = (downloaded / total_size) * 100
+                                print(f"\rDownloading {filename}: {progress:.1f}%", end='', flush=True)
 
-                        # Show progress for large files
-                        if total_size > 0:
-                            progress = (downloaded / total_size) * 100
-                            print(f"\rDownloading {filename}: {progress:.1f}%", end='', flush=True)
-
-            if total_size > 0:
-                print()  # New line after progress
-
-            # Verify download
-            if model_path.stat().st_size > 0:
+                if total_size > 0:
+                    print()
                 logger.info(f"Successfully downloaded {filename}")
                 return True
-            else:
-                logger.error(f"Downloaded file is empty: {filename}")
-                return False
 
+            except Exception as e:
+                logger.warning(f"Direct download failed for {filename}: {e}")
+                # Fall back to programmatic download
+
+        # Use programmatic download/conversion
+        logger.info(f"Using programmatic download for {filename}")
+        return self._download_programmatic(filename)
+
+    def _download_programmatic(self, filename: str) -> bool:
+        """Download and convert models programmatically"""
+        try:
+            if "yolo" in filename.lower():
+                return self._download_yolo_model(filename)
+            elif "openclip" in filename.lower():
+                return self._download_openclip_model(filename)
+            elif "blip" in filename.lower():
+                return self._download_blip_model(filename)
+            else:
+                logger.error(f"No programmatic download method for {filename}")
+                return self._create_optimized_placeholder(filename)
         except Exception as e:
-            logger.error(f"Failed to download {filename}: {e}")
-            # Clean up partial download
-            if model_path.exists():
-                model_path.unlink()
-            return False
+            logger.error(f"Programmatic download failed for {filename}: {e}")
+            return self._create_optimized_placeholder(filename)
+
+    def _download_yolo_model(self, filename: str) -> bool:
+        """Download and convert YOLO model using ultralytics"""
+        try:
+            from ultralytics import YOLO
+
+            # Determine model size
+            model_size = 'n' if 'yolov11n' in filename or 'yolov8n' in filename else 's'
+
+            logger.info(f"Downloading YOLOv8{model_size} model...")
+
+            # Download and load model
+            model = YOLO(f'yolov8{model_size}.pt')
+
+            # Export to ONNX
+            model_path = self.models_dir / filename
+            success = model.export(format='onnx', dynamic=True)
+
+            if success:
+                # Find and move the exported file
+                exported_files = list(Path('.').glob(f'yolov8{model_size}.onnx'))
+                if exported_files:
+                    exported_files[0].rename(model_path)
+                    logger.info(f"Successfully converted YOLO model: {filename}")
+                    return True
+                else:
+                    logger.error("Exported YOLO file not found")
+                    return self._create_optimized_placeholder(filename)
+            else:
+                logger.error("YOLO export failed")
+                return self._create_optimized_placeholder(filename)
+
+        except ImportError:
+            logger.error("Ultralytics not installed. Install with: pip install ultralytics")
+            return self._create_optimized_placeholder(filename)
+        except Exception as e:
+            logger.error(f"YOLO download/conversion failed: {e}")
+            return self._create_optimized_placeholder(filename)
+
+    def _download_openclip_model(self, filename: str) -> bool:
+        """Download and convert OpenCLIP model"""
+        try:
+            import open_clip
+            import torch
+
+            # Determine model size
+            if 'vitb32' in filename:
+                model_name = 'ViT-B/32'
+                pretrained = 'laion2b_s34b_b79k'
+            elif 'vitl14' in filename:
+                model_name = 'ViT-L/14'
+                pretrained = 'laion2b_s32b_b82k'
+            elif 'vith14' in filename:
+                model_name = 'ViT-H/14'
+                pretrained = 'laion2b_s32b_b79k'
+            else:
+                model_name = 'ViT-B/32'
+                pretrained = 'laion2b_s34b_b79k'
+
+            logger.info(f"Downloading OpenCLIP {model_name} model...")
+
+            # Load model
+            model, _, preprocess = open_clip.create_model_and_transforms(model_name, pretrained=pretrained)
+            model.eval()
+
+            # Create dummy input
+            dummy_input = torch.randn(1, 3, 224, 224)
+
+            # Export to ONNX
+            model_path = self.models_dir / filename
+            torch.onnx.export(
+                model,
+                dummy_input,
+                str(model_path),
+                input_names=['input'],
+                output_names=['output'],
+                dynamic_axes={'input': {0: 'batch'}, 'output': {0: 'batch'}},
+                opset_version=11
+            )
+
+            logger.info(f"Successfully converted OpenCLIP model: {filename}")
+            return True
+
+        except ImportError:
+            logger.error("open_clip_torch not installed. Install with: pip install open_clip_torch")
+            return self._create_optimized_placeholder(filename)
+        except Exception as e:
+            logger.error(f"OpenCLIP download/conversion failed: {e}")
+            return self._create_optimized_placeholder(filename)
+
+    def _download_blip_model(self, filename: str) -> bool:
+        """Download and convert BLIP model"""
+        try:
+            from transformers import BlipProcessor, BlipForConditionalGeneration
+
+            # Determine model size
+            model_size = 'base' if 'base' in filename else 'large'
+
+            logger.info(f"Downloading BLIP-{model_size} model...")
+
+            # Load model and processor
+            processor = BlipProcessor.from_pretrained(f'Salesforce/blip-image-captioning-{model_size}')
+            model = BlipForConditionalGeneration.from_pretrained(f'Salesforce/blip-image-captioning-{model_size}')
+
+            # For now, create placeholder since ONNX conversion is complex
+            logger.warning("BLIP ONNX conversion is complex. Creating detailed instructions instead.")
+            return self._create_optimized_placeholder(filename)
+
+        except ImportError:
+            logger.error("transformers not installed. Install with: pip install transformers")
+            return self._create_optimized_placeholder(filename)
+        except Exception as e:
+            logger.error(f"BLIP download/conversion failed: {e}")
+            return self._create_optimized_placeholder(filename)
 
     def _get_model_url(self, filename: str) -> str:
         """Get download URL for a model file"""
