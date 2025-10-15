@@ -31,6 +31,10 @@ class Config:
     # Export settings
     export: Dict[str, bool] = None
 
+    # UI settings - remember last used folders
+    last_input_dir: str = ""
+    last_output_dir: str = ""
+
     def __post_init__(self):
         if self.max_tags is None:
             self.max_tags = {
@@ -102,3 +106,25 @@ class Config:
             with open(preset_file, 'r', encoding='utf-8') as f:
                 return yaml.safe_load(f) or {}
         return {}
+
+    def save(self):
+        """Save current configuration to file"""
+        config_dir = Path(__file__).parent.parent.parent / "configs"
+        config_dir.mkdir(exist_ok=True)
+        config_file = config_dir / "config.yml"
+
+        # Convert to dict for YAML serialization
+        config_dict = {
+            "main_prefix": self.main_prefix,
+            "style_preset": self.style_preset,
+            "max_tags": self.max_tags,
+            "rename_pattern": self.rename_pattern,
+            "models": self.models,
+            "performance": self.performance,
+            "export": self.export,
+            "last_input_dir": self.last_input_dir,
+            "last_output_dir": self.last_output_dir
+        }
+
+        with open(config_file, 'w', encoding='utf-8') as f:
+            yaml.safe_dump(config_dict, f, default_flow_style=False)

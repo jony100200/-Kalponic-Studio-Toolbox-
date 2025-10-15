@@ -1,19 +1,21 @@
-main_prefix: "kalponic studio background"
-style_preset: "cinematic lighting, 4k render"
-max_tags:
-  props: 20
-  backgrounds: 25
-  characters: 30
-rename_pattern: "{category}_{top_tags}_{YYYYMMDD}_{index}"
-models:
-  tagger: "openclip_vith14.onnx"
-  detector: "yolov11.onnx"
-  captioner: "blip2.onnx"
-performance:
-  threads: 4
-  batch_size: 4
 export:
+  package_zip: true
   paired_txt: true
   rename_images: true
-  package_zip: true
   write_metadata: true
+last_input_dir: test_input
+last_output_dir: test_output
+main_prefix: kalponic studio background
+max_tags:
+  backgrounds: 25
+  characters: 30
+  props: 20
+models:
+  captioner: blip2.onnx
+  detector: yolov11.onnx
+  tagger: openclip_vith14.onnx
+performance:
+  batch_size: 4
+  threads: 4
+rename_pattern: '{category}_{top_tags}_{YYYYMMDD}_{index}'
+style_preset: cinematic lighting, 4k render

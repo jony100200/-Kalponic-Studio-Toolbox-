@@ -224,17 +224,27 @@ class MainWindow(QMainWindow):
 
     def select_input_folder(self):
         """Select input folder containing images"""
-        folder = QFileDialog.getExistingDirectory(self, "Select Input Folder")
+        # Start from last used directory if available
+        start_dir = self.config.last_input_dir if self.config.last_input_dir else ""
+        folder = QFileDialog.getExistingDirectory(self, "Select Input Folder", start_dir)
         if folder:
             self.input_dir = Path(folder)
+            self.config.last_input_dir = str(self.input_dir)
+            self.config.save()  # Save the preference
+            self.status_bar.showMessage(f"Input folder set: {self.input_dir.name} (remembered for next session)")
             self.update_file_tree()
             self.check_ready_to_process()
 
     def select_output_folder(self):
         """Select output folder for processed images"""
-        folder = QFileDialog.getExistingDirectory(self, "Select Output Folder")
+        # Start from last used directory if available
+        start_dir = self.config.last_output_dir if self.config.last_output_dir else ""
+        folder = QFileDialog.getExistingDirectory(self, "Select Output Folder", start_dir)
         if folder:
             self.output_dir = Path(folder)
+            self.config.last_output_dir = str(self.output_dir)
+            self.config.save()  # Save the preference
+            self.status_bar.showMessage(f"Output folder set: {self.output_dir.name} (remembered for next session)")
             self.check_ready_to_process()
 
     def check_ready_to_process(self):
@@ -302,7 +312,15 @@ class MainWindow(QMainWindow):
 
         self.results_text.setPlainText(result_text)
 
-        QMessageBox.information(self, "Complete", f"Successfully processed {len(results)} images!")
+        QMessageBox.information(self, "Complete", f"Successfully processed {len(results)} images!\n\nThe output folder will now open in File Explorer.")
+
+        # Open output folder in file explorer
+        try:
+            if hasattr(self, 'output_dir'):
+                os.startfile(str(self.output_dir))
+                logger.info(f"Opened output folder: {self.output_dir}")
+        except Exception as e:
+            logger.warning(f"Could not open output folder: {e}")
 
     def processing_error(self, error_msg: str):
         """Handle processing error"""
