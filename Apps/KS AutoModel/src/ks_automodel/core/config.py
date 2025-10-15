@@ -15,6 +15,7 @@ DEFAULT_CONFIG = {
     "cache_dir": str(get_cache_dir()),
     "max_cache_gb": 6,
     "favor_quality": False,
+    "ui_theme": "auto",
     "license_preferences": ["mit", "apache-2.0", "bsd-3-clause", "bsd-2-clause"],
     "providers": {"huggingface": {"enabled": True}},
 }
@@ -48,6 +49,10 @@ class ConfigManager:
     @property
     def favor_quality(self) -> bool:
         return bool(self._data.get("favor_quality", DEFAULT_CONFIG["favor_quality"]))
+
+    @property
+    def ui_theme(self) -> str:
+        return str(self._data.get("ui_theme", DEFAULT_CONFIG["ui_theme"]))
 
     def update(self, **kwargs: Any) -> None:
         self._data.update(kwargs)

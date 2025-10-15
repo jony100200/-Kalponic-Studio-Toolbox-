@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -90,9 +91,11 @@ class MainWindow(QMainWindow):
         self.candidates_by_task: Dict[str, List[ModelCandidate]] = {}
         self.pipeline: Optional[PipelineConfig] = None
         self.history: List[AnalysisRecord] = []
+        self.current_theme: str = "dark"
+        self.current_theme_mode: str = self.config.ui_theme.lower()
 
         self._build_ui()
-        self.setStyleSheet(build_qss())
+        self._apply_theme(self.config.ui_theme)
 
     # ------------------------------------------------------------------ UI builders
 
@@ -181,7 +184,10 @@ class MainWindow(QMainWindow):
 
         self.theme_combo = QComboBox()
         self.theme_combo.addItems(["Auto", "Dark", "Light"])
-        self.theme_combo.setCurrentIndex(0)
+        initial_theme = self.config.ui_theme.lower()
+        theme_label = {"auto": "Auto", "dark": "Dark", "light": "Light"}.get(initial_theme, "Auto")
+        self.theme_combo.setCurrentText(theme_label)
+        self.theme_combo.currentTextChanged.connect(self._on_theme_changed)
 
         self.favor_small_radio = QRadioButton("Favor smaller models")
         self.favor_quality_radio = QRadioButton("Favor quality")
@@ -335,9 +341,11 @@ class MainWindow(QMainWindow):
     def _collect_preferences(self) -> None:
         favor_quality = self.favor_quality_radio.isChecked() or self.pipeline_quality_radio.isChecked()
         licenses = [part.strip() for part in self.license_edit.text().split(",") if part.strip()]
+        if not licenses:
+            licenses = list(self.config.get_license_preferences())
         self.config.update(
             favor_quality=favor_quality,
-            license_preferences=licenses or self.config.get_license_preferences(),
+            license_preferences=licenses,
         )
         self.scorer.prefs.favor_quality = favor_quality
         self.scorer.prefs.license_allow_list = tuple(licenses)
@@ -345,6 +353,12 @@ class MainWindow(QMainWindow):
             self.scorer.prefs.max_size_mb = float(self.max_size_edit.text() or 500)
         except ValueError:
             self.scorer.prefs.max_size_mb = 500.0
+        self.pipeline_small_radio.blockSignals(True)
+        self.pipeline_quality_radio.blockSignals(True)
+        self.pipeline_small_radio.setChecked(not favor_quality)
+        self.pipeline_quality_radio.setChecked(favor_quality)
+        self.pipeline_small_radio.blockSignals(False)
+        self.pipeline_quality_radio.blockSignals(False)
 
     def _analyze_project(self) -> None:
         project_path = Path(self.project_path_edit.text()).expanduser()
@@ -477,8 +491,12 @@ class MainWindow(QMainWindow):
             f"Latency: {self.pipeline.estimated_latency_ms:.1f} ms"
         )
         self.pipeline_notes.setPlainText("\n".join(self.pipeline.notes))
+        self.pipeline_small_radio.blockSignals(True)
+        self.pipeline_quality_radio.blockSignals(True)
         self.pipeline_small_radio.setChecked(not self.pipeline.favor_quality)
         self.pipeline_quality_radio.setChecked(self.pipeline.favor_quality)
+        self.pipeline_small_radio.blockSignals(False)
+        self.pipeline_quality_radio.blockSignals(False)
 
     def _populate_download_tab(self) -> None:
         if not self.pipeline:
@@ -581,6 +599,39 @@ class MainWindow(QMainWindow):
         self._populate_download_tab()
 
     # ------------------------------------------------------------------
+
+    def _on_theme_changed(self, value: str) -> None:
+        normalized = value.lower()
+        if normalized == self.config.ui_theme and normalized == getattr(self, "current_theme_mode", None):
+            self._apply_theme(normalized)
+            return
+        self.config.update(ui_theme=normalized)
+        self._apply_theme(normalized)
+
+    def _apply_theme(self, mode: str) -> None:
+        actual = mode.lower()
+        if actual == "auto":
+            actual = self._system_theme()
+        self.current_theme = actual
+        self.current_theme_mode = mode.lower()
+        self.setStyleSheet(build_qss(actual))
+
+    def _system_theme(self) -> str:
+        app = QApplication.instance()
+        if app is not None:
+            try:
+                scheme = app.styleHints().colorScheme()
+                if scheme == Qt.ColorScheme.Dark:
+                    return "dark"
+                if scheme == Qt.ColorScheme.Light:
+                    return "light"
+            except Exception:
+                pass
+            palette: QPalette = app.palette()
+            window_color = palette.color(QPalette.Window)
+            if window_color.lightness() > 128:
+                return "light"
+        return "dark"
 
     def _panel(self) -> QFrame:
         panel = QFrame()
