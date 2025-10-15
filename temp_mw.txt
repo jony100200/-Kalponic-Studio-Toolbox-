@@ -1,0 +1,283 @@
+"""PySide6 desktop UI for KS AutoModel."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QFileDialog,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QProgressBar,
+    QTabWidget,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
+
+from ...core import (
+    AppProfiler,
+    ConfigManager,
+    HardwareProfiler,
+    ModelDownloader,
+    ModelFinder,
+    PipelineComposer,
+    ScoringEngine,
+    SearchFilters,
+    TaskMapper,
+)
+from ...core.scoring import ScoringPreferences
+from ...data import ModelRegistry, PipelineConfig
+from ...providers import HuggingFaceProvider
+from ..theme import build_qss, KS_TOKENS
+
+
+class MainWindow(QMainWindow):
+    """Main PySide window following the KS UI blueprint."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.setWindowTitle("KS AutoModel - Intelligent Model Finder")
+        self.resize(1100, 720)
+
+        self.config_path = Path.home() / ".ks_automodel" / "config.json"
+        self.config_path.parent.mkdir(parents=True, exist_ok=True)
+
+        self.config = ConfigManager(self.config_path)
+        registry_path = Path(__file__).resolve().parents[4] / "data" / "registries" / "curated_models.json"
+        self.registry = ModelRegistry(registry_paths=[registry_path])
+        self.provider = HuggingFaceProvider(registry=self.registry, online_enabled=False)
+        self.finder = ModelFinder([self.provider])
+        self.scorer = ScoringEngine(
+            ScoringPreferences(
+                favor_quality=self.config.favor_quality,
+                license_allow_list=tuple(self.config.get_license_preferences()),
+            )
+        )
+        self.pipeline: PipelineConfig | None = None
+
+        self._build_ui()
+        self.setStyleSheet(build_qss())
+
+    # UI layout --------------------------------------------------------
+
+    def _build_ui(self) -> None:
+        central = QWidget(self)
+        layout = QVBoxLayout(central)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(KS_TOKENS["spacing.unit"] * 2)
+
+        hero = QLabel("KS AutoModel")
+        hero.setObjectName("Heading")
+        sub = QLabel("Discover optimized models for your projects in minutes.")
+        sub.setObjectName("SubHeading")
+        layout.addWidget(hero)
+        layout.addWidget(sub)
+
+        layout.addWidget(self._build_project_panel())
+        layout.addWidget(self._build_results_panel(), 1)
+        layout.addWidget(self._build_pipeline_panel())
+
+        self.setCentralWidget(central)
+
+    def _build_project_panel(self) -> QWidget:
+        frame = QFrame()
+        frame.setObjectName("Panel")
+        h_layout = QGridLayout(frame)
+        h_layout.setColumnStretch(1, 1)
+
+        path_label = QLabel("Project Path")
+        self.path_edit = QLineEdit(str(Path.cwd()))
+        browse_btn = QPushButton("Browse...")
+        analyze_btn = QPushButton("Analyze Project")
+        analyze_btn.setObjectName("PrimaryButton")
+
+        browse_btn.clicked.connect(self._choose_project)
+        analyze_btn.clicked.connect(self._analyze_project)
+
+        tier_label = QLabel("Hardware Tier: unknown")
+        self.tier_label = tier_label
+        self.hardware_summary = QLabel("Hardware profile has not been detected yet.")
+        self.hardware_summary.setWordWrap(True)
+
+        h_layout.addWidget(path_label, 0, 0)
+        h_layout.addWidget(self.path_edit, 0, 1)
+        h_layout.addWidget(browse_btn, 0, 2)
+        h_layout.addWidget(analyze_btn, 1, 0, 1, 3)
+        h_layout.addWidget(tier_label, 2, 0, 1, 3)
+        h_layout.addWidget(self.hardware_summary, 3, 0, 1, 3)
+
+        return frame
+
+    def _build_results_panel(self) -> QWidget:
+        frame = QFrame()
+        frame.setObjectName("Panel")
+        layout = QHBoxLayout(frame)
+        layout.setSpacing(KS_TOKENS["spacing.unit"] * 2)
+
+        left_column = QVBoxLayout()
+        left_label = QLabel("Detected Tasks")
+        left_label.setObjectName("SubHeading")
+        self.tasks_list = QListWidget()
+        left_column.addWidget(left_label)
+        left_column.addWidget(self.tasks_list)
+
+        right_column = QVBoxLayout()
+        candidates_label = QLabel("Candidate Models")
+        candidates_label.setObjectName("SubHeading")
+        self.candidates_list = QListWidget()
+        right_column.addWidget(candidates_label)
+        right_column.addWidget(self.candidates_list)
+
+        layout.addLayout(left_column, 1)
+        layout.addLayout(right_column, 2)
+        return frame
+
+    def _build_pipeline_panel(self) -> QWidget:
+        frame = QFrame()
+        frame.setObjectName("Panel")
+        layout = QVBoxLayout(frame)
+
+        tabs = QTabWidget()
+        summary_tab = QWidget()
+        summary_layout = QVBoxLayout(summary_tab)
+        self.pipeline_summary = QTextEdit()
+        self.pipeline_summary.setReadOnly(True)
+        summary_layout.addWidget(self.pipeline_summary)
+        tabs.addTab(summary_tab, "Pipeline Summary")
+
+        notes_tab = QWidget()
+        notes_layout = QVBoxLayout(notes_tab)
+        self.pipeline_notes = QTextEdit()
+        self.pipeline_notes.setReadOnly(True)
+        notes_layout.addWidget(self.pipeline_notes)
+        tabs.addTab(notes_tab, "Notes")
+
+        layout.addWidget(tabs)
+
+        controls = QHBoxLayout()
+        self.download_btn = QPushButton("Download Models (simulated)")
+        self.download_btn.setEnabled(False)
+        self.download_btn.clicked.connect(self._download_pipeline)
+        self.progress = QProgressBar()
+        self.progress.setValue(0)
+        controls.addWidget(self.download_btn)
+        controls.addWidget(self.progress)
+        layout.addLayout(controls)
+        return frame
+
+    # Actions ----------------------------------------------------------
+
+    def _choose_project(self) -> None:
+        directory = QFileDialog.getExistingDirectory(self, "Select project directory", self.path_edit.text())
+        if directory:
+            self.path_edit.setText(directory)
+
+    def _analyze_project(self) -> None:
+        project_path = Path(self.path_edit.text()).expanduser()
+        if not project_path.exists():
+            QMessageBox.warning(self, "Invalid Path", "The selected project directory does not exist.")
+            return
+
+        self.tasks_list.clear()
+        self.candidates_list.clear()
+        self.pipeline_summary.clear()
+        self.pipeline_notes.clear()
+        self.download_btn.setEnabled(False)
+        self.progress.setValue(0)
+
+        hardware = HardwareProfiler().detect()
+        profile = AppProfiler().analyse(project_path)
+        directives = TaskMapper().map(profile)
+
+        tier_text = f"Hardware Tier: {hardware.tier}"
+        self.tier_label.setText(tier_text)
+        self.hardware_summary.setText(
+            f"CPU: {hardware.cpu_name} ({hardware.cpu_cores} cores) | "
+            f"RAM: {hardware.ram_gb:.1f}GB | "
+            f"GPU: {hardware.gpu_name or 'None'}"
+        )
+
+        for task in profile.tasks:
+            QListWidgetItem(task, self.tasks_list)
+
+        candidates_by_task: dict[str, list] = {}
+        for directive in directives:
+            filters = SearchFilters(
+                task=directive.task,
+                preferred_formats=directive.preferred_formats,
+                license_allow_list=self.config.get_license_preferences(),
+                limit=6,
+                tags=directive.recommended_tags,
+            )
+            candidates = self.finder.search(filters)
+            scored = self.scorer.score(hardware, profile, candidates)
+            candidates_by_task[directive.task] = scored
+            for candidate in scored:
+                QListWidgetItem(
+                    f"{candidate.display_name} ({candidate.format}) • "
+                    f"{candidate.size_mb:.0f}MB • score {candidate.score}",
+                    self.candidates_list,
+                )
+
+        pipeline = PipelineComposer().compose(
+            candidates_by_task=candidates_by_task,
+            target_dir=self.config.download_dir,
+            favor_quality=self.config.favor_quality,
+        )
+        self.pipeline = pipeline
+        self._render_pipeline(pipeline)
+        self.download_btn.setEnabled(bool(pipeline.stages))
+
+    def _render_pipeline(self, pipeline: PipelineConfig) -> None:
+        summary_lines = [
+            f"Pipeline ID: {pipeline.pipeline_id}",
+            f"Tasks: {', '.join(pipeline.tasks)}",
+            f"Estimated Disk: {pipeline.estimated_disk_mb:.1f} MB",
+            f"Estimated VRAM: {pipeline.estimated_vram_gb:.1f} GB",
+            f"Estimated Latency: {pipeline.estimated_latency_ms:.1f} ms",
+            "",
+            "Stages:",
+        ]
+        for stage in pipeline.stages:
+            summary_lines.append(
+                f" - {stage.task}: {stage.candidate.display_name} "
+                f"({stage.candidate.format}, {stage.candidate.size_mb:.1f} MB)"
+            )
+        self.pipeline_summary.setPlainText("\n".join(summary_lines))
+        self.pipeline_notes.setPlainText("\n".join(pipeline.notes))
+
+    def _download_pipeline(self) -> None:
+        if not self.pipeline:
+            return
+
+        downloader = ModelDownloader(simulate=True)
+        total = len(self.pipeline.stages)
+        completed = 0
+
+        def on_progress(name: str, ratio: float) -> None:
+            # ratio currently always 1.0 in simulate mode
+            pass
+
+        for result in downloader.download_pipeline(self.pipeline, progress=on_progress):
+            completed += 1
+            self.progress.setValue(int(completed / total * 100))
+        QMessageBox.information(
+            self,
+            "Download Complete",
+            f"Pipeline assets saved to {self.pipeline.target_dir}\n(Downloads simulated).",
+        )
+
+
+def create_main_window() -> MainWindow:
+    return MainWindow()
+

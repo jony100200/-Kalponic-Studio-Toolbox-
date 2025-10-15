@@ -12,18 +12,36 @@ __author__ = "Kalponic Studio"
 __email__ = "info@kalponic.com"
 
 # Core functionality exports
-from .core import HardwareProfiler, AppProfiler, TaskMapper, ScoringEngine
+from .core import (
+    HardwareProfiler,
+    AppProfiler,
+    TaskMapper,
+    ScoringEngine,
+    ModelFinder,
+    SearchFilters,
+    PipelineComposer,
+    ModelDownloader,
+    ConfigManager,
+)
 from .providers import ModelProvider, HuggingFaceProvider
-from .data import ModelRegistry, PipelineConfig
+from .data import ModelRegistry, PipelineConfig, HardwareInfo, AppProfile, ModelCandidate
 
 __all__ = [
     "HardwareProfiler",
     "AppProfiler",
     "TaskMapper",
     "ScoringEngine",
+    "ModelFinder",
+    "SearchFilters",
+    "PipelineComposer",
+    "ModelDownloader",
+    "ConfigManager",
     "ModelProvider",
     "HuggingFaceProvider",
     "ModelRegistry",
+    "HardwareInfo",
+    "AppProfile",
+    "ModelCandidate",
     "PipelineConfig",
     "__version__",
 ]
