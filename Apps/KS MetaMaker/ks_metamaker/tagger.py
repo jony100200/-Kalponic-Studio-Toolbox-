@@ -154,10 +154,10 @@ class ImageTagger:
 
             # Load OpenCLIP model and preprocessing
             model, _, preprocess = open_clip.create_model_and_transforms(
-                'ViT-H-14', pretrained='laion2b_s32b_b79k'
+                'ViT-L-14', pretrained='laion2b_s32b_b82k'
             )
             model.eval()
-            tokenizer = open_clip.get_tokenizer('ViT-H-14')
+            tokenizer = open_clip.get_tokenizer('ViT-L-14')
 
             # Convert numpy array back to PIL Image for preprocessing
             # image is in CHW format (3, 224, 224), convert to HWC for PIL

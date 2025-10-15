@@ -223,19 +223,29 @@ class ModelManager:
                 'type': 'detection',
                 'url': 'https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov11s.pt',
                 'filename': 'yolov11s.onnx',
-                'converter': self._convert_yolo_model
+                'converter': self._convert_yolo_model,
+                'validator': self._validate_yolo_model
             },
             'openclip_vith14': {
                 'type': 'tagging',
                 'library_based': True,  # Uses open_clip_torch library directly
-                'required_packages': ['open_clip']
+                'required_packages': ['open_clip'],
+                'model_name': 'ViT-L-14',  # Optimized: 307M params vs 632M for ViT-H-14
+                'pretrained': 'laion2b_s32b_b82k',
+                # Try ONNX conversion as fallback if library fails
+                'fallback_onnx': {
+                    'filename': 'openclip_vitl14.onnx',
+                    'converter': self._convert_openclip_model,
+                    'validator': self._validate_openclip_model
+                }
             },
             'blip_large': {
                 'type': 'captioning',
                 'source': 'huggingface',
                 'repo': 'Salesforce/blip-image-captioning-large',
                 'filename': 'blip_large.onnx',
-                'converter': self._convert_blip_model
+                'converter': self._convert_blip_model,
+                'validator': self._validate_blip_model
             }
         }
 
@@ -259,7 +269,30 @@ class ModelManager:
 
         # Handle library-based models differently
         if config.get('library_based'):
-            return self._check_library_model_available(config, progress_callback)
+            success, model_path = self._check_library_model_available(config, progress_callback)
+
+            # If library approach fails, try ONNX conversion as fallback
+            if not success and 'fallback_onnx' in config:
+                logger.info(f"Library approach failed for {model_key}, trying ONNX conversion...")
+                if progress_callback:
+                    progress_callback(f"Trying ONNX conversion for {model_key}...", 0)
+
+                fallback_config = config['fallback_onnx']
+                onnx_path = self.models_dir / fallback_config['filename']
+
+                # Try conversion
+                if fallback_config.get('converter'):
+                    success = fallback_config['converter'](onnx_path, progress_callback)
+
+                    # Validate the converted model
+                    if success:
+                        success = self._validate_converted_model(onnx_path, config, progress_callback)
+
+                    if success:
+                        model_path = onnx_path
+                        logger.info(f"ONNX conversion successful for {model_key}")
+
+            return success, model_path
 
         model_path = self.models_dir / config['filename']
 
@@ -282,7 +315,150 @@ class ModelManager:
             if 'converter' in config:
                 success = config['converter'](model_path, progress_callback)
 
+                # Validate the converted model actually works
+                if success:
+                    success = self._validate_converted_model(model_path, config, progress_callback)
+
+                # Clean up any cached downloads after successful conversion
+                if success and config.get('source') == 'huggingface':
+                    self._cleanup_huggingface_cache(config)
+
         return success, model_path if success else Path()
+
+    def _validate_converted_model(self, model_path: Path, config: Dict,
+                                 progress_callback: Optional[Callable]) -> bool:
+        """
+        Validate that a converted ONNX model actually works by running inference
+
+        Args:
+            model_path: Path to the converted ONNX model
+            config: Model configuration
+            progress_callback: Optional progress callback
+
+        Returns:
+            True if model validation passes
+        """
+        if not AI_AVAILABLE:
+            logger.warning("AI libraries not available for model validation")
+            return False
+
+        try:
+            if progress_callback:
+                progress_callback("Validating converted model...", 0)
+
+            model_type = config['type']
+
+            if model_type == 'detection':  # YOLO
+                return self._validate_yolo_model(model_path, progress_callback)
+            elif model_type == 'captioning':  # BLIP
+                return self._validate_blip_model(model_path, progress_callback)
+            elif model_type == 'tagging':  # OpenCLIP
+                return self._validate_openclip_model(model_path, progress_callback)
+            else:
+                logger.warning(f"No validation method for model type: {model_type}")
+                return True  # Assume valid if no specific validation
+
+        except Exception as e:
+            logger.error(f"Model validation failed: {e}")
+            if progress_callback:
+                progress_callback(f"Model validation failed: {e}", 0)
+            return False
+
+    def _validate_yolo_model(self, model_path: Path, progress_callback: Optional[Callable]) -> bool:
+        """Validate YOLO ONNX model by running detection on dummy input"""
+        try:
+            # Create ONNX session
+            session = ort.InferenceSession(str(model_path))
+
+            # Create dummy input (batch_size=1, channels=3, height=640, width=640)
+            dummy_input = np.random.rand(1, 3, 640, 640).astype(np.float32)
+
+            # Run inference
+            outputs = session.run(None, {'images': dummy_input})
+
+            # Check that we got outputs
+            if not outputs or len(outputs) == 0:
+                logger.error("YOLO model produced no outputs")
+                return False
+
+            # Check output shapes (should have detection results)
+            output = outputs[0]  # Usually first output contains detections
+            if output.shape[0] == 0 or output.shape[1] < 5:  # No detections or malformed
+                logger.error(f"YOLO model produced invalid output shape: {output.shape}")
+                return False
+
+            logger.info("YOLO model validation passed")
+            if progress_callback:
+                progress_callback("YOLO model validated successfully", 100)
+            return True
+
+        except Exception as e:
+            logger.error(f"YOLO model validation error: {e}")
+            return False
+
+    def _validate_blip_model(self, model_path: Path, progress_callback: Optional[Callable]) -> bool:
+        """Validate BLIP ONNX model by running captioning on dummy input"""
+        try:
+            # Create ONNX session
+            session = ort.InferenceSession(str(model_path))
+
+            # Create dummy input (batch_size=1, channels=3, height=384, width=384)
+            dummy_input = np.random.rand(1, 3, 384, 384).astype(np.float32)
+
+            # Run inference
+            outputs = session.run(None, {'pixel_values': dummy_input})
+
+            # Check that we got outputs
+            if not outputs or len(outputs) == 0:
+                logger.error("BLIP model produced no outputs")
+                return False
+
+            # Check output shape (should be logits for text generation)
+            output = outputs[0]
+            if len(output.shape) != 2 or output.shape[0] != 1:  # Should be [batch_size, seq_len]
+                logger.error(f"BLIP model produced invalid output shape: {output.shape}")
+                return False
+
+            logger.info("BLIP model validation passed")
+            if progress_callback:
+                progress_callback("BLIP model validated successfully", 100)
+            return True
+
+        except Exception as e:
+            logger.error(f"BLIP model validation error: {e}")
+            return False
+
+    def _validate_openclip_model(self, model_path: Path, progress_callback: Optional[Callable]) -> bool:
+        """Validate OpenCLIP ONNX model by running inference on dummy input"""
+        try:
+            # Create ONNX session
+            session = ort.InferenceSession(str(model_path))
+
+            # Create dummy input (batch_size=1, channels=3, height=224, width=224)
+            dummy_input = np.random.rand(1, 3, 224, 224).astype(np.float32)
+
+            # Run inference
+            outputs = session.run(None, {'input': dummy_input})
+
+            # Check that we got outputs
+            if not outputs or len(outputs) == 0:
+                logger.error("OpenCLIP model produced no outputs")
+                return False
+
+            # Check output shape (should be [batch_size, embedding_dim])
+            output = outputs[0]
+            if len(output.shape) != 2 or output.shape[0] != 1 or output.shape[1] < 256:
+                logger.error(f"OpenCLIP model produced invalid output shape: {output.shape}")
+                return False
+
+            logger.info("OpenCLIP model validation passed")
+            if progress_callback:
+                progress_callback("OpenCLIP model validated successfully", 100)
+            return True
+
+        except Exception as e:
+            logger.error(f"OpenCLIP model validation error: {e}")
+            return False
 
     def _check_library_model_available(self, config: Dict, progress_callback: Optional[Callable]) -> Tuple[bool, Path]:
         """Check if a library-based model is available"""
@@ -318,11 +494,162 @@ class ModelManager:
         )
 
     def _download_huggingface_model(self, config: Dict, progress_callback: Optional[Callable]) -> bool:
-        """Download a model from HuggingFace"""
-        downloader = HuggingFaceDownloader(self.models_dir)
-        # For now, we'll handle conversion separately
-        # This is a placeholder for actual HF download logic
-        return True
+        """Download a model from HuggingFace and immediately convert/cleanup"""
+        try:
+            repo_id = config['repo']
+            filename = config.get('filename', 'pytorch_model.bin')
+
+            if progress_callback:
+                progress_callback(f"Downloading {repo_id}...", 0)
+
+            # Import here to avoid circular imports
+            from transformers import AutoModel, AutoTokenizer, AutoConfig
+
+            # Download model directly (not to cache)
+            model = AutoModel.from_pretrained(repo_id, cache_dir=None, local_files_only=False)
+            tokenizer = AutoTokenizer.from_pretrained(repo_id, cache_dir=None, local_files_only=False)
+
+            # Save to temporary location in our models dir
+            temp_model_path = self.models_dir / f"temp_{config['filename'].replace('.onnx', '.pt')}"
+            model.save_pretrained(temp_model_path)
+            tokenizer.save_pretrained(temp_model_path)
+
+            if progress_callback:
+                progress_callback("Download complete, starting conversion...", 50)
+
+            # Convert immediately
+            onnx_path = self.models_dir / config['filename']
+            success = self._convert_model_to_onnx(model, onnx_path, config, progress_callback)
+
+            # Clean up temporary files
+            if temp_model_path.exists():
+                import shutil
+                shutil.rmtree(temp_model_path)
+
+            if success:
+                if progress_callback:
+                    progress_callback("Conversion successful, validating...", 90)
+
+                # Validate the converted model
+                success = self._validate_converted_model(onnx_path, config, progress_callback)
+
+                if success:
+                    if progress_callback:
+                        progress_callback("Model ready!", 100)
+                    return True
+                else:
+                    # Remove failed conversion
+                    if onnx_path.exists():
+                        onnx_path.unlink()
+                    return False
+            else:
+                return False
+
+        except Exception as e:
+            logger.error(f"HuggingFace download/conversion failed: {e}")
+            if progress_callback:
+                progress_callback(f"Failed: {e}", 0)
+            return False
+
+    def _convert_model_to_onnx(self, model, onnx_path: Path, config: Dict,
+                              progress_callback: Optional[Callable]) -> bool:
+        """Convert a loaded model to ONNX format"""
+        try:
+            model_type = config['type']
+
+            if model_type == 'captioning':
+                return self._convert_blip_to_onnx(model, onnx_path, progress_callback)
+            elif model_type == 'tagging':
+                return self._convert_openclip_to_onnx(model, onnx_path, progress_callback)
+            else:
+                logger.error(f"No ONNX conversion method for model type: {model_type}")
+                return False
+
+        except Exception as e:
+            logger.error(f"ONNX conversion failed: {e}")
+            return False
+
+    def _convert_blip_to_onnx(self, model, onnx_path: Path, progress_callback: Optional[Callable]) -> bool:
+        """Convert BLIP model to ONNX"""
+        try:
+            if progress_callback:
+                progress_callback("Converting BLIP to ONNX...", 60)
+
+            # Set model to eval mode
+            model.eval()
+
+            # Create dummy inputs
+            dummy_pixel_values = torch.randn(1, 3, 384, 384)  # BLIP input size
+
+            # Export to ONNX
+            torch.onnx.export(
+                model,
+                (dummy_pixel_values,),
+                str(onnx_path),
+                opset_version=14,
+                input_names=['pixel_values'],
+                output_names=['logits'],
+                dynamic_axes={'pixel_values': {0: 'batch_size'}, 'logits': {0: 'batch_size'}},
+                export_params=True,
+                verbose=False
+            )
+
+            logger.info(f"BLIP model converted to ONNX: {onnx_path}")
+            return True
+
+        except Exception as e:
+            logger.error(f"BLIP ONNX conversion failed: {e}")
+            return False
+
+    def _convert_openclip_to_onnx(self, model, onnx_path: Path, progress_callback: Optional[Callable]) -> bool:
+        """Convert OpenCLIP model to ONNX"""
+        try:
+            if progress_callback:
+                progress_callback("Converting OpenCLIP to ONNX...", 60)
+
+            # Set model to eval mode
+            model.eval()
+
+            # Create dummy input
+            dummy_input = torch.randn(1, 3, 224, 224)
+
+            # Export to ONNX
+            torch.onnx.export(
+                model,
+                dummy_input,
+                str(onnx_path),
+                opset_version=14,
+                input_names=['input'],
+                output_names=['output'],
+                dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}},
+                export_params=True,
+                verbose=False
+            )
+
+            logger.info(f"OpenCLIP model converted to ONNX: {onnx_path}")
+            return True
+
+        except Exception as e:
+            logger.error(f"OpenCLIP ONNX conversion failed: {e}")
+            return False
+
+    def _cleanup_huggingface_cache(self, config: Dict) -> None:
+        """Clean up HuggingFace cache after successful conversion"""
+        try:
+            import shutil
+            from pathlib import Path
+
+            repo_id = config['repo']
+            # Convert repo ID to cache folder name format
+            cache_folder_name = f"models--{repo_id.replace('/', '--')}"
+            cache_path = Path.home() / ".cache" / "huggingface" / "hub" / cache_folder_name
+
+            if cache_path.exists():
+                shutil.rmtree(cache_path)
+                logger.info(f"Cleaned up HuggingFace cache for {repo_id}")
+
+        except Exception as e:
+            logger.warning(f"Failed to cleanup HuggingFace cache: {e}")
 
     def _convert_yolo_model(self, model_path: Path, progress_callback: Optional[Callable]) -> bool:
         """Convert YOLO PyTorch model to ONNX"""
@@ -350,9 +677,14 @@ class ModelManager:
             if progress_callback:
                 progress_callback("Converting OpenCLIP model to ONNX...", 0)
 
+            # Get model config from the calling context (this is a bit hacky but works)
+            # In a real implementation, we'd pass the config
+            model_name = 'ViT-L-14'  # Use the optimized model
+            pretrained = 'laion2b_s32b_b82k'
+
             # Load the model
             model, _, preprocess = open_clip.create_model_and_transforms(
-                'ViT-H-14', pretrained='laion2b_s32b_b79k'
+                model_name, pretrained=pretrained
             )
             model.eval()
 
