@@ -92,5 +92,25 @@ def analyze(
         typer.echo("Download complete.")
 
 
-if __name__ == "__main__":
-    app()
+@app.command()
+def hardware():
+    """Display detected hardware information."""
+    try:
+        profiler = HardwareProfiler()
+        hardware = profiler.detect()
+
+        typer.echo("🖥️  Hardware Profile:")
+        typer.echo(f"   CPU: {hardware.cpu_name}")
+        typer.echo(f"   Cores: {hardware.cpu_cores}")
+        typer.echo(f"   RAM: {hardware.ram_gb:.1f} GB")
+        if hardware.gpu_name:
+            typer.echo(f"   GPU: {hardware.gpu_vendor} {hardware.gpu_name}")
+            typer.echo(f"   VRAM: {hardware.vram_gb:.1f} GB")
+        typer.echo(f"   OS: {hardware.os_name}")
+        typer.echo(f"   Tier: {hardware.tier}")
+        if hardware.notes:
+            typer.echo(f"   Notes: {', '.join(hardware.notes)}")
+
+    except Exception as e:
+        typer.echo(f"❌ Error detecting hardware: {e}", err=True)
+        raise typer.Exit(1)
