@@ -9,6 +9,7 @@ from PIL import Image
 import numpy as np
 
 from .utils.config import Config
+from .dynamic_model_manager import DynamicModelManager, ModelType
 
 logger = logging.getLogger(__name__)
 
@@ -21,16 +22,16 @@ except ImportError:
 
 
 class ImageTagger:
-    """Handles AI-powered image tagging and classification"""
+    """Handles AI-powered image tagging and classification with dynamic model loading"""
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, models_dir: Optional[Path] = None, hardware_detector=None):
         self.config = config
-        self.models_loaded = False
 
-        # Model sessions
-        self.openclip_session: Optional[ort.InferenceSession] = None
-        self.yolo_session: Optional[ort.InferenceSession] = None
-        self.blip_session: Optional[ort.InferenceSession] = None
+        # Initialize dynamic model manager
+        if models_dir is None:
+            models_dir = Path(__file__).parent.parent / "models"
+
+        self.model_manager = DynamicModelManager(models_dir, hardware_detector)
 
         # Tag databases as fallback
         self.prop_tags = [
@@ -48,12 +49,11 @@ class ImageTagger:
             "expression", "gender", "age", "style", "weapon", "magic"
         ]
 
-        # Try to load models on initialization
-        self.load_models()
+        logger.info(f"ImageTagger initialized with {self.model_manager.hardware_limits.memory_profile.value} profile")
 
     def tag(self, image_path: Path) -> List[str]:
         """
-        Generate tags for an image using AI models
+        Generate tags for an image using AI models with dynamic loading
 
         Args:
             image_path: Path to the image file
@@ -75,32 +75,23 @@ class ImageTagger:
             if image is None:
                 return [self.config.main_prefix, "unknown"]
 
-            # Use AI models if available
-            if self.models_loaded and ONNX_AVAILABLE:
-                # Get tags from different models
-                openclip_tags = self._get_openclip_tags(image)
-                yolo_tags = self._get_yolo_tags(image)
-                blip_caption = self._get_blip_caption(image)
+            # Use AI models with dynamic loading
+            openclip_tags = self._get_openclip_tags(image)
+            yolo_tags = self._get_yolo_tags(image)
+            blip_caption = self._get_blip_caption(image)
 
-                # Combine and filter tags
-                all_tags = openclip_tags + yolo_tags
-                if blip_caption:
-                    all_tags.extend(self._extract_tags_from_caption(blip_caption))
+            # Combine and filter tags
+            all_tags = openclip_tags + yolo_tags
+            if blip_caption:
+                all_tags.extend(self._extract_tags_from_caption(blip_caption))
 
-                # Determine category from tags
-                category = self._classify_from_tags(all_tags)
-                max_tags = self.config.max_tags.get(category, 20)
+            # Determine category from tags
+            category = self._classify_from_tags(all_tags)
+            max_tags = self.config.max_tags.get(category, 20)
 
-                # Select best tags
-                selected_tags = self._select_best_tags(all_tags, max_tags - len(tags))
-                tags.extend(selected_tags)
-            else:
-                # Fallback to mock tagging
-                category = self._classify_category(image_path)
-                category_tags = self._get_category_tags(category)
-                max_tags = self.config.max_tags.get(category, 20)
-                selected_tags = self._select_best_tags(category_tags, max_tags - len(tags))
-                tags.extend(selected_tags)
+            # Select best tags
+            selected_tags = self._select_best_tags(all_tags, max_tags - len(tags))
+            tags.extend(selected_tags)
 
             # Add quality tags
             quality_tags = self._assess_quality(image_path)
@@ -115,44 +106,6 @@ class ImageTagger:
         except Exception as e:
             logger.error(f"Failed to tag {image_path}: {e}")
             return [self.config.main_prefix, "unknown"]
-
-    def load_models(self):
-        """Load AI models using ONNX Runtime"""
-        if not ONNX_AVAILABLE:
-            logger.warning("ONNX Runtime not available")
-            return
-
-        try:
-            # Load OpenCLIP model
-            openclip_path = self.config.get_model_path("tagger")
-            if openclip_path.exists():
-                self.openclip_session = ort.InferenceSession(str(openclip_path))
-                logger.info("OpenCLIP model loaded")
-            else:
-                logger.warning(f"OpenCLIP model not found at {openclip_path}")
-
-            # Load YOLOv11 model
-            yolo_path = self.config.get_model_path("detector")
-            if yolo_path.exists():
-                self.yolo_session = ort.InferenceSession(str(yolo_path))
-                logger.info("YOLOv11 model loaded")
-            else:
-                logger.warning(f"YOLOv11 model not found at {yolo_path}")
-
-            # Load BLIP2 model
-            blip_path = self.config.get_model_path("captioner")
-            if blip_path.exists():
-                self.blip_session = ort.InferenceSession(str(blip_path))
-                logger.info("BLIP2 model loaded")
-            else:
-                logger.warning(f"BLIP2 model not found at {blip_path}")
-
-            self.models_loaded = True
-            logger.info("AI models loaded successfully")
-
-        except Exception as e:
-            logger.error(f"Failed to load models: {e}")
-            self.models_loaded = False
 
     def _load_image(self, image_path: Path) -> Optional[np.ndarray]:
         """Load and preprocess image for model input"""
@@ -178,11 +131,14 @@ class ImageTagger:
             return None
 
     def _get_openclip_tags(self, image: np.ndarray) -> List[str]:
-        """Get tags using OpenCLIP model"""
-        if not self.openclip_session:
-            return []
-
+        """Get tags using OpenCLIP model with dynamic loading"""
         try:
+            # Get model session dynamically
+            session = self.model_manager.get_model(ModelType.TAGGING)
+            if not session:
+                logger.warning("OpenCLIP model not available")
+                return []
+
             # This is a simplified implementation
             # In reality, you'd need the proper preprocessing and postprocessing
             # for the specific OpenCLIP ONNX model
@@ -195,11 +151,14 @@ class ImageTagger:
             return []
 
     def _get_yolo_tags(self, image: np.ndarray) -> List[str]:
-        """Get object detection tags using YOLOv11"""
-        if not self.yolo_session:
-            return []
-
+        """Get object detection tags using YOLOv11 with dynamic loading"""
         try:
+            # Get model session dynamically
+            session = self.model_manager.get_model(ModelType.DETECTION)
+            if not session:
+                logger.warning("YOLO model not available")
+                return []
+
             # Convert CHW to HWC for YOLO
             image_hwc = np.transpose(image, (1, 2, 0))
             image_hwc = (image_hwc * 255).astype(np.uint8)
@@ -216,11 +175,14 @@ class ImageTagger:
             return []
 
     def _get_blip_caption(self, image: np.ndarray) -> Optional[str]:
-        """Get image caption using BLIP2"""
-        if not self.blip_session:
-            return None
-
+        """Get image caption using BLIP2 with dynamic loading"""
         try:
+            # Get model session dynamically
+            session = self.model_manager.get_model(ModelType.CAPTIONING)
+            if not session:
+                logger.warning("BLIP model not available")
+                return None
+
             # Placeholder for BLIP2 captioning
             # This would require proper text tokenization and generation
 
