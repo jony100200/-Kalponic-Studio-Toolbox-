@@ -1,0 +1,19 @@
+main_prefix: "kalponic studio background"
+style_preset: "cinematic lighting, 4k render"
+max_tags:
+  props: 20
+  backgrounds: 25
+  characters: 30
+rename_pattern: "{category}_{top_tags}_{YYYYMMDD}_{index}"
+models:
+  tagger: "openclip_vith14.onnx"
+  detector: "yolov11.onnx"
+  captioner: "blip2.onnx"
+performance:
+  threads: 4
+  batch_size: 4
+export:
+  paired_txt: true
+  rename_images: true
+  package_zip: true
+  write_metadata: true

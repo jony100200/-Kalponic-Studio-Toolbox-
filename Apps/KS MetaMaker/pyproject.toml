@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ks-metamaker"
+version = "0.1.0"
+description = "AI-assisted local utility for tagging, renaming, and organizing visual assets"
+authors = [{name = "Kalponic Studio"}]
+dependencies = [
+    "torch>=2.0.0",
+    "onnxruntime>=1.15.0",
+    "opencv-python>=4.8.0",
+    "pillow>=10.0.0",
+    "pyyaml>=6.0",
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "pyqt6>=6.5.0",
+    "scikit-image>=0.21.0",
+    "imagehash>=4.3.0"
+]
+requires-python = ">=3.8"
+
+[tool.setuptools]
+packages = ["ks_metamaker", "app"]
+
+[tool.setuptools.package-dir]
+"" = "."
+
+[project.scripts]
+ks-metamaker = "app.main:main"
