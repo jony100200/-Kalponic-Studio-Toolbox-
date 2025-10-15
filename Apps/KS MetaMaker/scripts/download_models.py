@@ -20,40 +20,171 @@ from ks_metamaker.utils.config import Config
 
 logger = logging.getLogger(__name__)
 
-# Model download URLs (these are placeholder URLs - replace with actual model sources)
-MODEL_URLS = {
-    "openclip_vith14.onnx": "https://huggingface.co/OnnxCommunity/OpenCLIP-ViT-H-14/resolve/main/open_clip_model.onnx",
-    "yolov11.onnx": "https://github.com/ultralytics/assets/releases/download/v8.1.0/yolov11n.onnx",
-    "blip2.onnx": "https://huggingface.co/Salesforce/blip2-opt-2.7b/resolve/main/model.onnx"  # This might not be real
+#!/usr/bin/env python3
+"""
+Model download script for KS MetaMaker
+Downloads AI models (OpenCLIP, YOLOv11, BLIP2) in ONNX format
+Hardware-aware model selection for optimal performance vs size
+"""
+
+import os
+import sys
+from pathlib import Path
+import urllib.request
+import zipfile
+import logging
+import argparse
+import requests
+
+# Add project root to path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+from ks_metamaker.utils.config import Config
+from ks_metamaker.hardware_detector import HardwareDetector
+
+logger = logging.getLogger(__name__)
+
+# Hardware-optimized model configurations
+# Each entry: (filename, url, size_mb, recommended_for)
+MODEL_CONFIGS = {
+    # OpenCLIP models (smaller = faster, less accurate)
+    "openclip_vitb32.onnx": {
+        "url": "https://huggingface.co/OnnxCommunity/OpenCLIP-ViT-B-32/resolve/main/open_clip_model.onnx",
+        "size_mb": 350,
+        "recommended_for": ["cpu_only", "edge_4g", "mid_8g"],
+        "description": "Fast, lightweight tagging (ViT-B/32)"
+    },
+    "openclip_vitl14.onnx": {
+        "url": "https://huggingface.co/OnnxCommunity/OpenCLIP-ViT-L-14/resolve/main/open_clip_model.onnx",
+        "size_mb": 950,
+        "recommended_for": ["pro_12g", "max"],
+        "description": "Balanced performance (ViT-L/14)"
+    },
+    "openclip_vith14.onnx": {
+        "url": "https://huggingface.co/OnnxCommunity/OpenCLIP-ViT-H-14/resolve/main/open_clip_model.onnx",
+        "size_mb": 2100,
+        "recommended_for": ["max"],
+        "description": "Highest accuracy (ViT-H/14)"
+    },
+
+    # YOLOv11 models (smaller = faster, less accurate)
+    "yolov11n.onnx": {
+        "url": "https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov11n.onnx",
+        "size_mb": 5,
+        "recommended_for": ["cpu_only", "edge_4g", "mid_8g", "pro_12g", "max"],
+        "description": "Fastest detection (Nano)"
+    },
+    "yolov11s.onnx": {
+        "url": "https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov11s.onnx",
+        "size_mb": 20,
+        "recommended_for": ["mid_8g", "pro_12g", "max"],
+        "description": "Balanced detection (Small)"
+    },
+
+    # Captioning models (smaller alternatives to BLIP2)
+    "blip_base.onnx": {
+        "url": None,  # ONNX versions not readily available, will create optimized placeholder
+        "size_mb": 600,
+        "recommended_for": ["cpu_only", "edge_4g", "mid_8g"],
+        "description": "Lightweight captioning (BLIP Base)"
+    },
+    "blip_large.onnx": {
+        "url": None,  # ONNX versions not readily available, will create optimized placeholder
+        "size_mb": 1700,
+        "recommended_for": ["pro_12g", "max"],
+        "description": "High-quality captioning (BLIP Large)"
+    }
 }
 
-# Alternative sources (more realistic)
-ALTERNATIVE_URLS = {
-    "openclip_vith14.onnx": "https://huggingface.co/OnnxCommunity/OpenCLIP-ViT-H-14/resolve/main/open_clip_model.onnx",
-    "yolov11.onnx": "https://github.com/ultralytics/assets/releases/download/v8.1.0/yolov11n.onnx",
-    # BLIP2 ONNX might not be readily available, so we'll create a placeholder
+# Hardware profile to model mapping
+HARDWARE_MODEL_MAPPING = {
+    "cpu_only": {
+        "tagger": "openclip_vitb32.onnx",
+        "detector": "yolov11n.onnx",
+        "captioner": "blip_base.onnx"
+    },
+    "edge_4g": {
+        "tagger": "openclip_vitb32.onnx",
+        "detector": "yolov11n.onnx",
+        "captioner": "blip_base.onnx"
+    },
+    "mid_8g": {
+        "tagger": "openclip_vitb32.onnx",
+        "detector": "yolov11s.onnx",
+        "captioner": "blip_base.onnx"
+    },
+    "pro_12g": {
+        "tagger": "openclip_vitl14.onnx",
+        "detector": "yolov11s.onnx",
+        "captioner": "blip_large.onnx"
+    },
+    "max": {
+        "tagger": "openclip_vith14.onnx",
+        "detector": "yolov11s.onnx",
+        "captioner": "blip_large.onnx"
+    }
 }
 
 
 class ModelDownloader:
-    """Handles downloading and managing AI models"""
+    """Handles downloading and managing AI models with hardware-aware selection"""
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, hardware_detector=None):
         self.config = config
         self.models_dir = Path(__file__).parent.parent / "models"
         self.models_dir.mkdir(exist_ok=True)
 
+        # Initialize hardware detector
+        self.hardware_detector = hardware_detector or HardwareDetector()
+        self.hardware_profile = self._get_hardware_profile()
+
+        logger.info(f"Hardware profile detected: {self.hardware_profile}")
+
+    def _get_hardware_profile(self) -> str:
+        """Determine hardware profile for model selection"""
+        try:
+            summary = self.hardware_detector.get_hardware_summary()
+            gpu_memory = 0
+
+            if summary['gpus']:
+                gpu_memory = summary['gpus'][0]['memory_gb']
+
+            # Determine profile based on VRAM
+            if gpu_memory >= 12:
+                return "max"
+            elif gpu_memory >= 8:
+                return "pro_12g"
+            elif gpu_memory >= 4:
+                return "mid_8g"
+            elif gpu_memory > 0:
+                return "edge_4g"
+            else:
+                return "cpu_only"
+
+        except Exception as e:
+            logger.warning(f"Could not detect hardware, using conservative profile: {e}")
+            return "cpu_only"
+
+    def get_recommended_models(self) -> dict:
+        """Get recommended models for current hardware"""
+        return HARDWARE_MODEL_MAPPING.get(self.hardware_profile, HARDWARE_MODEL_MAPPING["cpu_only"])
+
     def download_all_models(self, force: bool = False) -> bool:
-        """Download all required models"""
+        """Download all recommended models for current hardware"""
         success = True
+        recommended_models = self.get_recommended_models()
 
-        models_to_download = [
-            ("tagger", "openclip_vith14.onnx"),
-            ("detector", "yolov11.onnx"),
-            ("captioner", "blip2.onnx")
-        ]
+        print(f"📊 Hardware Profile: {self.hardware_profile}")
+        print(f"🎯 Recommended Models:")
+        for model_type, filename in recommended_models.items():
+            config = MODEL_CONFIGS.get(filename, {})
+            size = config.get('size_mb', 'unknown')
+            desc = config.get('description', '')
+            print(f"   {model_type:10}: {filename} ({size}MB) - {desc}")
+        print()
 
-        for model_type, filename in models_to_download:
+        for model_type, filename in recommended_models.items():
             if not self.download_model(filename, force):
                 success = False
 
@@ -68,72 +199,140 @@ class ModelDownloader:
             logger.info(f"Model {filename} already exists, skipping download")
             return True
 
-        # For now, create placeholder models since real ONNX models are hard to source
-        logger.info(f"Creating placeholder model for {filename}")
-        return self._create_placeholder_model(filename)
+        # Get model URL
+        model_config = MODEL_CONFIGS.get(filename)
+        if not model_config:
+            logger.error(f"No configuration found for model: {filename}")
+            return False
+
+        url = model_config["url"]
+
+        # Handle models without direct ONNX downloads
+        if url is None:
+            logger.info(f"Creating optimized placeholder for {filename} (ONNX version not readily available)")
+            return self._create_optimized_placeholder(filename)
+
+        size_mb = model_config.get("size_mb", "unknown")
+
+        logger.info(f"Downloading {filename} ({size_mb}MB) from {url}")
+
+        try:
+            # Download the model
+            response = requests.get(url, stream=True, timeout=300)
+            response.raise_for_status()
+
+            total_size = int(response.headers.get('content-length', 0))
+            downloaded = 0
+
+            with open(model_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+
+                        # Show progress for large files
+                        if total_size > 0:
+                            progress = (downloaded / total_size) * 100
+                            print(f"\rDownloading {filename}: {progress:.1f}%", end='', flush=True)
+
+            if total_size > 0:
+                print()  # New line after progress
+
+            # Verify download
+            if model_path.stat().st_size > 0:
+                logger.info(f"Successfully downloaded {filename}")
+                return True
+            else:
+                logger.error(f"Downloaded file is empty: {filename}")
+                return False
+
+        except Exception as e:
+            logger.error(f"Failed to download {filename}: {e}")
+            # Clean up partial download
+            if model_path.exists():
+                model_path.unlink()
+            return False
 
     def _get_model_url(self, filename: str) -> str:
         """Get download URL for a model file"""
-        # Try primary URLs first
-        if filename in MODEL_URLS:
-            return MODEL_URLS[filename]
+        model_config = MODEL_CONFIGS.get(filename)
+        return model_config["url"] if model_config else None
 
-        # Try alternative URLs
-        if filename in ALTERNATIVE_URLS:
-            return ALTERNATIVE_URLS[filename]
-
-        # For BLIP2, create a placeholder since ONNX version might not be available
-        if filename == "blip2.onnx":
-            logger.warning("BLIP2 ONNX model not readily available. Creating placeholder.")
-            self._create_placeholder_model(filename)
-            return None
-
-        return None
-
-    def _create_placeholder_model(self, filename: str) -> bool:
-        """Create a placeholder model file for models that aren't available"""
+    def _create_optimized_placeholder(self, filename: str) -> bool:
+        """Create an optimized placeholder for models not readily available as ONNX"""
         model_path = self.models_dir / filename
 
         try:
-            # Create a minimal placeholder that indicates this is not a real model
-            with open(model_path, 'w') as f:
-                f.write("# KS MetaMaker Placeholder Model\n")
-                f.write(f"# Filename: {filename}\n")
-                f.write("# This is a placeholder file for development purposes.\n")
-                f.write("# Real ONNX models should be obtained from official sources:\n")
-                f.write("# - OpenCLIP: https://github.com/mlfoundations/open_clip\n")
-                f.write("# - YOLOv11: https://github.com/ultralytics/ultralytics\n")
-                f.write("# - BLIP2: https://github.com/salesforce/LAVIS\n")
-                f.write("# Convert to ONNX format using appropriate tools.\n")
-                f.write("# The application will use mock/fallback tagging when models are not available.\n")
+            # Create a more informative placeholder
+            content = f"""# KS MetaMaker Optimized Placeholder Model
+# Filename: {filename}
+# Hardware Profile: {self.hardware_profile}
+# Expected Size: {MODEL_CONFIGS.get(filename, {}).get('size_mb', 'unknown')}MB
+# Description: {MODEL_CONFIGS.get(filename, {}).get('description', 'Unknown')}
+#
+# REAL MODEL ACQUISITION REQUIRED:
+# ================================
+"""
 
-            logger.info(f"Created placeholder model: {filename}")
+            if "blip" in filename.lower():
+                content += """
+# BLIP Captioning Models:
+# - Convert from PyTorch using ONNX export tools
+# - Base model: https://huggingface.co/Salesforce/blip-image-captioning-base
+# - Large model: https://huggingface.co/Salesforce/blip-image-captioning-large
+# - Export command: python -c "from transformers.onnx import export; export(model, onnx_path)"
+"""
+            elif "openclip" in filename.lower():
+                content += """
+# OpenCLIP Models:
+# - Already available as ONNX from OnnxCommunity
+# - Check: https://huggingface.co/OnnxCommunity
+# - Alternative: Convert from torch with onnxruntime tools
+"""
+            else:
+                content += """
+# Model conversion required:
+# - Use onnxruntime or transformers.onnx.export
+# - Ensure compatible input/output shapes for KS MetaMaker
+"""
+
+            content += """
+# The application will use fallback/mock functionality until real models are provided.
+"""
+
+            with open(model_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+            logger.info(f"Created optimized placeholder model: {filename}")
             return True
 
         except Exception as e:
-            logger.error(f"Failed to create placeholder model {filename}: {e}")
+            logger.error(f"Failed to create optimized placeholder model {filename}: {e}")
             return False
 
     def verify_models(self) -> dict:
-        """Verify that all required models are present and valid"""
+        """Verify that all recommended models are present and valid"""
         results = {}
+        recommended_models = self.get_recommended_models()
 
-        required_models = [
-            ("tagger", "openclip_vith14.onnx"),
-            ("detector", "yolov11.onnx"),
-            ("captioner", "blip2.onnx")
-        ]
-
-        for model_type, filename in required_models:
+        for model_type, filename in recommended_models.items():
             model_path = self.models_dir / filename
             exists = model_path.exists()
             size = model_path.stat().st_size if exists else 0
+            size_mb = size / (1024 * 1024) if size > 0 else 0
+
+            # Get expected size from config
+            expected_config = MODEL_CONFIGS.get(filename, {})
+            expected_size_mb = expected_config.get("size_mb", 0)
+            size_valid = abs(size_mb - expected_size_mb) < 50 if expected_size_mb > 0 else size > 100
 
             results[model_type] = {
                 "filename": filename,
                 "exists": exists,
-                "size": size,
-                "valid": exists and size > 100  # Accept placeholders as valid for now
+                "size_mb": round(size_mb, 1),
+                "expected_size_mb": expected_size_mb,
+                "valid": exists and size_valid,
+                "description": expected_config.get("description", "")
             }
 
         return results
@@ -144,6 +343,8 @@ def main():
     parser = argparse.ArgumentParser(description="Download AI models for KS MetaMaker")
     parser.add_argument("--force", action="store_true", help="Force re-download of existing models")
     parser.add_argument("--verify-only", action="store_true", help="Only verify existing models without downloading")
+    parser.add_argument("--profile", choices=["cpu_only", "edge_4g", "mid_8g", "pro_12g", "max"],
+                       help="Override hardware profile detection")
 
     args = parser.parse_args()
 
@@ -156,45 +357,78 @@ def main():
     # Load configuration
     config = Config.load()
 
-    # Create downloader
-    downloader = ModelDownloader(config)
+    # Initialize hardware detector
+    hardware_detector = HardwareDetector()
+
+    # Create downloader with hardware awareness
+    downloader = ModelDownloader(config, hardware_detector)
+
+    # Override profile if specified
+    if args.profile:
+        downloader.hardware_profile = args.profile
+        logger.info(f"Hardware profile overridden to: {args.profile}")
 
     if args.verify_only:
         # Only verify models
         results = downloader.verify_models()
-        print("\nModel Verification Results:")
-        print("-" * 50)
+        print("\n🔍 Model Verification Results:")
+        print("=" * 60)
+        print(f"Hardware Profile: {downloader.hardware_profile}")
+        print()
+
+        total_size = 0
+        all_valid = True
 
         for model_type, info in results.items():
-            status = "✓ OK" if info["valid"] else "✗ MISSING/INVALID"
+            status = "✅ OK" if info["valid"] else "❌ MISSING/INVALID"
+            size_info = f"{info['size_mb']}MB"
+            if info['expected_size_mb'] > 0:
+                size_info += f" (expected: {info['expected_size_mb']}MB)"
+
             print(f"{model_type:12}: {status}")
             print(f"    File: {info['filename']}")
-            print(f"    Size: {info['size']} bytes")
+            print(f"    Size: {size_info}")
+            print(f"    Desc: {info['description']}")
             print()
 
-        return 0
+            if info["valid"]:
+                total_size += info['size_mb']
+            else:
+                all_valid = False
+
+        print(f"Total Model Size: {total_size:.1f}MB")
+        print(f"Overall Status: {'✅ All models ready' if all_valid else '❌ Some models missing'}")
+
+        return 0 if all_valid else 1
 
     # Download models
-    print("Downloading AI models for KS MetaMaker...")
-    print("This may take several minutes depending on your internet connection.")
+    print("🚀 KS MetaMaker Model Downloader")
+    print("=" * 40)
+    print("Optimizing models for your hardware...")
     print()
 
     success = downloader.download_all_models(force=args.force)
 
     if success:
-        print("\n✓ All models downloaded successfully!")
+        print("\n✅ All models downloaded successfully!")
     else:
-        print("\n⚠ Some models failed to download. Check the logs above.")
+        print("\n⚠️  Some models failed to download. Check the logs above.")
         print("You can try running the script again with --force to retry.")
 
     # Verify final state
     results = downloader.verify_models()
-    print("\nFinal Model Status:")
-    print("-" * 30)
+    print("\n📊 Final Model Status:")
+    print("-" * 40)
 
+    total_size = 0
     for model_type, info in results.items():
-        status = "✓" if info["valid"] else "✗"
-        print(f"{model_type:12}: {status}")
+        status = "✅" if info["valid"] else "❌"
+        print(f"{model_type:12}: {status} ({info['size_mb']}MB)")
+        if info["valid"]:
+            total_size += info['size_mb']
+
+    print(f"\n💾 Total Size: {total_size:.1f}MB")
+    print(f"🎯 Profile: {downloader.hardware_profile}")
 
     return 0 if success else 1
 

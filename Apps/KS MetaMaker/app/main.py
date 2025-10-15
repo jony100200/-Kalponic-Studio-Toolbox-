@@ -30,6 +30,7 @@ from ks_metamaker.tagger import ImageTagger
 from ks_metamaker.rename import FileRenamer
 from ks_metamaker.organize import FileOrganizer
 from ks_metamaker.export import DatasetExporter
+from ks_metamaker.hardware_setup_dialog import HardwareSetupDialog
 
 
 class ProcessingWorker(QThread):
@@ -106,6 +107,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("KS MetaMaker - Tag. Name. Organize. Simplify.")
         self.setMinimumSize(1000, 700)
 
+        # Create menu bar
+        self.create_menu_bar()
+
         # Create central widget
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -161,6 +165,30 @@ class MainWindow(QMainWindow):
         # Status bar
         self.status_bar = self.statusBar()
         self.status_bar.showMessage("KS MetaMaker v0.1.0 - Ready")
+
+    def create_menu_bar(self):
+        """Create the application menu bar"""
+        menubar = self.menuBar()
+
+        # Setup menu
+        setup_menu = menubar.addMenu('Setup')
+
+        # Hardware setup action
+        hardware_action = setup_menu.addAction('🖥️ Hardware & AI Models')
+        hardware_action.triggered.connect(self.show_hardware_setup)
+
+        # Separator
+        setup_menu.addSeparator()
+
+        # Exit action
+        exit_action = setup_menu.addAction('Exit')
+        exit_action.triggered.connect(self.close)
+
+    def show_hardware_setup(self):
+        """Show the hardware setup dialog"""
+        models_dir = project_root / "models"
+        dialog = HardwareSetupDialog(models_dir, self)
+        dialog.exec()
 
     def setup_connections(self):
         """Setup signal connections"""
@@ -256,6 +284,24 @@ class MainWindow(QMainWindow):
         self.process_btn.setEnabled(True)
         self.status_label.setText("Error occurred during processing")
         QMessageBox.critical(self, "Error", f"Processing failed: {error_msg}")
+
+    def undo_action(self):
+        """Perform undo action"""
+        # TODO: Implement undo functionality
+        QMessageBox.information(self, "Undo", "Undo action not implemented yet.")
+
+    def redo_action(self):
+        """Perform redo action"""
+        # TODO: Implement redo functionality
+        QMessageBox.information(self, "Redo", "Redo action not implemented yet.")
+
+    def show_about(self):
+        """Show about dialog"""
+        QMessageBox.about(self, "About KS MetaMaker",
+            "<h2>KS MetaMaker v0.1.0</h2>"
+            "<p>AI-assisted local utility for tagging, renaming, and organizing visual assets.</p>"
+            "<p>Copyright &copy; 2023 Kalponic Studio. All rights reserved.</p>"
+        )
 
 
 def main():
