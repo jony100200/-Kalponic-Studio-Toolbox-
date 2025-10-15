@@ -278,7 +278,7 @@ class QualityAssessor:
         for image_path in image_paths:
             try:
                 quality_metrics = self.assess_quality(image_path)
-                score = quality_metrics.get('overall_score', 0.0)
+                score = quality_metrics.get('quality_score', 0.0)
 
                 if score >= min_quality_score:
                     quality_images.append(image_path)
@@ -307,4 +307,4 @@ class QualityAssessor:
         except Exception as e:
             logger.warning(f"Error calculating hash for {image_path}: {e}")
             # Fallback to file hash
-            return self._calculate_simple_hash(image_path)
+            return self._calculate_basic_hash(image_path)

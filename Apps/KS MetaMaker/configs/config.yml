@@ -3,8 +3,10 @@ export:
   paired_txt: true
   rename_images: true
   write_metadata: true
-last_input_dir: test_input
-last_output_dir: test_output
+last_input_dir: E:\__Kalponic Studio Repositories\-Kalponic-Studio-Toolbox-\Apps\KS
+  MetaMaker\samples
+last_output_dir: E:\__Kalponic Studio Repositories\-Kalponic-Studio-Toolbox-\Apps\KS
+  MetaMaker\output
 main_prefix: kalponic studio background
 max_tags:
   backgrounds: 25
