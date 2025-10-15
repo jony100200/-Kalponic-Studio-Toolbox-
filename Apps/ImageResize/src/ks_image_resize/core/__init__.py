@@ -1,0 +1,3 @@
+"""
+Core image resizing functionality
+"""
