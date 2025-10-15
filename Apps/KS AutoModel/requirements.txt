@@ -1,0 +1,35 @@
+# KS AutoModel Requirements
+# Core dependencies for the KS AutoModel application
+
+# GUI Framework
+PySide6>=6.5.0
+
+# CLI Framework
+typer>=0.9.0
+
+# HTTP requests for API calls to model hubs
+requests>=2.31.0
+
+# System profiling (CPU, RAM, GPU info)
+psutil>=5.9.0
+
+# Hugging Face Hub integration
+huggingface-hub>=0.17.0
+
+# ONNX Runtime for model inference
+onnxruntime>=1.15.0
+
+# Image processing
+Pillow>=10.0.0
+
+# Numerical computing
+numpy>=1.24.0
+
+# JSON schema validation
+jsonschema>=4.17.0
+
+# Optional: PyTorch for PyTorch model support (uncomment if needed)
+# torch>=2.0.0
+
+# Optional: OpenCV for advanced image processing (uncomment if needed)
+# opencv-python>=4.8.0

@@ -1,0 +1,35 @@
+# KS SnapStudio Requirements
+# Core dependencies for the KS SnapStudio application
+
+# GUI Framework
+PySide6>=6.5.0
+
+# Computer Vision for circle detection and image processing
+opencv-python>=4.8.0
+
+# Image manipulation and watermarking
+Pillow>=10.0.0
+
+# Numerical computing for image arrays
+numpy>=1.24.0
+
+# Screen capture functionality
+mss>=9.0.0
+
+# YAML configuration parsing
+pyyaml>=6.0
+
+# HTTP requests for updates/checks
+requests>=2.31.0
+
+# Optional AI features (uncomment to enable)
+# torch>=2.0.0
+# torchvision>=0.15.0
+# onnxruntime>=1.15.0
+
+# Development dependencies (uncomment for development)
+# pytest>=7.0.0
+# pytest-cov>=4.0.0
+# black>=22.0.0
+# isort>=5.10.0
+# mypy>=1.0.0

@@ -1,0 +1,89 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ks-automodel"
+version = "0.1.0"
+description = "Independent ML model finder and recommender for applications"
+authors = [
+    {name = "Kalponic Studio", email = "info@kalponic.com"}
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "PySide6>=6.5.0",
+    "typer>=0.9.0",
+    "requests>=2.31.0",
+    "psutil>=5.9.0",
+    "huggingface-hub>=0.17.0",
+    "onnxruntime>=1.15.0",
+    "Pillow>=10.0.0",
+    "numpy>=1.24.0",
+    "jsonschema>=4.17.0",
+    "pyyaml>=6.0",
+    "pathlib2>=2.3.0; python_version < '3.4'",
+]
+
+[project.optional-dependencies]
+ai = [
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+],
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=22.0.0",
+    "isort>=5.10.0",
+    "mypy>=1.0.0",
+    "pytest-asyncio>=0.21.0",
+],
+docs = [
+    "sphinx>=5.0.0",
+    "sphinx-rtd-theme>=1.2.0",
+]
+
+[project.scripts]
+ks-automodel = "ks_automodel.cli.main:app"
+
+[project.urls]
+Homepage = "https://github.com/kalponic/ks-automodel"
+Repository = "https://github.com/kalponic/ks-automodel"
+Documentation = "https://ks-automodel.readthedocs.io/"
+Issues = "https://github.com/kalponic/ks-automodel/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.black]
+line-length = 88
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
