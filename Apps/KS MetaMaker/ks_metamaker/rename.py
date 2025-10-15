@@ -51,6 +51,10 @@ class FileRenamer:
                 new_path = file_path.parent / f"{new_name_with_counter}{file_path.suffix}"
                 counter += 1
 
+            # Actually rename/move the file
+            import shutil
+            shutil.move(str(file_path), str(new_path))
+
             logger.info(f"Renamed {file_path.name} -> {new_path.name}")
             return new_path
 

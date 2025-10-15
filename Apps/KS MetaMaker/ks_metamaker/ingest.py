@@ -56,11 +56,11 @@ class ImageIngester:
 
     def _find_image_files(self, input_dir: Path) -> List[Path]:
         """Find all image files in the input directory recursively"""
-        image_paths = []
+        image_paths = set()
         for ext in self.SUPPORTED_FORMATS:
-            image_paths.extend(input_dir.rglob(f"*{ext}"))
-            image_paths.extend(input_dir.rglob(f"*{ext.upper()}"))
-        return sorted(image_paths)
+            image_paths.update(input_dir.rglob(f"*{ext}"))
+            image_paths.update(input_dir.rglob(f"*{ext.upper()}"))
+        return sorted(list(image_paths))
 
     def _filter_valid_images(self, image_paths: List[Path]) -> List[Path]:
         """Filter out invalid or corrupted image files"""

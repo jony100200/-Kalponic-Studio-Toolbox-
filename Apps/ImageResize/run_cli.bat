@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo   KS Image Resize - Batch Image Resizer
+echo   KS Image Resize CLI - Command Line Tool
 echo ========================================
 echo.
 
@@ -15,15 +15,6 @@ if errorlevel 1 (
     echo Please install Python from https://python.org/downloads/
     echo Make sure to check "Add Python to PATH" during installation
     echo.
-    pause
-    exit /b 1
-)
-
-REM Check if pip is available
-pip --version >nul 2>&1
-if errorlevel 1 (
-    echo ERROR: pip is not available
-    echo Please ensure pip is installed with Python
     pause
     exit /b 1
 )
@@ -45,28 +36,23 @@ if errorlevel 1 (
 
 REM Check if required dependencies are available
 echo Checking required dependencies...
-python -c "import PIL, customtkinter, yaml" >nul 2>&1
+python -c "import PIL, yaml" >nul 2>&1
 if errorlevel 1 (
     echo Installing required dependencies...
-    pip install Pillow customtkinter PyYAML
+    pip install Pillow PyYAML
     if errorlevel 1 (
         echo ERROR: Failed to install dependencies
-        echo Please run: pip install Pillow customtkinter PyYAML
+        echo Please run: pip install Pillow PyYAML
         pause
         exit /b 1
     )
     echo.
 )
 
-REM Launch the GUI application
-echo Starting KS Image Resize GUI...
+REM Run the CLI with all passed arguments
+echo Running KS Image Resize CLI...
 echo.
-python -m ks_image_resize.ui.app
+python -m ks_image_resize.cli.main %*
 
-REM If there was an error, keep the window open
-if errorlevel 1 (
-    echo.
-    echo ERROR: The application encountered an error
-    echo.
-    pause
-)
+REM Preserve the exit code
+exit /b %errorlevel%

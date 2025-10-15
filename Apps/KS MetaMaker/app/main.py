@@ -6,11 +6,14 @@ AI-assisted local utility for tagging, renaming, and organizing visual assets
 
 import sys
 import os
+import logging
 from pathlib import Path
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
+
+logger = logging.getLogger(__name__)
 
 try:
     from PyQt6.QtWidgets import (
@@ -30,6 +33,8 @@ from ks_metamaker.tagger import ImageTagger
 from ks_metamaker.rename import FileRenamer
 from ks_metamaker.organize import FileOrganizer
 from ks_metamaker.export import DatasetExporter
+from ks_metamaker.context_metadata import ContextMetadataGenerator
+from ks_metamaker.review_dialog import ReviewDialog
 from ks_metamaker.hardware_setup_dialog import HardwareSetupDialog
 
 
@@ -39,20 +44,26 @@ class ProcessingWorker(QThread):
     finished = pyqtSignal(dict)  # results
     error = pyqtSignal(str)
 
-    def __init__(self, input_dir: Path, output_dir: Path, config: Config):
+    def __init__(self, input_dir: Path, output_dir: Path, config: Config, hardware_detector=None):
         super().__init__()
         self.input_dir = input_dir
         self.output_dir = output_dir
         self.config = config
+        self.hardware_detector = hardware_detector
 
     def run(self):
         try:
             # Initialize components
             ingester = ImageIngester(enable_quality_filter=True, enable_duplicate_detection=True)
-            tagger = ImageTagger(self.config)
+            tagger = ImageTagger(self.config, hardware_detector=self.hardware_detector)
             renamer = FileRenamer(self.config)
             organizer = FileOrganizer(self.config, self.output_dir)
             exporter = DatasetExporter(self.config)
+
+            # Initialize context metadata generator if enabled
+            metadata_generator = None
+            if self.config.export.get('write_context_json', False):
+                metadata_generator = ContextMetadataGenerator(self.output_dir)
 
             # Ingest images
             self.progress.emit(10, "Ingesting images...")
@@ -71,6 +82,21 @@ class ProcessingWorker(QThread):
                 # Rename and organize
                 new_path = renamer.rename(image_path, tags)
                 organized_path = organizer.organize(new_path, tags[0] if tags else "unknown")
+
+                # Generate context metadata if enabled
+                if metadata_generator:
+                    try:
+                        metadata_path = metadata_generator.generate_context_metadata(
+                            image_path=image_path,
+                            processed_path=organized_path,
+                            tags=tags,
+                            profile_name=self.config.profile_name,
+                            hardware_profile=getattr(self.hardware_detector, 'profile', 'unknown') if self.hardware_detector else 'unknown',
+                            models_used=self.config.models.keys() if self.config.models else []
+                        )
+                        logger.info(f"Generated context metadata: {metadata_path}")
+                    except Exception as e:
+                        logger.warning(f"Failed to generate context metadata for {image_path}: {e}")
 
                 # Export
                 exporter.export(organized_path, tags)
@@ -97,10 +123,33 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.config = Config()
+        self.hardware_detector = None
         self.processing_worker = None
+        self.processing_results = {}  # Store results for review
+
+        # Initialize hardware detection
+        self.init_hardware_detection()
 
         self.init_ui()
         self.setup_connections()
+
+    def init_hardware_detection(self):
+        """Initialize hardware detection and show setup dialog if needed"""
+        try:
+            from ks_metamaker.hardware_detector import HardwareDetector
+            self.hardware_detector = HardwareDetector()
+
+            # Show hardware setup dialog
+            setup_dialog = HardwareSetupDialog(self.hardware_detector, self)
+            if setup_dialog.exec():
+                logger.info("Hardware setup completed")
+            else:
+                logger.warning("Hardware setup cancelled or failed")
+
+        except Exception as e:
+            logger.error(f"Hardware detection initialization failed: {e}")
+            # Continue without hardware detection
+            self.hardware_detector = None
 
     def init_ui(self):
         """Initialize the user interface"""
@@ -120,6 +169,15 @@ class MainWindow(QMainWindow):
         # Top toolbar
         toolbar_layout = QHBoxLayout()
 
+        # Profile selection
+        toolbar_layout.addWidget(QLabel("Profile:"))
+        self.profile_combo = QComboBox()
+        self.profile_combo.setMinimumWidth(150)
+        self.populate_profile_combo()
+        toolbar_layout.addWidget(self.profile_combo)
+
+        toolbar_layout.addSpacing(20)
+
         self.select_input_btn = QPushButton("Select Input Folder")
         self.select_input_btn.setMinimumHeight(35)
         toolbar_layout.addWidget(self.select_input_btn)
@@ -132,6 +190,12 @@ class MainWindow(QMainWindow):
         self.process_btn.setMinimumHeight(35)
         self.process_btn.setEnabled(False)
         toolbar_layout.addWidget(self.process_btn)
+
+        self.review_btn = QPushButton("Review Tags")
+        self.review_btn.setMinimumHeight(35)
+        self.review_btn.setEnabled(False)
+        self.review_btn.setVisible(False)  # Hidden until processing is done
+        toolbar_layout.addWidget(self.review_btn)
 
         toolbar_layout.addStretch()
         layout.addLayout(toolbar_layout)
@@ -195,20 +259,85 @@ class MainWindow(QMainWindow):
         self.select_input_btn.clicked.connect(self.select_input_folder)
         self.select_output_btn.clicked.connect(self.select_output_folder)
         self.process_btn.clicked.connect(self.start_processing)
+        self.review_btn.clicked.connect(self.show_review_dialog)
+        self.profile_combo.currentTextChanged.connect(self.on_profile_changed)
+
+    def populate_profile_combo(self):
+        """Populate the profile selection combo box"""
+        self.profile_combo.clear()
+        profiles = self.config.get_available_profiles()
+
+        for profile in profiles:
+            self.profile_combo.addItem(profile)
+
+        # Set current profile
+        current_profile = self.config.profile_name
+        index = self.profile_combo.findText(current_profile)
+        if index >= 0:
+            self.profile_combo.setCurrentIndex(index)
+
+    def show_review_dialog(self):
+        """Show the tag review dialog"""
+        if not self.processing_results:
+            QMessageBox.warning(self, "No Results", "No processing results available for review.")
+            return
+
+        # Prepare data for review dialog
+        review_data = []
+        for original_path, data in self.processing_results.items():
+            review_data.append({
+                'path': data['new_path'],  # Use the processed path
+                'tags': data['tags'],
+                'metadata': {}  # Could be enhanced to include confidence scores
+            })
+
+        # Show review dialog
+        review_dialog = ReviewDialog(review_data, self.config, self)
+        review_dialog.tags_approved.connect(self.on_tags_approved)
+        review_dialog.tags_rejected.connect(self.on_tags_rejected)
+        review_dialog.tags_modified.connect(self.on_tags_modified)
+
+        review_dialog.exec()
+
+    def on_tags_approved(self, approved_data: list):
+        """Handle approved tags from review dialog"""
+        self.status_bar.showMessage(f"Approved {len(approved_data)} images with reviewed tags")
+        logger.info(f"Approved {len(approved_data)} images from review")
+
+    def on_tags_rejected(self, rejected_paths: list):
+        """Handle rejected images from review dialog"""
+        self.status_bar.showMessage(f"Rejected {len(rejected_paths)} images")
+        logger.info(f"Rejected {len(rejected_paths)} images from review")
+
+    def on_tags_modified(self, modified_tags: dict):
+        """Handle modified tags from review dialog"""
+        # Here you could update the exported files with the modified tags
+        self.status_bar.showMessage(f"Updated tags for {len(modified_tags)} images")
+        logger.info(f"Modified tags for {len(modified_tags)} images")
 
     def select_input_folder(self):
         """Select input folder containing images"""
-        folder = QFileDialog.getExistingDirectory(self, "Select Input Folder")
+        # Start from last used directory if available
+        start_dir = self.config.last_input_dir if self.config.last_input_dir else ""
+        folder = QFileDialog.getExistingDirectory(self, "Select Input Folder", start_dir)
         if folder:
             self.input_dir = Path(folder)
+            self.config.last_input_dir = str(self.input_dir)
+            self.config.save()  # Save the preference
+            self.status_bar.showMessage(f"Input folder set: {self.input_dir.name} (remembered for next session)")
             self.update_file_tree()
             self.check_ready_to_process()
 
     def select_output_folder(self):
         """Select output folder for processed images"""
-        folder = QFileDialog.getExistingDirectory(self, "Select Output Folder")
+        # Start from last used directory if available
+        start_dir = self.config.last_output_dir if self.config.last_output_dir else ""
+        folder = QFileDialog.getExistingDirectory(self, "Select Output Folder", start_dir)
         if folder:
             self.output_dir = Path(folder)
+            self.config.last_output_dir = str(self.output_dir)
+            self.config.save()  # Save the preference
+            self.status_bar.showMessage(f"Output folder set: {self.output_dir.name} (remembered for next session)")
             self.check_ready_to_process()
 
     def check_ready_to_process(self):
@@ -249,7 +378,7 @@ class MainWindow(QMainWindow):
         self.status_label.setText("Processing images...")
 
         # Start worker thread
-        self.processing_worker = ProcessingWorker(self.input_dir, self.output_dir, self.config)
+        self.processing_worker = ProcessingWorker(self.input_dir, self.output_dir, self.config, self.hardware_detector)
         self.processing_worker.progress.connect(self.update_progress)
         self.processing_worker.finished.connect(self.processing_finished)
         self.processing_worker.error.connect(self.processing_error)
@@ -267,6 +396,14 @@ class MainWindow(QMainWindow):
         self.process_btn.setEnabled(True)
         self.status_label.setText(f"Processing complete! Processed {len(results)} images.")
 
+        # Store results for review
+        self.processing_results = results
+
+        # Show review button if review UI is enabled in profile
+        if self.config.ui_features.get('review_ui', True):
+            self.review_btn.setVisible(True)
+            self.review_btn.setEnabled(True)
+
         # Display results
         result_text = "Processing Results:\n\n"
         for original_path, data in results.items():
@@ -276,7 +413,15 @@ class MainWindow(QMainWindow):
 
         self.results_text.setPlainText(result_text)
 
-        QMessageBox.information(self, "Complete", f"Successfully processed {len(results)} images!")
+        QMessageBox.information(self, "Complete", f"Successfully processed {len(results)} images!\n\nThe output folder will now open in File Explorer.\n\nUse 'Review Tags' to manually validate and edit the generated tags.")
+
+        # Open output folder in file explorer
+        try:
+            if hasattr(self, 'output_dir'):
+                os.startfile(str(self.output_dir))
+                logger.info(f"Opened output folder: {self.output_dir}")
+        except Exception as e:
+            logger.warning(f"Could not open output folder: {e}")
 
     def processing_error(self, error_msg: str):
         """Handle processing error"""

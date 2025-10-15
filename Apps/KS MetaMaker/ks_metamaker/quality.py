@@ -261,3 +261,50 @@ class QualityAssessor:
             return "good quality"
 
         return f"issues: {', '.join(issues)}"
+
+    def filter_quality_images(self, image_paths: List[Path], min_quality_score: float = 0.3) -> List[Path]:
+        """
+        Filter images based on quality assessment
+
+        Args:
+            image_paths: List of image paths to filter
+            min_quality_score: Minimum quality score (0-1) to keep image
+
+        Returns:
+            List of image paths that meet quality threshold
+        """
+        quality_images = []
+
+        for image_path in image_paths:
+            try:
+                quality_metrics = self.assess_quality(image_path)
+                score = quality_metrics.get('quality_score', 0.0)
+
+                if score >= min_quality_score:
+                    quality_images.append(image_path)
+                else:
+                    logger.info(f"Image {image_path} filtered out due to low quality (score: {score:.2f})")
+
+            except Exception as e:
+                logger.warning(f"Error assessing quality for {image_path}: {e}")
+                # Include images that can't be assessed to avoid losing data
+                quality_images.append(image_path)
+
+        return quality_images
+
+    def get_image_hash(self, image_path: Path) -> str:
+        """
+        Get perceptual hash of image for duplicate detection
+
+        Args:
+            image_path: Path to image file
+
+        Returns:
+            String hash of the image
+        """
+        try:
+            return self._calculate_perceptual_hash(image_path)
+        except Exception as e:
+            logger.warning(f"Error calculating hash for {image_path}: {e}")
+            # Fallback to file hash
+            return self._calculate_basic_hash(image_path)

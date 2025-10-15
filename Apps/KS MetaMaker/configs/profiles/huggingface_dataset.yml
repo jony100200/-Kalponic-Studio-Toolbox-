@@ -1,0 +1,45 @@
+name: huggingface_dataset
+description: Standardized for HuggingFace dataset uploads
+profile_type: huggingface_dataset
+main_prefix: ''
+style_preset: ''
+rename_pattern: '{category}_{top_tags}_{YYYYMMDD}_{index}'
+max_tags:
+  general: 30
+normalization:
+  taxonomy:
+    synonyms: {}
+    categories:
+      object: subject
+      scene: composition
+      quality: quality
+    nsfw_filters: []
+    priority_tags: []
+    banned_tags: []
+  case_sensitive: false
+  remove_duplicates: true
+  sort_by_confidence: true
+  min_confidence: 0.1
+budget:
+  max_tags_per_category: {}
+  diversity_weight: 0.3
+  quality_threshold: 0.7
+  allocation_rules: {}
+models:
+  tagger: openclip_vith14.onnx
+  detector: yolov11.onnx
+  captioner: blip2.onnx
+performance:
+  threads: 4
+  batch_size: 4
+  memory_profile: medium
+export:
+  paired_txt: true
+  rename_images: true
+  package_zip: true
+  write_metadata: true
+  write_context_json: true
+ui_features:
+  review_ui: true
+  watch_mode: false
+  collaboration: false
