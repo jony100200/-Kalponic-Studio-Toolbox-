@@ -89,13 +89,13 @@ Apps/PromptSender2ChatGP/settings.json
 Apps/PromptSender2ChatGP/KS_PDF_STUDIO_README.md
 Apps/KS_PDF_Studio/KS_PDF_STUDIO_README.md
 Docs/KS Creation & Development Strategy Guide.md
-Apps\KS MetaMaker\KS MetaMaker DesignDoc.md
-Apps\KS MetaMaker\Development Documents\
+Apps/KS MetaMaker/KS MetaMaker DesignDoc.md
+Apps/KS MetaMaker/Development Documents/
 output/
 samples/
-Apps\KS MetaMaker\KS MetaMaker DesignDoc.md
-Apps\KS Sprite Splitter\KS Sprite Splitter DesignDoc.md
-Apps\KS AutoModel\KS AutoModel DesignDoc.md
-Apps\KS SnapStudio\KS SnapStudio DesignDoc.md
-Apps\KS_PDF_Studio\Docs
-Apps\KS MetaMaker\KS MetaMaker DesignDoc.md
+Apps/KS MetaMaker/KS MetaMaker DesignDoc.md
+Apps/KS Sprite Splitter/KS Sprite Splitter DesignDoc.md
+Apps/KS AutoModel/KS AutoModel DesignDoc.md
+Apps/KS SnapStudio/KS SnapStudio DesignDoc.md
+Apps/KS_PDF_Studio/Docs
+Apps/KS MetaMaker/KS MetaMaker DesignDoc.md
