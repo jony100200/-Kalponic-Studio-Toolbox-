@@ -1,5 +1,5 @@
 {
-  "target_window": "2D HD Game Assets - Game background creation",
+  "target_window": "2D HD Game Assets - 2D asset recreation request",
   "initial_delay": 10,
   "text_paste_enter_grace": 1500,
   "text_generation_wait": 180,
@@ -11,9 +11,22 @@
   "image_jitter_percent": 15,
   "image_auto_enter": true,
   "image_repeat_prompt": true,
-  "text_input_folder": "D:/__Income Develop Plan/-Kalponic-Studio-Toolbox-/Apps/PromptSender2ChatGP/sent_prompts/failed",
-  "image_input_folder": "D:/Assets For Sale/Vector Fantasy Sidescrolls/Side Scroll Assets to be mAde with AI/Thumbnails/3D Assets/Multistory Dungeons 2/Props 2",
-  "global_prompt_file": "D:/Assets For Sale/Vector Fantasy Sidescrolls/Side Scroll Assets to be mAde with AI/Universal Image-to-Asset Prompt - Same Mood - Painterly.txt",
+  "text_input_folder": "I:/My Drive/___Assets for Sale/Low Poly Objects/Weapon Racks",
+  "image_input_folder": "I:/My Drive/___Assets for Sale/Low Poly Objects/Rutz/Buildings Package/PREFABS/MODULAR ASSETS/Back",
+  "global_prompt_file": "I:/My Drive/___Assets for Sale/Low Poly Objects/Universal Image-to-Asset Prompt - Same Mood-Cartony Style.txt",
   "image_queue_mode": true,
-  "image_queue_items": []
+  "image_queue_items": [
+    {
+      "id": "b7561d61-49c8-4023-a9d1-93e576d45ebe",
+      "image_folder": "I:/My Drive/___Assets for Sale/Low Poly Objects/Poly Universal Pack/- Prefabs/Fantasy/Signboard Fantasy/Side",
+      "prompt_file": "I:/My Drive/___Assets for Sale/Low Poly Objects/Universal Image-to-Asset Prompt - Same Mood-Cartony Style.txt",
+      "name": "Side"
+    },
+    {
+      "id": "ff91be18-fa6d-42ea-89bc-97de5002afb8",
+      "image_folder": "I:/My Drive/___Assets for Sale/Low Poly Objects/Poly Universal Pack/- Prefabs/Fantasy/Flags Fantasy/Back",
+      "prompt_file": "I:/My Drive/___Assets for Sale/Low Poly Objects/Universal Image-to-Asset Prompt - Same Mood-Cartony Style.txt",
+      "name": "Back"
+    }
+  ]
 }
