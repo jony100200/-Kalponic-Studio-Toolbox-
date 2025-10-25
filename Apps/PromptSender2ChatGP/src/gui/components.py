@@ -808,6 +808,34 @@ class ImageModeTab(ctk.CTkScrollableFrame):
             pass  # Keep existing values
         self.config.image_auto_enter = self.auto_enter_var.get()
         self.config.image_repeat_prompt = self.repeat_prompt_var.get()
+    
+    def _on_intra_slider_change(self, value):
+        """Handle intra delay slider change"""
+        # Convert slider value (0-10) to seconds and update display
+        seconds = round(value, 1)
+        self.intra_var.set(f"{seconds}")
+        self._update_intra_display(seconds)
+    
+    def _on_intra_entry_change(self, event=None):
+        """Handle intra delay entry field change"""
+        try:
+            seconds = float(self.intra_var.get())
+            # Clamp to reasonable range
+            seconds = max(0, min(10, seconds))
+            self.intra_var.set(f"{seconds}")
+            # Update slider position
+            self.intra_slider.set(seconds)
+            self._update_intra_display(seconds)
+        except ValueError:
+            # Reset to current slider value
+            current_value = self.intra_slider.get()
+            self.intra_var.set(f"{current_value}")
+            self._update_intra_display(current_value)
+    
+    def _update_intra_display(self, seconds):
+        """Update the intra delay display text"""
+        ms = int(seconds * 1000)
+        self.intra_display.configure(text=f"{seconds} sec ({ms} ms)")
 
 class LogPanel(ctk.CTkFrame):
     """Log panel with scrollable text display"""
@@ -947,31 +975,3 @@ class WindowSelectionDialog:
         """Show dialog and return selected window"""
         self.dialog.wait_window()
         return self.result
-    
-    def _on_intra_slider_change(self, value):
-        """Handle intra delay slider change"""
-        # Convert slider value (0-10) to seconds and update display
-        seconds = round(value, 1)
-        self.intra_var.set(f"{seconds}")
-        self._update_intra_display(seconds)
-    
-    def _on_intra_entry_change(self, event=None):
-        """Handle intra delay entry field change"""
-        try:
-            seconds = float(self.intra_var.get())
-            # Clamp to reasonable range
-            seconds = max(0, min(10, seconds))
-            self.intra_var.set(f"{seconds}")
-            # Update slider position
-            self.intra_slider.set(seconds)
-            self._update_intra_display(seconds)
-        except ValueError:
-            # Reset to current slider value
-            current_value = self.intra_slider.get()
-            self.intra_var.set(f"{current_value}")
-            self._update_intra_display(current_value)
-    
-    def _update_intra_display(self, seconds):
-        """Update the intra delay display text"""
-        ms = int(seconds * 1000)
-        self.intra_display.configure(text=f"{seconds} sec ({ms} ms)")
