@@ -88,6 +88,7 @@ run.bat
 - Example: Nature → nature_prompts.txt, Medieval → medieval_prompts.txt
 - Process hundreds of images across multiple themes automatically
 4. Images are pasted first, followed by text (if enabled)
+   - **Important:** Adjust the "Image Upload Delay" slider in Image Mode Settings to ensure sufficient time for image upload to complete before text is pasted
 
 ## Enhanced Window Focus System
 
@@ -111,6 +112,9 @@ The application now uses keyboard-based focus strategies instead of unreliable m
 ## Configuration
 
 Settings are automatically saved to `settings.json` and persist between sessions.
+
+**Image Mode Timing:**
+- **Image Upload Delay:** User-adjustable slider and entry field (0-10 seconds) to set the time to wait after pasting an image before text is pasted. This allows sufficient time for image upload to complete in AI applications like ChatGPT. Default: 3 seconds.
 
 ## File Organization
 

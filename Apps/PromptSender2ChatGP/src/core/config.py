@@ -24,7 +24,7 @@ class AppConfig:
     text_auto_enter: bool = True
     
     # Image mode settings
-    image_intra_delay: int = 300
+    image_intra_delay: int = 3000
     image_paste_enter_grace: int = 400
     image_generation_wait: int = 60
     image_jitter_percent: int = 15

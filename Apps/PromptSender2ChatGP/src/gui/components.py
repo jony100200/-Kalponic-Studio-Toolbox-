@@ -508,10 +508,43 @@ class ImageModeTab(ctk.CTkScrollableFrame):
         # Settings grid - more responsive layout
         row = 1
         
-        # Intra delay
-        ctk.CTkLabel(settings_frame, text="Intra Delay after Image (ms):").grid(row=row, column=0, sticky="w", padx=5, pady=2)
-        self.intra_var = tk.StringVar(value="300")
-        ctk.CTkEntry(settings_frame, textvariable=self.intra_var, width=100).grid(row=row, column=1, sticky="w", padx=5, pady=2)
+        # Intra delay - Enhanced UI with slider and seconds display
+        intra_frame = ctk.CTkFrame(settings_frame)
+        intra_frame.grid(row=row, column=0, columnspan=2, sticky="ew", padx=5, pady=2)
+        intra_frame.grid_columnconfigure(1, weight=1)
+        
+        # Label with tooltip-like info
+        intra_label = ctk.CTkLabel(intra_frame, text="⏱️ Image Upload Delay (sec):", font=ctk.CTkFont(size=11, weight="bold"))
+        intra_label.grid(row=0, column=0, sticky="w", padx=5, pady=(5, 2))
+        
+        # Info text
+        info_label = ctk.CTkLabel(intra_frame, text="Time to wait after pasting image for upload to complete", 
+                                 font=ctk.CTkFont(size=9), text_color="gray70")
+        info_label.grid(row=1, column=0, columnspan=2, sticky="w", padx=5, pady=(0, 5))
+        
+        # Slider and entry controls
+        controls_frame = ctk.CTkFrame(intra_frame)
+        controls_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=5, pady=(0, 5))
+        controls_frame.grid_columnconfigure(0, weight=1)
+        
+        # Slider (0-10 seconds)
+        self.intra_slider = ctk.CTkSlider(controls_frame, from_=0, to=10, number_of_steps=20, 
+                                         command=self._on_intra_slider_change)
+        self.intra_slider.grid(row=0, column=0, sticky="ew", padx=5, pady=2)
+        
+        # Entry field for precise control
+        self.intra_var = tk.StringVar(value="3.0")
+        self.intra_entry = ctk.CTkEntry(controls_frame, textvariable=self.intra_var, width=80, 
+                                       placeholder_text="sec")
+        self.intra_entry.grid(row=0, column=1, padx=(0, 5), pady=2)
+        self.intra_entry.bind("<FocusOut>", self._on_intra_entry_change)
+        self.intra_entry.bind("<Return>", self._on_intra_entry_change)
+        
+        # Current value display
+        self.intra_display = ctk.CTkLabel(controls_frame, text="3.0 sec (3000 ms)", 
+                                         font=ctk.CTkFont(size=9), text_color="gray60")
+        self.intra_display.grid(row=1, column=0, columnspan=2, sticky="w", padx=5, pady=(0, 5))
+        
         row += 1
         
         # Paste->Enter Grace
@@ -745,7 +778,10 @@ class ImageModeTab(ctk.CTkScrollableFrame):
                 self.queue_listbox.insert(tk.END, display_text)
         
         # Other settings
-        self.intra_var.set(str(self.config.image_intra_delay))
+        intra_seconds = self.config.image_intra_delay / 1000.0
+        self.intra_var.set(f"{intra_seconds}")
+        self.intra_slider.set(intra_seconds)
+        self._update_intra_display(intra_seconds)
         self.grace_var.set(str(self.config.image_paste_enter_grace))
         self.wait_var.set(str(self.config.image_generation_wait))
         self.jitter_var.set(str(self.config.image_jitter_percent))
@@ -763,7 +799,8 @@ class ImageModeTab(ctk.CTkScrollableFrame):
         
         # Other settings
         try:
-            self.config.image_intra_delay = int(self.intra_var.get())
+            intra_seconds = float(self.intra_var.get())
+            self.config.image_intra_delay = int(intra_seconds * 1000)
             self.config.image_paste_enter_grace = int(self.grace_var.get())
             self.config.image_generation_wait = int(self.wait_var.get())
             self.config.image_jitter_percent = int(self.jitter_var.get())
@@ -910,3 +947,31 @@ class WindowSelectionDialog:
         """Show dialog and return selected window"""
         self.dialog.wait_window()
         return self.result
+    
+    def _on_intra_slider_change(self, value):
+        """Handle intra delay slider change"""
+        # Convert slider value (0-10) to seconds and update display
+        seconds = round(value, 1)
+        self.intra_var.set(f"{seconds}")
+        self._update_intra_display(seconds)
+    
+    def _on_intra_entry_change(self, event=None):
+        """Handle intra delay entry field change"""
+        try:
+            seconds = float(self.intra_var.get())
+            # Clamp to reasonable range
+            seconds = max(0, min(10, seconds))
+            self.intra_var.set(f"{seconds}")
+            # Update slider position
+            self.intra_slider.set(seconds)
+            self._update_intra_display(seconds)
+        except ValueError:
+            # Reset to current slider value
+            current_value = self.intra_slider.get()
+            self.intra_var.set(f"{current_value}")
+            self._update_intra_display(current_value)
+    
+    def _update_intra_display(self, seconds):
+        """Update the intra delay display text"""
+        ms = int(seconds * 1000)
+        self.intra_display.configure(text=f"{seconds} sec ({ms} ms)")
