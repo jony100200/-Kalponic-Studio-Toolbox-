@@ -554,6 +554,118 @@ class ImageProcessor:
             print(f"Error creating transparent sprite sheet: {e}")
             return False
     
+    def split_sprite_sheet(self, sprite_sheet_path, output_folder, rows, cols):
+        """
+        Split a sprite sheet into individual frames
+        
+        Args:
+            sprite_sheet_path (str): Path to the sprite sheet image
+            output_folder (str): Path to output folder for frames
+            rows (int): Number of rows in the sprite sheet grid
+            cols (int): Number of columns in the sprite sheet grid
+            
+        Returns:
+            tuple: (success_status, list_of_created_frame_paths)
+        """
+        try:
+            if rows <= 0 or cols <= 0:
+                raise ValueError("Rows and columns must be greater than zero")
+            
+            # Load the sprite sheet
+            with Image.open(sprite_sheet_path) as img:
+                width, height = img.size
+                
+                # Validate dimensions are divisible by grid
+                if width % cols != 0 or height % rows != 0:
+                    raise ValueError(f"Sprite sheet dimensions ({width}x{height}) are not divisible by {rows} row(s) and {cols} column(s)")
+                
+                frame_width = width // cols
+                frame_height = height // rows
+                
+                # Ensure output directory exists
+                os.makedirs(output_folder, exist_ok=True)
+                
+                created_frames = []
+                base_name = os.path.splitext(os.path.basename(sprite_sheet_path))[0]
+                
+                print(f"Splitting '{base_name}' into {rows * cols} frames...")
+                
+                # Extract each frame
+                for row in range(rows):
+                    for col in range(cols):
+                        left = col * frame_width
+                        top = row * frame_height
+                        right = left + frame_width
+                        bottom = top + frame_height
+                        
+                        # Crop the frame
+                        frame = img.crop((left, top, right, bottom))
+                        
+                        # Generate frame filename
+                        frame_filename = f"{base_name}_r{row+1:02d}_c{col+1:02d}.png"
+                        frame_path = os.path.join(output_folder, frame_filename)
+                        
+                        # Save the frame
+                        frame.save(frame_path, 'PNG')
+                        created_frames.append(frame_path)
+                        
+                        print(f"Created frame: {frame_filename}")
+                
+                print(f"Successfully created {len(created_frames)} frames")
+                return True, created_frames
+                
+        except Exception as e:
+            print(f"Error splitting sprite sheet: {e}")
+            return False, []
+    
+    def split_sprite_sheets_batch(self, input_folder, output_folder, rows, cols, recursive=False):
+        """
+        Split multiple sprite sheets from a folder into individual frames
+        
+        Args:
+            input_folder (str): Path to folder containing sprite sheets
+            output_folder (str): Path to output folder for frames
+            rows (int): Number of rows in the sprite sheet grid
+            cols (int): Number of columns in the sprite sheet grid
+            recursive (bool): Whether to process subfolders recursively
+            
+        Returns:
+            tuple: (success_count, total_processed, list_of_all_created_frames)
+        """
+        try:
+            # Get all image files
+            image_files = self.get_image_files(input_folder)
+            
+            if not image_files:
+                print("No image files found in the input folder")
+                return 0, 0, []
+            
+            success_count = 0
+            total_frames = []
+            
+            print(f"Processing {len(image_files)} sprite sheet(s)...")
+            
+            for sprite_path in image_files:
+                try:
+                    success, frames = self.split_sprite_sheet(sprite_path, output_folder, rows, cols)
+                    if success:
+                        success_count += 1
+                        total_frames.extend(frames)
+                        print(f"✓ Split {os.path.basename(sprite_path)} into {len(frames)} frames")
+                    else:
+                        print(f"✗ Failed to split {os.path.basename(sprite_path)}")
+                        
+                except Exception as e:
+                    print(f"Error processing {sprite_path}: {e}")
+                    continue
+            
+            print(f"Completed: {success_count}/{len(image_files)} sprite sheets processed, {len(total_frames)} total frames created")
+            return success_count, len(image_files), total_frames
+            
+        except Exception as e:
+            print(f"Error in batch processing: {e}")
+            return 0, 0, []
+    
     # Legacy methods for backwards compatibility
     def merge_sprite_with_background(self, sprite_path, background_path, output_path):
         """Legacy method - merge single sprite with background"""

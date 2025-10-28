@@ -115,16 +115,21 @@ class MainWindow:
         # Add tabs
         tab1 = self.tabview.add("🔀 Icon + Background Merger")
         tab2 = self.tabview.add("📋 Sprite Sheet Maker")
+        tab3 = self.tabview.add("✂️ Sprite Sheet Splitter")
         
         # Configure tab grids
         tab1.grid_columnconfigure(0, weight=1)
         tab2.grid_columnconfigure(0, weight=1)
+        tab3.grid_columnconfigure(0, weight=1)
         
         # Build Tab 1 - Existing functionality
         self._build_merger_tab(tab1)
         
         # Build Tab 2 - New sprite sheet maker
         self._build_spritesheet_tab(tab2)
+        
+        # Build Tab 3 - Sprite sheet splitter
+        self._build_splitter_tab(tab3)
     
     def _build_merger_tab(self, parent):
         """Build the icon + background merger tab (existing functionality)"""
@@ -158,32 +163,33 @@ class MainWindow:
         self._build_sprite_folder_selection(sprite_frame)
         
         # Sprite sheet settings
-        self._build_sprite_settings(sprite_frame)
+        self._build_spritesheet_settings(sprite_frame)
         
         # Sprite sheet action buttons
-        self._build_sprite_action_buttons(sprite_frame)
-    
+        # Reuse the existing action buttons builder (same layout used by merger tab)
+        self._build_action_buttons(sprite_frame)
+
     def _build_sprite_folder_selection(self, parent):
-        """Build folder selection for sprite sheet maker"""
+        """Build folder selection specifically for the Sprite Sheet Maker tab"""
         folder_frame = ctk.CTkFrame(parent, corner_radius=15)
         folder_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
         folder_frame.grid_columnconfigure(1, weight=1)
-        
+
         # Section title
         ctk.CTkLabel(
             folder_frame,
-            text="📁 SPRITE SHEET DIRECTORIES",
+            text="📁 SPRITESHEET SOURCE",
             font=ctk.CTkFont(size=18, weight="bold"),
             text_color=self.colors["secondary"]
         ).grid(row=0, column=0, columnspan=3, padx=20, pady=(20, 15), sticky="w")
-        
+
         # Icons folder
         ctk.CTkLabel(
             folder_frame,
             text="Icons Folder:",
             font=ctk.CTkFont(size=12, weight="bold")
         ).grid(row=1, column=0, padx=20, pady=5, sticky="w")
-        
+
         self.sprite_icons_folder_var = ctk.StringVar()
         self.sprite_icons_folder_entry = ctk.CTkEntry(
             folder_frame,
@@ -193,10 +199,10 @@ class MainWindow:
             corner_radius=8
         )
         self.sprite_icons_folder_entry.grid(row=1, column=1, padx=10, pady=5, sticky="ew")
-        
+
         ctk.CTkButton(
             folder_frame,
-            text="🎯 SELECT",
+            text="📂 SELECT",
             command=self._select_sprite_icons_folder,
             width=100,
             height=35,
@@ -204,14 +210,14 @@ class MainWindow:
             fg_color=self.colors["accent"],
             hover_color=self.colors["primary"]
         ).grid(row=1, column=2, padx=20, pady=5)
-        
-        # Output folder
+
+        # Output folder for sprite sheets
         ctk.CTkLabel(
             folder_frame,
             text="Output Folder:",
             font=ctk.CTkFont(size=12, weight="bold")
         ).grid(row=2, column=0, padx=20, pady=5, sticky="w")
-        
+
         self.sprite_output_folder_var = ctk.StringVar()
         self.sprite_output_folder_entry = ctk.CTkEntry(
             folder_frame,
@@ -221,7 +227,7 @@ class MainWindow:
             corner_radius=8
         )
         self.sprite_output_folder_entry.grid(row=2, column=1, padx=10, pady=(5, 20), sticky="ew")
-        
+
         ctk.CTkButton(
             folder_frame,
             text="💾 SELECT",
@@ -232,198 +238,32 @@ class MainWindow:
             fg_color=self.colors["accent"],
             hover_color=self.colors["primary"]
         ).grid(row=2, column=2, padx=20, pady=(5, 20))
-    
-    def _build_sprite_settings(self, parent):
-        """Build sprite sheet settings"""
-        settings_frame = ctk.CTkFrame(parent, corner_radius=15)
-        settings_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=10)
-        settings_frame.grid_columnconfigure((0, 1, 2), weight=1)
-        
-        # Section title
-        ctk.CTkLabel(
-            settings_frame,
-            text="⚙️ SPRITE SHEET CONFIGURATION",
-            font=ctk.CTkFont(size=18, weight="bold"),
-            text_color=self.colors["secondary"]
-        ).grid(row=0, column=0, columnspan=3, padx=20, pady=(20, 15), sticky="w")
-        
-        # Cell Size
-        cell_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
-        cell_frame.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
-        
-        ctk.CTkLabel(
-            cell_frame,
-            text="Cell Size (px):",
-            font=ctk.CTkFont(size=11, weight="bold")
-        ).pack(anchor="w", padx=5)
-        
-        self.sprite_cell_size_var = ctk.StringVar(value="256")
-        self.sprite_cell_size_entry = ctk.CTkEntry(
-            cell_frame,
-            textvariable=self.sprite_cell_size_var,
-            width=80,
-            height=30,
-            placeholder_text="256"
-        )
-        self.sprite_cell_size_entry.pack(padx=5, pady=2)
-        self.sprite_cell_size_entry.bind('<KeyRelease>', self._on_sprite_settings_change)
-        
-        # Grid Spacing
-        spacing_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
-        spacing_frame.grid(row=1, column=1, padx=10, pady=10, sticky="ew")
-        
-        ctk.CTkLabel(
-            spacing_frame,
-            text="Grid Spacing (px):",
-            font=ctk.CTkFont(size=11, weight="bold")
-        ).pack(anchor="w", padx=5)
-        
-        self.sprite_grid_spacing_var = ctk.StringVar(value="2")
-        self.sprite_grid_spacing_entry = ctk.CTkEntry(
-            spacing_frame,
-            textvariable=self.sprite_grid_spacing_var,
-            width=80,
-            height=30,
-            placeholder_text="2"
-        )
-        self.sprite_grid_spacing_entry.pack(padx=5, pady=2)
-        self.sprite_grid_spacing_entry.bind('<KeyRelease>', self._on_sprite_settings_change)
-        
-        # Bottom Margin
-        margin_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
-        margin_frame.grid(row=1, column=2, padx=10, pady=10, sticky="ew")
-        
-        ctk.CTkLabel(
-            margin_frame,
-            text="Bottom Margin (px):",
-            font=ctk.CTkFont(size=11, weight="bold")
-        ).pack(anchor="w", padx=5)
-        
-        self.sprite_bottom_margin_var = ctk.StringVar(value="0")
-        self.sprite_bottom_margin_entry = ctk.CTkEntry(
-            margin_frame,
-            textvariable=self.sprite_bottom_margin_var,
-            width=80,
-            height=30,
-            placeholder_text="0"
-        )
-        self.sprite_bottom_margin_entry.pack(padx=5, pady=2)
-        self.sprite_bottom_margin_entry.bind('<KeyRelease>', self._on_sprite_settings_change)
-        
-        # Second row - Grid dimensions and options
-        # Rows
-        rows_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
-        rows_frame.grid(row=2, column=0, padx=10, pady=10, sticky="ew")
-        
-        ctk.CTkLabel(
-            rows_frame,
-            text="Grid Rows:",
-            font=ctk.CTkFont(size=11, weight="bold")
-        ).pack(anchor="w", padx=5)
-        
-        self.sprite_rows_var = ctk.StringVar(value="8")
-        self.sprite_rows_entry = ctk.CTkEntry(
-            rows_frame,
-            textvariable=self.sprite_rows_var,
-            width=80,
-            height=30,
-            placeholder_text="8"
-        )
-        self.sprite_rows_entry.pack(padx=5, pady=2)
-        self.sprite_rows_entry.bind('<KeyRelease>', self._on_sprite_settings_change)
-        
-        # Columns
-        cols_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
-        cols_frame.grid(row=2, column=1, padx=10, pady=10, sticky="ew")
-        
-        ctk.CTkLabel(
-            cols_frame,
-            text="Grid Columns:",
-            font=ctk.CTkFont(size=11, weight="bold")
-        ).pack(anchor="w", padx=5)
-        
-        self.sprite_cols_var = ctk.StringVar(value="8")
-        self.sprite_cols_entry = ctk.CTkEntry(
-            cols_frame,
-            textvariable=self.sprite_cols_var,
-            width=80,
-            height=30,
-            placeholder_text="8"
-        )
-        self.sprite_cols_entry.pack(padx=5, pady=2)
-        self.sprite_cols_entry.bind('<KeyRelease>', self._on_sprite_settings_change)
-        
-        # Options
-        sprite_options_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
-        sprite_options_frame.grid(row=2, column=2, padx=10, pady=10, sticky="ew")
-        
-        ctk.CTkLabel(
-            sprite_options_frame,
-            text="Options:",
-            font=ctk.CTkFont(size=11, weight="bold")
-        ).pack(anchor="w", padx=5)
-        
-        # Power of two option
-        self.sprite_power_of_two_var = ctk.BooleanVar(value=False)
-        self.sprite_power_of_two_check = ctk.CTkCheckBox(
-            sprite_options_frame,
-            text="Power of 2 Canvas",
-            variable=self.sprite_power_of_two_var,
-            font=ctk.CTkFont(size=10)
-        )
-        self.sprite_power_of_two_check.pack(anchor="w", padx=5, pady=2)
-        
-        # Info display
-        info_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
-        info_frame.grid(row=3, column=0, columnspan=3, padx=10, pady=10, sticky="ew")
-        
-        # File count display
-        self.sprite_file_count_label = ctk.CTkLabel(
-            info_frame,
-            text="📊 Ready to scan icons folder...",
+
+        # Quick info label
+        self.sprite_folder_info = ctk.CTkLabel(
+            folder_frame,
+            text="📊 Select icons folder and output folder to enable building",
             font=ctk.CTkFont(size=10),
             text_color=self.colors["primary"]
         )
-        self.sprite_file_count_label.pack(anchor="w", padx=10, pady=5)
-        
-        # Grid info
-        self.sprite_grid_info_label = ctk.CTkLabel(
-            info_frame,
-            text="Grid: 8×8 = 64 cells/sheet",
-            font=ctk.CTkFont(size=9),
-            text_color=self.colors["primary"]
-        )
-        self.sprite_grid_info_label.pack(anchor="w", padx=10, pady=2)
+        self.sprite_folder_info.grid(row=3, column=0, columnspan=3, padx=20, pady=(0, 10), sticky="w")
     
-    def _build_sprite_action_buttons(self, parent):
-        """Build action buttons for sprite sheet maker"""
-        action_frame = ctk.CTkFrame(parent, corner_radius=15)
-        action_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=20)
-        action_frame.grid_columnconfigure((0, 1), weight=1)
+    def _build_splitter_tab(self, parent):
+        """Build the sprite sheet splitter tab"""
+        # Create scrollable frame for the tab content
+        splitter_frame = ctk.CTkScrollableFrame(parent, corner_radius=15)
+        splitter_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        splitter_frame.grid_columnconfigure(0, weight=1)
+        parent.grid_rowconfigure(0, weight=1)
         
-        # Scan button
-        ctk.CTkButton(
-            action_frame,
-            text="🔍 SCAN ICONS",
-            command=self._scan_sprite_icons,
-            height=45,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            fg_color=self.colors["accent"],
-            hover_color=self.colors["primary"],
-            corner_radius=15
-        ).grid(row=0, column=0, padx=10, pady=15, sticky="ew")
+        # Sprite sheet input section
+        self._build_splitter_input_section(splitter_frame)
         
-        # Build button
-        ctk.CTkButton(
-            action_frame,
-            text="📋 BUILD SPRITE SHEET",
-            command=self._build_sprite_sheet,
-            height=45,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            fg_color=self.colors["primary"],
-            hover_color=self.colors["secondary"],
-            corner_radius=15
-        ).grid(row=0, column=1, padx=10, pady=15, sticky="ew")
+        # Splitter settings section
+        self._build_splitter_settings_section(splitter_frame)
+        
+        # Splitter action buttons
+        self._build_splitter_action_buttons(splitter_frame)
     
     def _build_folder_selection(self, parent):
         """Build folder selection section"""
@@ -1312,6 +1152,400 @@ class MainWindow:
             hover_color=self.colors["accent"]
         ).pack(pady=20)
     
+    def _build_splitter_input_section(self, parent):
+        """Build the input section for sprite sheet splitter"""
+        input_frame = ctk.CTkFrame(parent, corner_radius=15)
+        input_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
+        input_frame.grid_columnconfigure(1, weight=1)
+        
+        # Section title
+        ctk.CTkLabel(
+            input_frame,
+            text="📁 SPRITE SHEET INPUT",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color=self.colors["secondary"]
+        ).grid(row=0, column=0, columnspan=3, padx=20, pady=(20, 15), sticky="w")
+        
+        # Input type selection
+        ctk.CTkLabel(
+            input_frame,
+            text="Input Type:",
+            font=ctk.CTkFont(size=12, weight="bold")
+        ).grid(row=1, column=0, padx=20, pady=5, sticky="w")
+        
+        self.splitter_input_type_var = ctk.StringVar(value="single_file")
+        self.splitter_single_radio = ctk.CTkRadioButton(
+            input_frame,
+            text="Single Sprite Sheet",
+            variable=self.splitter_input_type_var,
+            value="single_file",
+            font=ctk.CTkFont(size=10),
+            command=self._on_splitter_input_type_change
+        )
+        self.splitter_single_radio.grid(row=1, column=1, padx=10, pady=5, sticky="w")
+        
+        self.splitter_folder_radio = ctk.CTkRadioButton(
+            input_frame,
+            text="Folder (Batch Process)",
+            variable=self.splitter_input_type_var,
+            value="folder",
+            font=ctk.CTkFont(size=10),
+            command=self._on_splitter_input_type_change
+        )
+        self.splitter_folder_radio.grid(row=1, column=2, padx=10, pady=5, sticky="w")
+        
+        # Input path
+        ctk.CTkLabel(
+            input_frame,
+            text="Input Path:",
+            font=ctk.CTkFont(size=12, weight="bold")
+        ).grid(row=2, column=0, padx=20, pady=5, sticky="w")
+        
+        self.splitter_input_path_var = ctk.StringVar()
+        self.splitter_input_entry = ctk.CTkEntry(
+            input_frame,
+            textvariable=self.splitter_input_path_var,
+            placeholder_text="Select sprite sheet file or folder...",
+            height=35,
+            corner_radius=8
+        )
+        self.splitter_input_entry.grid(row=2, column=1, padx=10, pady=5, sticky="ew")
+        
+        self.splitter_browse_input_btn = ctk.CTkButton(
+            input_frame,
+            text="🎯 SELECT",
+            command=self._select_splitter_input,
+            width=100,
+            height=35,
+            corner_radius=8,
+            fg_color=self.colors["accent"],
+            hover_color=self.colors["primary"]
+        )
+        self.splitter_browse_input_btn.grid(row=2, column=2, padx=20, pady=5)
+        
+        # Output folder
+        ctk.CTkLabel(
+            input_frame,
+            text="Output Folder:",
+            font=ctk.CTkFont(size=12, weight="bold")
+        ).grid(row=3, column=0, padx=20, pady=5, sticky="w")
+        
+        self.splitter_output_folder_var = ctk.StringVar()
+        self.splitter_output_entry = ctk.CTkEntry(
+            input_frame,
+            textvariable=self.splitter_output_folder_var,
+            placeholder_text="Select output folder for frames...",
+            height=35,
+            corner_radius=8
+        )
+        self.splitter_output_entry.grid(row=3, column=1, padx=10, pady=(5, 20), sticky="ew")
+        
+        self.splitter_browse_output_btn = ctk.CTkButton(
+            input_frame,
+            text="💾 SELECT",
+            command=self._select_splitter_output_folder,
+            width=100,
+            height=35,
+            corner_radius=8,
+            fg_color=self.colors["accent"],
+            hover_color=self.colors["primary"]
+        )
+        self.splitter_browse_output_btn.grid(row=3, column=2, padx=20, pady=(5, 20))
+        
+        # File count display
+        self.splitter_file_count_label = ctk.CTkLabel(
+            input_frame,
+            text="📊 Ready to select input...",
+            font=ctk.CTkFont(size=10),
+            text_color=self.colors["primary"]
+        )
+        self.splitter_file_count_label.grid(row=4, column=0, columnspan=3, padx=20, pady=(0, 20), sticky="w")
+    
+    def _build_splitter_settings_section(self, parent):
+        """Build the settings section for sprite sheet splitter"""
+        settings_frame = ctk.CTkFrame(parent, corner_radius=15)
+        settings_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=10)
+        settings_frame.grid_columnconfigure((0, 1), weight=1)
+        
+        # Section title
+        ctk.CTkLabel(
+            settings_frame,
+            text="⚙️ GRID CONFIGURATION",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color=self.colors["secondary"]
+        ).grid(row=0, column=0, columnspan=2, padx=20, pady=(20, 15), sticky="w")
+        
+        # Grid dimensions
+        # Rows
+        rows_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
+        rows_frame.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
+        
+        ctk.CTkLabel(
+            rows_frame,
+            text="Rows:",
+            font=ctk.CTkFont(size=12, weight="bold")
+        ).pack(anchor="w", padx=5)
+        
+        self.splitter_rows_var = ctk.StringVar(value="4")
+        self.splitter_rows_entry = ctk.CTkEntry(
+            rows_frame,
+            textvariable=self.splitter_rows_var,
+            width=80,
+            height=30,
+            placeholder_text="4"
+        )
+        self.splitter_rows_entry.pack(padx=5, pady=2)
+        
+        # Columns
+        cols_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
+        cols_frame.grid(row=1, column=1, padx=10, pady=10, sticky="ew")
+        
+        ctk.CTkLabel(
+            cols_frame,
+            text="Columns:",
+            font=ctk.CTkFont(size=12, weight="bold")
+        ).pack(anchor="w", padx=5)
+        
+        self.splitter_cols_var = ctk.StringVar(value="4")
+        self.splitter_cols_entry = ctk.CTkEntry(
+            cols_frame,
+            textvariable=self.splitter_cols_var,
+            width=80,
+            height=30,
+            placeholder_text="4"
+        )
+        self.splitter_cols_entry.pack(padx=5, pady=2)
+        
+        # Grid info display
+        info_frame = ctk.CTkFrame(settings_frame, fg_color="transparent")
+        info_frame.grid(row=2, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
+        
+        self.splitter_grid_info_label = ctk.CTkLabel(
+            info_frame,
+            text="Grid: 4×4 = 16 frames per sheet",
+            font=ctk.CTkFont(size=10),
+            text_color=self.colors["primary"]
+        )
+        self.splitter_grid_info_label.pack(anchor="w", padx=10, pady=5)
+        
+        # Update grid info initially
+        self._update_splitter_grid_info()
+    
+    def _build_splitter_action_buttons(self, parent):
+        """Build action buttons for sprite sheet splitter"""
+        action_frame = ctk.CTkFrame(parent, corner_radius=15)
+        action_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=20)
+        action_frame.grid_columnconfigure((0, 1), weight=1)
+        
+        # Scan button
+        ctk.CTkButton(
+            action_frame,
+            text="🔍 SCAN INPUT",
+            command=self._scan_splitter_input,
+            height=45,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color=self.colors["accent"],
+            hover_color=self.colors["primary"],
+            corner_radius=15
+        ).grid(row=0, column=0, padx=10, pady=15, sticky="ew")
+        
+        # Split button
+        ctk.CTkButton(
+            action_frame,
+            text="✂️ SPLIT SPRITE SHEETS",
+            command=self._split_sprite_sheets,
+            height=45,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color=self.colors["primary"],
+            hover_color=self.colors["secondary"],
+            corner_radius=15
+        ).grid(row=0, column=1, padx=10, pady=15, sticky="ew")
+    
     def run(self):
         """Start the application"""
         self.root.mainloop()
+    
+    def _on_splitter_input_type_change(self):
+        """Handle splitter input type change"""
+        input_type = self.splitter_input_type_var.get()
+        if input_type == "single_file":
+            self.splitter_input_entry.configure(placeholder_text="Select sprite sheet file...")
+        else:
+            self.splitter_input_entry.configure(placeholder_text="Select folder containing sprite sheets...")
+        # Clear current selection
+        self.splitter_input_path_var.set("")
+        self.splitter_file_count_label.configure(text="📊 Ready to select input...")
+    
+    def _select_splitter_input(self):
+        """Select input for sprite sheet splitter"""
+        input_type = self.splitter_input_type_var.get()
+        
+        if input_type == "single_file":
+            file_path = filedialog.askopenfilename(
+                title="🎯 Select Sprite Sheet",
+                filetypes=[("Image files", "*.png *.jpg *.jpeg *.webp *.bmp *.gif")]
+            )
+            if file_path:
+                self.splitter_input_path_var.set(file_path)
+                self._scan_splitter_input()
+        else:
+            folder_path = filedialog.askdirectory(title="🎯 Select Sprite Sheets Folder")
+            if folder_path:
+                self.splitter_input_path_var.set(folder_path)
+                self._scan_splitter_input()
+    
+    def _select_splitter_output_folder(self):
+        """Select output folder for sprite sheet splitter"""
+        folder = filedialog.askdirectory(title="💾 Select Output Folder")
+        if folder:
+            self.splitter_output_folder_var.set(folder)
+    
+    def _scan_splitter_input(self):
+        """Scan the splitter input and update file counts"""
+        input_path = self.splitter_input_path_var.get()
+        input_type = self.splitter_input_type_var.get()
+        
+        if not input_path:
+            self.splitter_file_count_label.configure(text="📊 Select input path to scan...")
+            return
+        
+        try:
+            if input_type == "single_file":
+                if os.path.isfile(input_path):
+                    # Check if it's a valid image
+                    ext = os.path.splitext(input_path)[1].lower()
+                    if ext in ['.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif']:
+                        self.splitter_file_count_label.configure(text="📊 Ready to split 1 sprite sheet")
+                        self.status_label.configure(text="🟡 Ready to split sprite sheet")
+                    else:
+                        self.splitter_file_count_label.configure(text="❌ Selected file is not a supported image format")
+                        self._show_error_dialog("Invalid File", "Please select a valid image file (PNG, JPG, WebP, etc.)")
+                else:
+                    self.splitter_file_count_label.configure(text="❌ Selected file does not exist")
+            else:  # folder
+                if os.path.isdir(input_path):
+                    image_files = self.image_processor.get_image_files(input_path)
+                    count = len(image_files)
+                    if count > 0:
+                        self.splitter_file_count_label.configure(text=f"📊 Found {count} sprite sheet(s) to process")
+                        self.status_label.configure(text="🟡 Ready to split sprite sheets")
+                    else:
+                        self.splitter_file_count_label.configure(text="📊 No image files found in folder")
+                        self._show_error_dialog("No Images", "No supported image files found in the selected folder.")
+                else:
+                    self.splitter_file_count_label.configure(text="❌ Selected folder does not exist")
+                    
+        except Exception as e:
+            self.splitter_file_count_label.configure(text=f"❌ Scan error: {str(e)}")
+    
+    def _update_splitter_grid_info(self):
+        """Update splitter grid information"""
+        try:
+            rows_text = self.splitter_rows_var.get()
+            cols_text = self.splitter_cols_var.get()
+            
+            rows = int(rows_text) if rows_text.isdigit() and int(rows_text) > 0 else 4
+            cols = int(cols_text) if cols_text.isdigit() and int(cols_text) > 0 else 4
+            
+            total_frames = rows * cols
+            self.splitter_grid_info_label.configure(text=f"Grid: {rows}×{cols} = {total_frames} frames per sheet")
+            
+        except (ValueError, AttributeError):
+            self.splitter_grid_info_label.configure(text="Grid: 4×4 = 16 frames per sheet")
+    
+    def _split_sprite_sheets(self):
+        """Split sprite sheets into individual frames"""
+        input_path = self.splitter_input_path_var.get()
+        output_folder = self.splitter_output_folder_var.get()
+        input_type = self.splitter_input_type_var.get()
+        
+        # Validate inputs
+        if not input_path:
+            self._show_error_dialog("Input Error", "Please select input path.")
+            return
+        
+        if not output_folder:
+            self._show_error_dialog("Output Error", "Please select output folder.")
+            return
+        
+        try:
+            # Get grid dimensions
+            rows = int(self.splitter_rows_var.get()) if self.splitter_rows_var.get().isdigit() else 4
+            cols = int(self.splitter_cols_var.get()) if self.splitter_cols_var.get().isdigit() else 4
+            
+            if rows <= 0 or cols <= 0:
+                self._show_error_dialog("Grid Error", "Rows and columns must be greater than 0.")
+                return
+            
+            self.status_label.configure(text="🔄 Splitting sprite sheets...")
+            self.root.update()
+            
+            if input_type == "single_file":
+                # Split single sprite sheet
+                success, created_frames = self.image_processor.split_sprite_sheet(
+                    input_path, output_folder, rows, cols
+                )
+                
+                if success and created_frames:
+                    self._show_splitter_results(created_frames, 1, 1, rows, cols)
+                    self.status_label.configure(text="✅ Sprite sheet split successfully")
+                else:
+                    self._show_error_dialog("Split Error", "Failed to split sprite sheet. Check the console for details.")
+                    self.status_label.configure(text="❌ Split failed")
+                    
+            else:  # folder batch processing
+                # Split multiple sprite sheets
+                success_count, total_count, all_frames = self.image_processor.split_sprite_sheets_batch(
+                    input_path, output_folder, rows, cols
+                )
+                
+                if success_count > 0:
+                    self._show_batch_splitter_results(success_count, total_count, all_frames, rows, cols)
+                    self.status_label.configure(text=f"✅ Split {success_count}/{total_count} sprite sheets")
+                else:
+                    self._show_error_dialog("Batch Split Error", "Failed to split any sprite sheets. Check the console for details.")
+                    self.status_label.configure(text="❌ Batch split failed")
+                    
+        except ValueError as e:
+            self._show_error_dialog("Validation Error", str(e))
+            self.status_label.configure(text="❌ Validation failed")
+        except Exception as e:
+            self._show_error_dialog("Processing Error", f"An error occurred: {str(e)}")
+            self.status_label.configure(text="❌ Processing failed")
+    
+    def _show_splitter_results(self, created_frames, sheet_rows, sheet_cols, grid_rows, grid_cols):
+        """Show results of sprite sheet splitting"""
+        total_frames = sheet_rows * sheet_cols
+        summary_parts = [
+            f"• Split into {len(created_frames)} frames",
+            f"• Grid: {grid_rows}×{grid_cols} = {total_frames} frames per sheet",
+            "• Created files:"
+        ]
+        
+        for frame in created_frames:
+            summary_parts.append(f"  - {os.path.basename(frame)}")
+        
+        self._show_success_dialog(
+            "Sprite Sheet Split Complete",
+            f"Successfully split sprite sheet into individual frames!\n\n"
+            f"📊 Summary:\n" + "\n".join(summary_parts)
+        )
+    
+    def _show_batch_splitter_results(self, success_count, total_count, all_frames, rows, cols):
+        """Show results of batch sprite sheet splitting"""
+        total_frames = rows * cols
+        summary_parts = [
+            f"• Processed {total_count} sprite sheet(s)",
+            f"• Successfully split {success_count} sprite sheet(s)",
+            f"• Grid: {rows}×{cols} = {total_frames} frames per sheet",
+            "• Created files:"
+        ]
+        
+        for frame in all_frames:
+            summary_parts.append(f"  - {os.path.basename(frame)}")
+        
+        self._show_success_dialog(
+            "Batch Sprite Sheet Split Complete",
+            f"Successfully processed batch of sprite sheets!\n\n"
+            f"📊 Summary:\n" + "\n".join(summary_parts)
+        )
