@@ -32,7 +32,7 @@ and a responsive GUI for interactive batch jobs.
 - **Modes:** GUI (CustomTkinter) and CLI-friendly entrypoints (see `main_v2.py`).
 - **Output:** Clean PNGs (alpha channel preserved); relative folder structure is preserved when scripting batch runs.
 - **Design:** SOLID + KISS — modular so removers, processors and the UI are separated and testable.
-- **Demo:** (https://www.youtube.com/watch?v=BJyfVY6PSzU&t=15s)
+- **Demo:** https://www.youtube.com/watch?v=BJyfVY6PSzU&t=15s
 
 ## Features ✅
 

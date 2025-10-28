@@ -1,6 +1,6 @@
 # Prompt Sequencer
 
-A powerful GUI application for automating prompt sequences to AI applications like ChatGPT, Stable Diffusion, ComfyUI, and more.
+A powerful GUI application for automating prompt sequences to AI applications like ChatGPT, Groq  and more.
 
 ## Features
 
