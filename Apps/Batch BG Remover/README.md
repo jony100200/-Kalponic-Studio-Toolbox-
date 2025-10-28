@@ -32,6 +32,7 @@ and a responsive GUI for interactive batch jobs.
 - **Modes:** GUI (CustomTkinter) and CLI-friendly entrypoints (see `main_v2.py`).
 - **Output:** Clean PNGs (alpha channel preserved); relative folder structure is preserved when scripting batch runs.
 - **Design:** SOLID + KISS — modular so removers, processors and the UI are separated and testable.
+- **Demo:** (https://www.youtube.com/watch?v=BJyfVY6PSzU&t=15s)
 
 ## Features ✅
 
@@ -156,13 +157,3 @@ license. If you later build other tools or paid wrappers that call this code, ke
 distributions separate — the core project here remains MIT.
 
 ---
-
-## Want me to help further? 💡
-
-I can help with any of the following as separate, optional tasks:
-
-- Draft a `RELEASE.md` with PyInstaller steps to build a distributable EXE on Windows.
-- Add small file-level wrapper scripts if you want simple `<src> <dst>` command-line calls.
-- Help write automated scripts that import `src/core/processor.py` for folder processing.
-
-Reply with which item you want next and I'll implement it.
