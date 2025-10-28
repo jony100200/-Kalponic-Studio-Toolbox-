@@ -20,6 +20,14 @@ A modern Python application for batch processing icons with random backgrounds a
 - **📋 Multi-Sheet Pagination**: Automatically creates multiple sheets when needed
 - **💎 Power-of-2 Canvas**: Optional power-of-2 canvas expansion for game engines
 
+### ✂️ Sprite Sheet Splitter Mode (NEW!)
+- **🔄 Reverse Operation**: Split existing sprite sheets back into individual frames
+- **📐 Grid-Based Extraction**: Extract frames using configurable row/column grid
+- **📁 Single & Batch Processing**: Process individual sheets or entire folders
+- **🎯 Smart Naming**: Frames named with row/column coordinates (e.g., `sheet_r01_c01.png`)
+- **✅ Dimension Validation**: Ensures sprite sheet dimensions are evenly divisible by grid
+- **⚡ Fast Processing**: Efficient cropping and saving of individual frames
+
 ### 🎨 Common Features
 - **🌌 Sci-Fi Dark Theme**: Modern CustomTkinter interface with futuristic styling
 - **🏗️ Clean Architecture**: Modular design following SOLID principles
@@ -98,7 +106,32 @@ The application features **two processing modes** accessible via tabs:
 ### 📝 Output Files
 - **Naming**: `<IconsFolderName>_sheet.png` or `<IconsFolderName>_sheet_N.png` for multiple sheets
 - **Format**: PNG with full transparency support
-- **Multi-Sheet**: Automatic indexing (_sheet_1, _sheet_2, etc.)
+- **Multi-Sheet**: Automatic indexing (_sheet_1, _sheet_2, etc.) for pagination
+
+## ✂️ Mode 3: Sprite Sheet Splitter
+
+### 📁 Input Selection
+1. **Input Type**: Choose between Single Sprite Sheet or Folder (Batch Processing)
+2. **Input Path**: Select individual sprite sheet file or folder containing multiple sheets
+3. **Output Folder**: Choose where to save extracted frames
+
+### ⚙️ Grid Configuration
+- **Rows**: Number of rows in the sprite sheet grid (default: 4)
+- **Columns**: Number of columns in the sprite sheet grid (default: 4)
+- **📊 Grid Info**: Real-time display of total frames per sheet
+
+### 🎯 Processing Behavior
+1. **Dimension Validation**: Verifies sprite sheet dimensions are evenly divisible by grid
+2. **Frame Extraction**: Crops each frame using calculated grid coordinates
+3. **Smart Naming**: Frames named as `<sheet_name>_r<row>_c<col>.png` (zero-padded)
+4. **Batch Processing**: Processes all image files in selected folder
+5. **Error Handling**: Skips invalid files and reports processing status
+
+### 📝 Output Files
+- **Frame Naming**: `<original_name>_r01_c01.png`, `<original_name>_r01_c02.png`, etc.
+- **Format**: PNG with preserved transparency and original quality
+- **Organization**: All frames saved to selected output folder
+- **Batch Mode**: Frames from multiple sheets saved to same output folder
 
 ### 📁 Output Formats
 
@@ -131,6 +164,15 @@ The application features **two processing modes** accessible via tabs:
 6. **Auto-Pagination**: Creates multiple sheets when icon count exceeds grid capacity
 7. **Power-of-2 Expansion**: Optionally expands canvas to power-of-2 dimensions
 
+### Sprite Sheet Splitter Workflow
+1. **Input Validation**: Verifies selected file/folder exists and contains valid images
+2. **Grid Compatibility**: Checks sprite sheet dimensions are divisible by row/column grid
+3. **Frame Calculation**: Computes frame dimensions and coordinates for each grid cell
+4. **Sequential Extraction**: Crops and saves each frame in row-major order
+5. **Smart Naming**: Generates coordinate-based filenames for easy identification
+6. **Batch Processing**: Repeats process for all sprite sheets in folder mode
+7. **Progress Reporting**: Shows success/failure counts and total frames created
+
 ## 🛡️ Reliability Features
 
 - **Input Validation**: Comprehensive folder and file validation before processing
@@ -157,6 +199,14 @@ The application features **two processing modes** accessible via tabs:
 - **Bottom Margin Support**: Extra space below sprites within cells
 - **Power-of-2 Canvas**: Optional expansion for game engine compatibility
 - **Multi-Sheet Pagination**: Automatic sheet creation when grid capacity exceeded
+
+### Sprite Sheet Splitter
+- **Grid-Based Extraction**: Precise frame extraction using row/column coordinates
+- **Dimension Validation**: Ensures even divisibility for clean frame separation
+- **Coordinate Naming**: Systematic naming with row/column identifiers
+- **Batch Folder Processing**: Processes entire directories of sprite sheets
+- **Format Preservation**: Maintains original image format and quality
+- **Error Resilience**: Continues processing despite individual file errors
 
 ## 🏗️ Architecture
 
@@ -204,3 +254,9 @@ src/
 - **Mobile Apps**: Optimized sprite sheets for memory-efficient rendering
 - **Web Development**: Transparent icon sets with consistent grid layout
 - **Animation**: Frame-based animation sheets with precise positioning
+
+### Sprite Sheet Splitter
+- **Asset Extraction**: Extracting individual frames from existing sprite atlases
+- **Animation Breakdown**: Separating animation frames for editing or reuse
+- **Legacy Asset Recovery**: Converting old sprite sheets to individual files
+- **Cross-Platform Conversion**: Preparing assets for engines requiring individual frames
