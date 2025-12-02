@@ -112,6 +112,7 @@ public class KSSpriteEffects : EditorWindow
         result.ReadPixels(new Rect(0, 0, original.width, original.height), 0, 0);
         result.Apply();
 
+        RenderTexture.active = null; // Reset active render texture
         RenderTexture.ReleaseTemporary(rt);
         return result;
     }
