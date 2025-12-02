@@ -1,5 +1,5 @@
 {
-  "target_window": "Create images prompts",
+  "target_window": "2D HD Game Assets - Apocalyptic assets request",
   "initial_delay": 8,
   "text_paste_enter_grace": 1500,
   "text_generation_wait": 180,
@@ -14,6 +14,13 @@
   "text_input_folder": "I:/My Drive/___Assets for Sale/Low Poly Objects/Weapon Racks",
   "image_input_folder": "I:/My Drive/___Assets for Sale/3D Char refs/24th Oct 2025",
   "global_prompt_file": "I:/My Drive/___Assets for Sale/Universal Promps/CharPrompts/Force A Pose.txt",
-  "image_queue_mode": false,
-  "image_queue_items": []
+  "image_queue_mode": true,
+  "image_queue_items": [
+    {
+      "id": "3ec732db-cc74-4613-94dd-c8c469677a38",
+      "image_folder": "G:/__AI Game Assets/Apocalyptic 3D models/Props/Misc/Back",
+      "prompt_file": "I:/My Drive/___Assets for Sale/Low Poly Objects/Universal Image-to-Asset Prompt - Stylized LP.txt",
+      "name": "Back"
+    }
+  ]
 }

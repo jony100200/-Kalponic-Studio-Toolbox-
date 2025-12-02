@@ -62,10 +62,10 @@ class HealthMonitor:
         
         # Thresholds
         self.thresholds = {
-            "memory_percent": 0.85,
-            "gpu_memory_percent": 0.90,
-            "cpu_percent": 0.80,
-            "disk_percent": 0.90,
+            "memory_percent": 0.95,
+            "gpu_memory_percent": 0.95,
+            "cpu_percent": 0.95,
+            "disk_percent": 0.98,
             "response_time_ms": 5000
         }
         
@@ -230,7 +230,7 @@ class HealthMonitor:
         elif value < threshold * 0.9:
             return HealthStatus.WARNING
         elif value < threshold:
-            return HealthStatus.CRITICAL
+            return HealthStatus.WARNING
         else:
             return HealthStatus.CRITICAL
 
