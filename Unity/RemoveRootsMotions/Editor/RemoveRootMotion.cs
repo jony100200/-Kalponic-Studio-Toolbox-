@@ -7,7 +7,7 @@ using System.Linq;
 public class RemoveRootMotion : EditorWindow
 {
     // Add the option to open this window from the Unity editor menu
-    [MenuItem("Tools/Remove Root Motion")]
+    [MenuItem("Tools/Kalponic Studio/Remove Root Motion")]
     public static void ShowWindow()
     {
         GetWindow<RemoveRootMotion>("Remove Root Motion");

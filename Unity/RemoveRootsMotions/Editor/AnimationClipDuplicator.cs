@@ -6,7 +6,7 @@ using System.Linq;
 
 public class AnimationClipDuplicator : EditorWindow
 {
-    [MenuItem("Tools/Duplicate Animation Clips")]
+    [MenuItem("Tools/Kalponic Studio/Duplicate Animation Clips")]
     public static void ShowWindow()
     {
         GetWindow<AnimationClipDuplicator>("Duplicate Animation Clips");
