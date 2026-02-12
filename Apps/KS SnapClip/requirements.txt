@@ -1,0 +1,6 @@
+customtkinter
+Pillow
+mss
+screeninfo
+pywin32; platform_system == 'Windows'
+# optional: keyboard or pynput for hotkeys (opt-in)

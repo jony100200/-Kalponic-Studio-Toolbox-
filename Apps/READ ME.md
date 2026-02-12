@@ -9,7 +9,7 @@ The goal: make it easy to reference, reuse, and eventually integrate any of thes
 
 Below are the **apps and scripts** in this folder with a short description and the primary interface (GUI / CLI / script).
 
-- `Area_Screenshot_Tool.py` — Interactive area screenshot tool with GUI overlay, multi-monitor support, and sequential naming. (GUI)
+- `KS SnapClip/` — Clipboard-first screenshot tool (area/fullscreen capture, history, copy to clipboard). (GUI; MVP)
 - `Batch BG Remover/` — Batch background removal with GUI and CLI, retry/manifest support and modular processors. (GUI + CLI; Working)
 - `Batch-cleanup tool/` — Fringe removal and alpha edge refinement for AI cutouts (CustomTkinter GUI). (GUI; Working)
 - `FastPBR_MapMaker/` — Single-file PBR map helper script for quick map generation. (Script / Prototype)
@@ -37,15 +37,11 @@ Below are the **apps and scripts** in this folder with a short description and t
 ## ✅ Status: What works & what is WIP
 
 ### ✅ Working / Stable
-- `Area_Screenshot_Tool.py` — GUI screenshot tool (works; interactive overlay). ✅
+- `KS SnapClip/` — Clipboard-first screenshot tool (area/fullscreen capture, history, copy to clipboard). (GUI; MVP)
 - `Batch BG Remover/` — GUI + CLI batch background removal (tested entrypoints & README). ✅
 - `Batch-cleanup tool/` — Fringe removal and alpha refinement (GUI present and documented). ✅
 - `ImageResize/` — Batch resizer with GUI & CLI, presets and tests. ✅
-- `KS MetaMaker/` — AI-driven tagging & dataset exporter (readme, tests present). ✅
-- `KS SnapStudio/` — Material preview capture & export (GUI + CLI documented). ✅
 - `KSTexturePresentation/` — Icon/sprite utilities (GUI + CLI). ✅
-- `KS_PDF_Studio/` — PDF processing suite with API & web interface. ✅
-- `KS_Seamless_Checker/` — Seam/tile checker with GUI and tests. ✅
 - `Model Launcher/` — Model picker UI for local models. ✅
 - `Universal Model Launcher/` — V4 GUI + loader present (feature-rich). ✅
 - `PromptSender2ChatGP/` — Prompt & image sender to local ChatGP-style servers. ✅
@@ -54,6 +50,16 @@ Below are the **apps and scripts** in this folder with a short description and t
 - `TranscriptMaker/` — Batch transcription using faster-whisper (CLI works). ✅
 
 ### ⚠️ WIP / Needs verification or UI
+- `KS AutoModel/` — **WIP**: design document and core modules present; **no polished UI** yet. Action: implement minimal UI + plugin API. ⚠️
+- `Local AI Model Laucher/` — **WIP**: helper scripts and prompts exist; **no launcher UI**. Action: consolidate with `Model Launcher` or Universal launcher. ⚠️
+- `KS Sprite Splitter/` — **Needs verification**: has README & GUI launcher but **needs integration tests and runtime validation** on sample sprites. ⚠️
+- `Pathline/` — **Empty / Placeholder**: no code. Action: decide scope or remove placeholder. ⚠️
+- `sprite_sheet_splitter/` — **Empty**: placeholder only. Action: either remove or implement splitting logic. ⚠️
+- `FastPBR_MapMaker/` — **Prototype script**: useful but minimal UX; consider adding tests or CLI args. ⚠️
+- `KS_PDF_Studio/` — **WIP (Not functioning)**: API and web interface present but currently failing in runtime tests; Action: add failing reproducible test and debug deployment. ⚠️
+- `KS_Seamless_Checker/` — **WIP (Not functioning)**: GUI present but some workflows fail on launch or processing; Action: add smoke tests and fix GUI/process integration. ⚠️
+- `KS MetaMaker/` — **WIP (Not functioning)**: readme/tests present but end-to-end runs fail in parts; Action: run full pipeline smoke test, fix model loading & exports. ⚠️
+- `KS SnapStudio/` — **WIP (Not functioning)**: capture/export workflows report errors in processing; Action: add repro steps and unit tests for capture/mask/export. ⚠️
 - `KS AutoModel/` — **WIP**: design document and core modules present; **no polished UI** yet. Action: implement minimal UI + plugin API. ⚠️
 - `Local AI Model Laucher/` — **WIP**: helper scripts and prompts exist; **no launcher UI**. Action: consolidate with `Model Launcher` or Universal launcher. ⚠️
 - `KS Sprite Splitter/` — **Needs verification**: has README & GUI launcher but **needs integration tests and runtime validation** on sample sprites. ⚠️
