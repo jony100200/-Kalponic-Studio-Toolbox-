@@ -18,6 +18,11 @@ class Settings:
     filename_pattern: str = "{prefix}_{window}_{timestamp}.png"
     max_history: int = 20
     use_legacy_input_folder: bool = False
+    start_minimized: bool = True
+    hotkeys_enabled: bool = False
+    hotkey_area: str = "<ctrl>+<alt>+s"
+    hotkey_window: str = "<ctrl>+<alt>+w"
+    hotkey_monitor: str = "<ctrl>+<alt>+m"
 
 
 DEFAULT_SETTINGS = Settings()

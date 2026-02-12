@@ -9,7 +9,7 @@ import customtkinter as ctk
 from PIL import ImageTk
 from capture import capture_fullscreen, capture_area
 from store import CaptureStore
-from clipboard_win import copy_image
+from clipboard_win import default_provider
 
 
 store = CaptureStore(max_items=20)
@@ -29,6 +29,14 @@ def main():
     from utils import generate_filename
 
     settings = load_settings()
+    # start minimized to tray option
+    start_minimized = settings.start_minimized
+    start_in_tray = start_minimized
+    # hotkeys
+    hotkeys_enabled = settings.hotkeys_enabled
+    hotkey_area = settings.hotkey_area
+    hotkey_window = settings.hotkey_window
+    hotkey_monitor = settings.hotkey_monitor
 
     # Right preview
     right = ctk.CTkFrame(app)
@@ -67,14 +75,47 @@ def main():
     ctk.CTkEntry(left, textvariable=app._ast_widgets["prefix_var"], width=200).grid(row=1, column=1, sticky="w")
 
     app._ast_widgets["autosave_var"] = ctk.BooleanVar(value=settings.auto_save)
-    ctk.CTkCheckBox(left, text="Auto-save captures to output folder", variable=app._ast_widgets["autosave_var"]).grid(row=2, column=1, pady=5, sticky="w")
+    autosave_cb = ctk.CTkCheckBox(left, text="Auto-save captures to output folder", variable=app._ast_widgets["autosave_var"])
+    autosave_cb.grid(row=2, column=1, pady=5, sticky="w")
 
     app._ast_widgets["autocopy_var"] = ctk.BooleanVar(value=settings.auto_copy)
-    ctk.CTkCheckBox(left, text="Auto-copy to clipboard after capture", variable=app._ast_widgets["autocopy_var"]).grid(row=3, column=1, pady=5, sticky="w")
+    autocopy_cb = ctk.CTkCheckBox(left, text="Auto-copy to clipboard after capture", variable=app._ast_widgets["autocopy_var"])
+    autocopy_cb.grid(row=3, column=1, pady=5, sticky="w")
 
     # advanced legacy option (hidden by default)
     app._ast_widgets["legacy_var"] = ctk.BooleanVar(value=settings.use_legacy_input_folder)
-    ctk.CTkCheckBox(left, text="Use legacy input-folder for naming (advanced)", variable=app._ast_widgets["legacy_var"]).grid(row=4, column=1, pady=5, sticky="w")
+    legacy_cb = ctk.CTkCheckBox(left, text="Use legacy input-folder for naming (advanced)", variable=app._ast_widgets["legacy_var"]) 
+    legacy_cb.grid(row=4, column=1, pady=5, sticky="w")
+
+    # Start minimized / tray and hotkeys
+    app._ast_widgets["start_min_var"] = ctk.BooleanVar(value=settings.start_minimized)
+    start_min_cb = ctk.CTkCheckBox(left, text="Start minimized to tray", variable=app._ast_widgets["start_min_var"]) 
+    start_min_cb.grid(row=5, column=1, pady=5, sticky="w")
+
+    app._ast_widgets["hotkeys_enabled_var"] = ctk.BooleanVar(value=settings.hotkeys_enabled)
+    hotkey_cb = ctk.CTkCheckBox(left, text="Enable global hotkeys (opt-in)", variable=app._ast_widgets["hotkeys_enabled_var"]) 
+    hotkey_cb.grid(row=6, column=1, pady=5, sticky="w")
+
+    # callbacks to persist settings when changed
+    def on_setting_change(*_):
+        settings.output_folder = app._ast_widgets["output_folder_var"].get()
+        settings.filename_prefix = app._ast_widgets["prefix_var"].get()
+        settings.auto_save = app._ast_widgets["autosave_var"].get()
+        settings.auto_copy = app._ast_widgets["autocopy_var"].get()
+        settings.use_legacy_input_folder = app._ast_widgets["legacy_var"].get()
+        settings.start_minimized = app._ast_widgets["start_min_var"].get()
+        settings.hotkeys_enabled = app._ast_widgets["hotkeys_enabled_var"].get()
+        from settings import save_settings
+        save_settings(settings)
+
+    # attach traces
+    app._ast_widgets["output_folder_var"].trace_add("write", lambda *_: on_setting_change())
+    app._ast_widgets["prefix_var"].trace_add("write", lambda *_: on_setting_change())
+    app._ast_widgets["autosave_var"].trace_add("write", lambda *_: on_setting_change())
+    app._ast_widgets["autocopy_var"].trace_add("write", lambda *_: on_setting_change())
+    app._ast_widgets["legacy_var"].trace_add("write", lambda *_: on_setting_change())
+    app._ast_widgets["start_min_var"].trace_add("write", lambda *_: on_setting_change())
+    app._ast_widgets["hotkeys_enabled_var"].trace_add("write", lambda *_: on_setting_change())
 
     btn_full = ctk.CTkButton(left, text="Capture Fullscreen", command=lambda: do_capture(app))
     btn_full.grid(row=6, column=0, columnspan=2, pady=6)
@@ -91,7 +132,114 @@ def main():
     # populate initial history
     rebuild_history(app)
 
+    # start tray if configured (deferred until settings applied)
+    tray = None
+
+    # manage hotkey & tray lifecycle helpers
+    hk = None
+
+    def start_hotkeys():
+        nonlocal hk
+        if hk is not None:
+            return
+        try:
+            from hotkey import HotkeyManager
+            hk = HotkeyManager()
+            hk.add_hotkey(hotkey_area, lambda: do_capture(app, area=True))
+            hk.add_hotkey(hotkey_window, lambda: do_capture(app, area=False))
+            hk.add_hotkey(hotkey_monitor, lambda: do_capture(app, area=False))
+            hk.start()
+        except Exception:
+            pass
+
+    def stop_hotkeys():
+        nonlocal hk
+        if hk:
+            try:
+                hk.stop()
+            except Exception:
+                pass
+            hk = None
+
+    def start_tray():
+        nonlocal tray
+        if tray is not None:
+            return
+        try:
+            from tray import TrayIcon
+            def on_capture_area():
+                do_capture(app, area=True)
+            def on_capture_window():
+                # map to active window capture
+                from capture import capture_active_window
+                img = capture_active_window()
+                if img:
+                    store.add(img)
+                    preview(img, app)
+            def on_capture_monitor():
+                img = capture_fullscreen()
+                if img:
+                    store.add(img)
+                    preview(img, app)
+            def on_open_ui():
+                app.deiconify()
+            def on_exit():
+                try:
+                    app.quit()
+                except Exception:
+                    pass
+            tray = TrayIcon(on_capture_area, on_capture_window, on_capture_monitor, on_open_ui, on_exit)
+            tray.start()
+        except Exception:
+            tray = None
+
+    def stop_tray():
+        nonlocal tray
+        if tray:
+            try:
+                tray.stop()
+            except Exception:
+                pass
+            tray = None
+
+    # initialize based on settings
+    if settings.hotkeys_enabled:
+        start_hotkeys()
+    if settings.start_minimized:
+        start_tray()
+        app.withdraw()
+
+    # attach change hooks to toggle hotkeys/tray
+    def apply_runtime_settings(*_):
+        if app._ast_widgets["hotkeys_enabled_var"].get():
+            start_hotkeys()
+        else:
+            stop_hotkeys()
+        if app._ast_widgets["start_min_var"].get():
+            start_tray()
+            app.withdraw()
+        else:
+            stop_tray()
+            app.deiconify()
+
+    app._ast_widgets["hotkeys_enabled_var"].trace_add("write", lambda *_: apply_runtime_settings())
+    app._ast_widgets["start_min_var"].trace_add("write", lambda *_: apply_runtime_settings())
+
     app.mainloop()
+
+    # cleanup
+    if hk:
+        hk.stop()
+    if tray:
+        tray.stop()
+
+    app.mainloop()
+
+    # cleanup
+    if hk:
+        hk.stop()
+    if tray:
+        tray.stop()
 
 
 def do_capture(app, area: bool = False):

@@ -3,4 +3,6 @@ Pillow
 mss
 screeninfo
 pywin32; platform_system == 'Windows'
+pystray
+pynput
 # optional: keyboard or pynput for hotkeys (opt-in)

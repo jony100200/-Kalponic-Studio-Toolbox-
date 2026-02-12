@@ -32,7 +32,7 @@ try:
 except Exception:
     win32gui = None
 
-from area_overlay import select_region
+import area_overlay
 
 
 def _mss_shot_region(left: int, top: int, width: int, height: int) -> Image.Image:
@@ -79,7 +79,7 @@ def capture_area(delay: float = 0.0, monitor_index: int = 0) -> Optional[Image.I
     if delay > 0:
         time.sleep(delay)
 
-    region = select_region(monitor_index=monitor_index)
+    region = area_overlay.select_region(monitor_index=monitor_index)
     if not region:
         return None
 

@@ -46,7 +46,8 @@ except Exception:
     m.height = h
     monitors = [m]
 monitor_options = [f"Monitor {i+1}" for i in range(len(monitors))]
-selected_monitor = ctk.StringVar(value=monitor_options[0])
+# Avoid creating tkinter variables at import time; use plain default
+selected_monitor = monitor_options[0] if monitor_options else "Monitor 1"
 
 
 # === Reusable overlay function (non-CTk) ===
