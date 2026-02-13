@@ -20,9 +20,21 @@ class Settings:
     use_legacy_input_folder: bool = False
     start_minimized: bool = True
     hotkeys_enabled: bool = False
-    hotkey_area: str = "<ctrl>+<alt>+s"
-    hotkey_window: str = "<ctrl>+<alt>+w"
-    hotkey_monitor: str = "<ctrl>+<alt>+m"
+    # Default hotkeys: Ctrl+Shift+1/2/3
+    hotkey_area: str = "<ctrl>+<shift>+1"
+    hotkey_window: str = "<ctrl>+<shift>+2"
+    hotkey_monitor: str = "<ctrl>+<shift>+3"
+    # Instant Paste: simulate Ctrl+V after copy
+    instant_paste: bool = False
+    toast_enabled: bool = False
+    # AI optimization options
+    ai_optimization_enabled: bool = False
+    ai_max_width: int = 1024
+    ai_convert_to_png: bool = True
+    # First-run flag for startup toast
+    first_run: bool = True
+    # Window capture mode: 'active', 'click', or 'list'
+    window_capture_mode: str = 'click'  # default to click-to-select (recommended)
 
 
 DEFAULT_SETTINGS = Settings()

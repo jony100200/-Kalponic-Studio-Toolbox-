@@ -71,6 +71,15 @@ def capture_active_window() -> Optional[Image.Image]:
     return _mss_shot_region(left, top, width, height)
 
 
+def capture_rect(left: int, top: int, width: int, height: int) -> Optional[Image.Image]:
+    """Capture the specified rectangle (absolute screen coords) and return a PIL Image."""
+    if width <= 0 or height <= 0:
+        return None
+    try:
+        return _mss_shot_region(left, top, width, height)
+    except Exception:
+        return None
+
 def capture_area(delay: float = 0.0, monitor_index: int = 0) -> Optional[Image.Image]:
     """Capture an area selected by the user using the overlay.
 

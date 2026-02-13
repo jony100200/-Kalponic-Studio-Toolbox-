@@ -15,10 +15,30 @@ class HotkeyManager:
         self._listener = None
         self._thread = None
         self._running = False
+        self._enabled = True
+
+    def pause(self):
+        self._enabled = False
+
+    def resume(self):
+        self._enabled = True
+
+    def enabled(self) -> bool:
+        return self._enabled
 
     def add_hotkey(self, combo: str, callback):
-        """Add a hotkey combo string (pynput style) and a callback."""
-        self._hotkeys[combo] = callback
+        """Add a hotkey combo string (pynput style) and a callback.
+
+        The callback is wrapped so hotkeys can be paused/resumed.
+        """
+        def _wrapped():
+            if not self._enabled:
+                return
+            try:
+                callback()
+            except Exception:
+                pass
+        self._hotkeys[combo] = _wrapped
 
     def _run_listener(self):
         if keyboard is None:
@@ -48,3 +68,24 @@ class HotkeyManager:
             except Exception:
                 pass
         self._running = False
+
+    def update_hotkeys(self, hotkey_map: dict):
+        """Replace current hotkeys with a new hotkey->callback mapping and restart listener if running."""
+        # wrap callbacks to respect pause/resume state
+        wrapped = {}
+        for combo, cb in hotkey_map.items():
+            def _make(cb_):
+                def _wrapped():
+                    if not self._enabled:
+                        return
+                    try:
+                        cb_()
+                    except Exception:
+                        pass
+                return _wrapped
+            wrapped[combo] = _make(cb)
+        self._hotkeys = wrapped
+        # if a listener is running, restart it to pick up changes
+        if self._running:
+            self.stop()
+            self.start()

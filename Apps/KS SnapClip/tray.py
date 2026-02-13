@@ -39,8 +39,27 @@ class TrayIcon:
             pystray.MenuItem('Open UI', lambda : self.on_open_ui()),
             pystray.MenuItem('Exit', lambda : self.on_exit()),
         )
-        self.icon = pystray.Icon('ks_snapclip', img, 'KS SnapClip', menu)
-        self.icon.run()
+        # Tooltip shows running state
+        try:
+            self.icon = pystray.Icon('ks_snapclip', img, 'Capture Tool (Running)', menu)
+            # try to send a notification to the OS (may show a toast in Action Center)
+            try:
+                if hasattr(self.icon, 'notify'):
+                    try:
+                        self.icon.notify('KS SnapClip is running in the system tray')
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            self.icon.run()
+        except Exception as e:
+            logging.exception('Tray icon failed to run: %s', e)
+            # ensure icon cleaned up
+            try:
+                if self.icon:
+                    self.icon.stop()
+            except Exception:
+                pass
 
     def start(self):
         if pystray is None:

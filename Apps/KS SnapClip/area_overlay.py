@@ -119,6 +119,103 @@ def select_region(monitor_index: int = 0):
     return result['coords']
 
 
+# === Window click-to-select ===
+
+def select_window(monitor_index: int = 0):
+    """Allow the user to click a window to select it. Returns (left, top, right, bottom) or None if cancelled."""
+    try:
+        m = monitors[monitor_index]
+    except Exception:
+        m = monitors[0]
+
+    # If win32 is not available, fallback to select_region
+    try:
+        import win32gui
+        import win32con
+    except Exception:
+        return select_region(monitor_index=monitor_index)
+
+    root = tk.Tk()
+    root.overrideredirect(True)
+    root.geometry(f"{m.width}x{m.height}+{m.x}+{m.y}")
+    root.attributes("-topmost", True)
+    root.attributes("-alpha", 0.0)
+    root.config(cursor="cross")
+
+    canvas = tk.Canvas(root, bg="", highlightthickness=0)
+    canvas.pack(fill="both", expand=True)
+
+    highlight = None
+    result = {"coords": None}
+
+    def draw_highlight(rect_coords):
+        nonlocal highlight
+        # rect_coords is (l,t,r,b) in screen coords
+        l, t, r, b = rect_coords
+        # convert to canvas coordinates
+        x1 = l - m.x
+        y1 = t - m.y
+        x2 = r - m.x
+        y2 = b - m.y
+        if highlight is None:
+            highlight = canvas.create_rectangle(x1, y1, x2, y2, outline='cyan', width=3)
+        else:
+            canvas.coords(highlight, x1, y1, x2, y2)
+
+    def on_motion(event):
+        try:
+            # get absolute screen coordinates
+            sx = root.winfo_pointerx()
+            sy = root.winfo_pointery()
+            hwnd = win32gui.WindowFromPoint((sx, sy))
+            if not hwnd:
+                return
+            # get top-level ancestor
+            try:
+                anc = win32gui.GetAncestor(hwnd, win32con.GA_ROOTOWNER)
+            except Exception:
+                anc = hwnd
+            rect = win32gui.GetWindowRect(anc)
+            left, top, right, bottom = rect
+            # ensure rect intersects monitor
+            if right < m.x or left > (m.x + m.width) or bottom < m.y or top > (m.y + m.height):
+                return
+            draw_highlight((left, top, right, bottom))
+        except Exception:
+            pass
+
+    def on_click(event):
+        try:
+            sx = root.winfo_pointerx()
+            sy = root.winfo_pointery()
+            hwnd = win32gui.WindowFromPoint((sx, sy))
+            if not hwnd:
+                root.destroy()
+                return
+            try:
+                anc = win32gui.GetAncestor(hwnd, win32con.GA_ROOTOWNER)
+            except Exception:
+                anc = hwnd
+            rect = win32gui.GetWindowRect(anc)
+            left, top, right, bottom = rect
+            result['coords'] = (left, top, right, bottom)
+        except Exception:
+            result['coords'] = None
+        finally:
+            root.destroy()
+
+    def on_escape(event=None):
+        root.destroy()
+
+    canvas.bind("<Motion>", on_motion)
+    canvas.bind("<Button-1>", on_click)
+    root.bind("<Escape>", on_escape)
+
+    root.mainloop()
+
+    return result['coords']
+
+
 
 # Legacy demo GUI removed from import-time behavior. If you want to run a demo GUI for manual testing,
 # run this module directly (python area_overlay.py) which will launch a small demo UI.
