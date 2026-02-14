@@ -13,6 +13,7 @@ def default_targets() -> Dict[str, Dict[str, Any]]:
             "assume_open": True,
             "click_only_activation": True,
             "open_if_needed": False,
+            "command_open_in_test": False,
             "settle_delay_s": 0.2,
         },
         "gemini": {
@@ -22,6 +23,7 @@ def default_targets() -> Dict[str, Dict[str, Any]]:
             "assume_open": False,
             "click_only_activation": False,
             "open_if_needed": True,
+            "command_open_in_test": True,
             "settle_delay_s": 0.6,
         },
         "codex": {
@@ -31,6 +33,7 @@ def default_targets() -> Dict[str, Dict[str, Any]]:
             "assume_open": False,
             "click_only_activation": False,
             "open_if_needed": True,
+            "command_open_in_test": True,
             "settle_delay_s": 0.6,
         },
         "kilo": {
@@ -40,6 +43,7 @@ def default_targets() -> Dict[str, Dict[str, Any]]:
             "assume_open": False,
             "click_only_activation": False,
             "open_if_needed": True,
+            "command_open_in_test": True,
             "settle_delay_s": 0.6,
         },
         "cline": {
@@ -49,6 +53,7 @@ def default_targets() -> Dict[str, Dict[str, Any]]:
             "assume_open": False,
             "click_only_activation": False,
             "open_if_needed": True,
+            "command_open_in_test": True,
             "settle_delay_s": 0.6,
         },
     }
@@ -107,6 +112,8 @@ class AppConfig:
                     self.targets[name]["click_only_activation"] = bool(target["click_only_activation"])
                 if "open_if_needed" not in self.targets[name]:
                     self.targets[name]["open_if_needed"] = bool(target["open_if_needed"])
+                if "command_open_in_test" not in self.targets[name]:
+                    self.targets[name]["command_open_in_test"] = bool(target["command_open_in_test"])
                 if "settle_delay_s" not in self.targets[name]:
                     self.targets[name]["settle_delay_s"] = float(target["settle_delay_s"])
         if not self.active_target or self.active_target not in self.targets:

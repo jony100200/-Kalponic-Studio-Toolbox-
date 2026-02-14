@@ -84,6 +84,7 @@ def build_parser():
     self_test = sub.add_parser("self-test-targets")
     self_test.add_argument("--names", nargs="+", help="Targets to test. Defaults to enabled targets")
     self_test.add_argument("--no-clear", action="store_true", help="Do not clear probe text after typing")
+    self_test.add_argument("--no-open-commands", action="store_true", help="Do not use extension open commands during test")
 
     return parser
 
@@ -240,7 +241,16 @@ def main():
         all_ok = True
         for target in targets:
             probe_text = f"KS_CODEOPS_PROBE_{target.upper()}"
-            ok = sequencer.probe_target_input(target, probe_text, clear_after=not args.no_clear)
+            if args.no_open_commands:
+                allow_open = False
+            else:
+                allow_open = bool(sequencer._target_payload(target).get("command_open_in_test", False))
+            ok = sequencer.probe_target_input(
+                target,
+                probe_text,
+                clear_after=not args.no_clear,
+                allow_command_open=allow_open,
+            )
             all_ok = all_ok and ok
             print(f"{target}: {'ok' if ok else 'failed'}")
         if not all_ok:

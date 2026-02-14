@@ -161,11 +161,11 @@ class VSCodeAutomation:
     def _normalize_click_rel(self, rel: Dict[str, float]):
         rel = rel or {}
         x_rel = float(rel.get("x_rel", 0.86))
-        y_rel = float(rel.get("y_rel", 0.96))
+        y_rel = float(rel.get("y_rel", 0.90))
         if x_rel < 0.1 or x_rel > 0.95:
             x_rel = 0.86
-        if y_rel < 0.80 or y_rel > 0.995:
-            y_rel = 0.96
+        if y_rel < 0.78 or y_rel > 0.95:
+            y_rel = 0.90
         return x_rel, y_rel
 
     def focus_target_input(self, fallback_click: Dict[str, float] = None) -> bool:
@@ -176,7 +176,7 @@ class VSCodeAutomation:
             return False
         rel = fallback_click or self.config.fallback_click
         x_rel, y_rel = self._normalize_click_rel(rel)
-        y_candidates = [y_rel, 0.94, 0.92, 0.90]
+        y_candidates = [y_rel, max(0.78, y_rel - 0.03), max(0.78, y_rel - 0.06), min(0.95, y_rel + 0.02)]
         for y_try in y_candidates:
             click_x = int(window.left + (window.width * x_rel))
             click_y = int(window.top + (window.height * y_try))

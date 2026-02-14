@@ -68,7 +68,18 @@ class VSCodeSequencer:
             raise ValueError(f"Target not configured: {name}")
         return {"name": name, **target}
 
-    def activate_target(self, target_name: Optional[str] = None, force_open: bool = False) -> bool:
+    def _allow_command_open_for(self, target_name: Optional[str], force_no_send: bool) -> bool:
+        target = self._target_payload(target_name)
+        if not force_no_send:
+            return True
+        return bool(target.get("command_open_in_test", False))
+
+    def activate_target(
+        self,
+        target_name: Optional[str] = None,
+        force_open: bool = False,
+        allow_command_open: bool = True,
+    ) -> bool:
         target = self._target_payload(target_name)
         name = target["name"]
         if not self._is_target_enabled(name):
@@ -78,7 +89,7 @@ class VSCodeSequencer:
         assume_open = bool(target.get("assume_open", False))
         click_only_activation = bool(target.get("click_only_activation", False))
         ok = False
-        if force_open:
+        if force_open and allow_command_open:
             for attempt in range(1, 4):
                 ok = self.automation.activate_panel(
                     command=target.get("command"),
@@ -89,8 +100,14 @@ class VSCodeSequencer:
                     break
                 self._log(f"Target {name} force-open retry {attempt}/3")
                 time.sleep(0.12)
+        elif force_open and not allow_command_open:
+            self._log(f"Target {name} force-open suppressed in test mode")
+            ok = self.automation.focus_window()
         elif click_only_activation:
             self._log(f"Target {name} click-only activation: no command/icon interactions")
+            ok = self.automation.focus_window()
+        elif not allow_command_open:
+            self._log(f"Target {name} test-mode activation: no command/icon interactions")
             ok = self.automation.focus_window()
         elif assume_open:
             self._log(f"Target {name} assume-open mode: skipping open-chat command")
@@ -129,14 +146,20 @@ class VSCodeSequencer:
         self.config.save()
         self._log(f"Saved target fallback click for {name}: {value}")
 
-    def _focus_and_verify_target_input(self, target: Dict[str, Any], target_name: str) -> bool:
+    def _focus_and_verify_target_input(
+        self,
+        target: Dict[str, Any],
+        target_name: str,
+        allow_command_open: bool = True,
+    ) -> bool:
         base = target.get("fallback_click") or {}
         base_x = float(base.get("x_rel", 0.86))
         y_candidates = [
-            float(base.get("y_rel", 0.96)),
-            0.985,
-            0.97,
-            0.95,
+            float(base.get("y_rel", 0.90)),
+            0.92,
+            0.90,
+            0.88,
+            0.86,
             0.92,
         ]
         probe_text = f"KS_CODEOPS_INPUT_VERIFY_{target_name.upper()}"
@@ -152,9 +175,9 @@ class VSCodeSequencer:
                     self._log(f"Adjusted target click for {target_name}: {click}")
                 return True
 
-        if bool(target.get("open_if_needed", False)):
+        if bool(target.get("open_if_needed", False)) and allow_command_open:
             self._log(f"Input verify failed for {target_name}; trying open-if-needed path")
-            if self.activate_target(target_name, force_open=True):
+            if self.activate_target(target_name, force_open=True, allow_command_open=True):
                 for y_rel in y_candidates:
                     click = {"x_rel": base_x, "y_rel": y_rel}
                     if not self.automation.focus_target_input(click):
@@ -169,14 +192,23 @@ class VSCodeSequencer:
 
         return False
 
-    def send_text(self, text: str, press_enter: bool, target_name: Optional[str] = None):
+    def send_text(
+        self,
+        text: str,
+        press_enter: bool,
+        target_name: Optional[str] = None,
+        allow_command_open: bool = True,
+    ):
         target = self._target_payload(target_name)
         name = target["name"]
         self._log(f"Sending text via target: {name}")
-        if not self.activate_target(name):
-            self._log(f"Failed to activate target: {name}")
-            return False
-        if not self._focus_and_verify_target_input(target, name):
+        activated = self.activate_target(name, allow_command_open=allow_command_open)
+        if not activated:
+            self._log(f"Activation failed for {name}; trying in-place focus fallback")
+            if not self.automation.focus_window():
+                self._log(f"Failed to activate target: {name}")
+                return False
+        if not self._focus_and_verify_target_input(target, name, allow_command_open=allow_command_open):
             self._log(f"Failed input verification (clicked non-input area): {name}")
             return False
         py_ok = self.automation.send_text(text, press_enter=press_enter)
@@ -187,14 +219,23 @@ class VSCodeSequencer:
         ok = py_ok
         return ok
 
-    def send_image(self, image_path: str, press_enter: bool, target_name: Optional[str] = None):
+    def send_image(
+        self,
+        image_path: str,
+        press_enter: bool,
+        target_name: Optional[str] = None,
+        allow_command_open: bool = True,
+    ):
         target = self._target_payload(target_name)
         name = target["name"]
         self._log(f"Sending image via target {name}: {image_path}")
-        if not self.activate_target(name):
-            self._log(f"Failed to activate target: {name}")
-            return False
-        if not self._focus_and_verify_target_input(target, name):
+        activated = self.activate_target(name, allow_command_open=allow_command_open)
+        if not activated:
+            self._log(f"Activation failed for {name}; trying in-place focus fallback")
+            if not self.automation.focus_window():
+                self._log(f"Failed to activate target: {name}")
+                return False
+        if not self._focus_and_verify_target_input(target, name, allow_command_open=allow_command_open):
             self._log(f"Failed input verification (clicked non-input area): {name}")
             return False
         py_ok = self.automation.send_image(image_path, press_enter=press_enter)
@@ -205,14 +246,23 @@ class VSCodeSequencer:
         ok = py_ok
         return ok
 
-    def probe_target_input(self, target_name: str, probe_text: str, clear_after: bool = True) -> bool:
+    def probe_target_input(
+        self,
+        target_name: str,
+        probe_text: str,
+        clear_after: bool = True,
+        allow_command_open: bool = False,
+    ) -> bool:
         target = self._target_payload(target_name)
         name = target["name"]
         self._log(f"Probing target input: {name}")
-        if not self.activate_target(name):
-            self._log(f"Probe failed: target activation failed ({name})")
-            return False
-        if not self._focus_and_verify_target_input(target, name):
+        activated = self.activate_target(name, allow_command_open=allow_command_open)
+        if not activated:
+            self._log(f"Probe activation failed for {name}; trying in-place focus fallback")
+            if not self.automation.focus_window():
+                self._log(f"Probe failed: target activation failed ({name})")
+                return False
+        if not self._focus_and_verify_target_input(target, name, allow_command_open=allow_command_open):
             self._log(f"Probe failed: target input focus failed ({name})")
             return False
         ok = self.automation.probe_type_text(probe_text, clear_after=clear_after)
@@ -228,11 +278,11 @@ class VSCodeSequencer:
 
         candidate_points = []
         for x in [0.10, 0.14, 0.18, 0.22, 0.26, 0.30]:
-            for y in [0.90, 0.94, 0.97, 0.985]:
+            for y in [0.84, 0.88, 0.90, 0.92]:
                 candidate_points.append({"x_rel": x, "y_rel": y})
         candidate_points.extend([
-            {"x_rel": 0.82, "y_rel": 0.92},
-            {"x_rel": 0.86, "y_rel": 0.92},
+            {"x_rel": 0.82, "y_rel": 0.90},
+            {"x_rel": 0.86, "y_rel": 0.90},
         ])
 
         self._log(f"Auto-calibrating target click: {name}")
@@ -277,13 +327,25 @@ class VSCodeSequencer:
                 press_enter = False
             self._log(f"Step {idx}/{len(steps)}: {step_type} (target={step_target or self.config.active_target})")
             if step_type == "text":
-                if not self.send_text(step.get("content", ""), press_enter=press_enter, target_name=step_target):
+                allow_open = self._allow_command_open_for(step_target, force_no_send)
+                if not self.send_text(
+                    step.get("content", ""),
+                    press_enter=press_enter,
+                    target_name=step_target,
+                    allow_command_open=allow_open,
+                ):
                     return False
             elif step_type == "image":
                 path = step.get("path")
                 if not path:
                     raise ValueError(f"Step {idx} missing image path")
-                if not self.send_image(path, press_enter=press_enter, target_name=step_target):
+                allow_open = self._allow_command_open_for(step_target, force_no_send)
+                if not self.send_image(
+                    path,
+                    press_enter=press_enter,
+                    target_name=step_target,
+                    allow_command_open=allow_open,
+                ):
                     return False
             else:
                 raise ValueError(f"Unsupported step type: {step_type}")
@@ -310,6 +372,12 @@ class VSCodeSequencer:
                 raise ValueError("dispatch item missing target")
             if not content:
                 raise ValueError(f"dispatch item for target '{target}' missing content")
-            ok = self.send_text(content, press_enter=press_enter, target_name=target)
+            allow_open = self._allow_command_open_for(target, force_no_send)
+            ok = self.send_text(
+                content,
+                press_enter=press_enter,
+                target_name=target,
+                allow_command_open=allow_open,
+            )
             results[target] = bool(ok)
         return results
