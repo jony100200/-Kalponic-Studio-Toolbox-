@@ -265,6 +265,17 @@ class VSCodeAutomation:
 
         return False
 
+    def _dismiss_transient_ui(self):
+        if not self._is_vscode_active():
+            return
+        try:
+            pyautogui.press("escape")
+            time.sleep(0.04)
+            pyautogui.press("escape")
+            time.sleep(0.04)
+        except Exception:
+            pass
+
     def record_fallback_click(self, seconds: int = 4):
         if not self.focus_window():
             raise RuntimeError("Could not focus VS Code window")
@@ -279,9 +290,13 @@ class VSCodeAutomation:
         self.config.save()
         return self.config.fallback_click
 
-    def send_text(self, text: str, press_enter: bool = False) -> bool:
-        if not self.focus_input():
+    def send_text(self, text: str, press_enter: bool = False, assume_focused: bool = False) -> bool:
+        if not assume_focused:
+            if not self.focus_input():
+                return False
+        if not self._is_vscode_active():
             return False
+        self._dismiss_transient_ui()
         if not self._is_vscode_active():
             return False
         pyperclip.copy(text)
@@ -353,11 +368,15 @@ class VSCodeAutomation:
         if result != 0:
             raise RuntimeError("Failed to copy image to clipboard")
 
-    def send_image(self, image_path: str, press_enter: bool = False) -> bool:
+    def send_image(self, image_path: str, press_enter: bool = False, assume_focused: bool = False) -> bool:
         if not os.path.exists(image_path):
             raise FileNotFoundError(image_path)
-        if not self.focus_input():
+        if not assume_focused:
+            if not self.focus_input():
+                return False
+        if not self._is_vscode_active():
             return False
+        self._dismiss_transient_ui()
         if not self._is_vscode_active():
             return False
         self._copy_image_to_clipboard(image_path)

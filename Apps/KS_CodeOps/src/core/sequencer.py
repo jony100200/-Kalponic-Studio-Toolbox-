@@ -74,6 +74,14 @@ class VSCodeSequencer:
             return True
         return bool(target.get("command_open_in_test", False))
 
+    def _focus_window_with_retry(self, retries: int = 3, sleep_s: float = 0.12) -> bool:
+        for attempt in range(1, retries + 1):
+            if self.automation.focus_window():
+                return True
+            if attempt < retries:
+                time.sleep(sleep_s)
+        return False
+
     def activate_target(
         self,
         target_name: Optional[str] = None,
@@ -102,16 +110,16 @@ class VSCodeSequencer:
                 time.sleep(0.12)
         elif force_open and not allow_command_open:
             self._log(f"Target {name} force-open suppressed in test mode")
-            ok = self.automation.focus_window()
+            ok = self._focus_window_with_retry()
         elif click_only_activation:
             self._log(f"Target {name} click-only activation: no command/icon interactions")
-            ok = self.automation.focus_window()
+            ok = self._focus_window_with_retry()
         elif not allow_command_open:
             self._log(f"Target {name} test-mode activation: no command/icon interactions")
-            ok = self.automation.focus_window()
+            ok = self._focus_window_with_retry()
         elif assume_open:
             self._log(f"Target {name} assume-open mode: skipping open-chat command")
-            ok = self.automation.focus_window()
+            ok = self._focus_window_with_retry()
         else:
             for attempt in range(1, 4):
                 ok = self.automation.activate_panel(
@@ -205,13 +213,13 @@ class VSCodeSequencer:
         activated = self.activate_target(name, allow_command_open=allow_command_open)
         if not activated:
             self._log(f"Activation failed for {name}; trying in-place focus fallback")
-            if not self.automation.focus_window():
+            if not self._focus_window_with_retry():
                 self._log(f"Failed to activate target: {name}")
                 return False
         if not self._focus_and_verify_target_input(target, name, allow_command_open=allow_command_open):
             self._log(f"Failed input verification (clicked non-input area): {name}")
             return False
-        py_ok = self.automation.send_text(text, press_enter=press_enter)
+        py_ok = self.automation.send_text(text, press_enter=press_enter, assume_focused=True)
         if py_ok:
             self._log("Text sent" if press_enter else "Text typed (test mode, not sent)")
         else:
@@ -232,13 +240,13 @@ class VSCodeSequencer:
         activated = self.activate_target(name, allow_command_open=allow_command_open)
         if not activated:
             self._log(f"Activation failed for {name}; trying in-place focus fallback")
-            if not self.automation.focus_window():
+            if not self._focus_window_with_retry():
                 self._log(f"Failed to activate target: {name}")
                 return False
         if not self._focus_and_verify_target_input(target, name, allow_command_open=allow_command_open):
             self._log(f"Failed input verification (clicked non-input area): {name}")
             return False
-        py_ok = self.automation.send_image(image_path, press_enter=press_enter)
+        py_ok = self.automation.send_image(image_path, press_enter=press_enter, assume_focused=True)
         if py_ok:
             self._log("Image sent" if press_enter else "Image pasted (test mode, not sent)")
         else:
@@ -380,4 +388,71 @@ class VSCodeSequencer:
                 allow_command_open=allow_open,
             )
             results[target] = bool(ok)
+        return results
+
+    def run_target_test_sequence(self, targets: List[str], delay_between_s: float = 1.0, text_prefix: str = "KS_CODEOPS_SEQ") -> Dict[str, bool]:
+        if not targets:
+            raise ValueError("No targets provided for test sequence")
+
+        valid_targets = []
+        for name in targets:
+            if name not in self.config.targets:
+                raise ValueError(f"Unknown target: {name}")
+            if name not in valid_targets:
+                valid_targets.append(name)
+
+        self.set_enabled_targets(valid_targets)
+
+        results: Dict[str, bool] = {}
+        for index, name in enumerate(valid_targets, start=1):
+            self._log(f"[SEQUENCE] {index}/{len(valid_targets)} target={name}")
+            payload = f"{text_prefix}_{name.upper()}"
+            ok = self.send_text(
+                payload,
+                press_enter=False,
+                target_name=name,
+                allow_command_open=True,
+            )
+            results[name] = bool(ok)
+            self._log(f"[SEQUENCE] {'PASS' if ok else 'FAIL'} target={name}")
+            if index < len(valid_targets) and delay_between_s > 0:
+                time.sleep(delay_between_s)
+
+        return results
+
+    def test_targets_next(self, target_names: List[str], pause_s: float = 1.0) -> Dict[str, bool]:
+        results: Dict[str, bool] = {}
+        for target_name in target_names:
+            if target_name not in self.config.targets:
+                raise ValueError(f"Unknown target: {target_name}")
+            if not self._is_target_enabled(target_name):
+                self._log(f"Target {target_name} is disabled")
+                results[target_name] = False
+                continue
+
+            self._log(f"Next target: {target_name}")
+            allow_open = bool(self._target_payload(target_name).get("command_open_in_test", False))
+            probe_text = f"KS_CODEOPS_PROBE_{target_name.upper()}"
+            probed = self.probe_target_input(
+                target_name,
+                probe_text,
+                clear_after=True,
+                allow_command_open=allow_open,
+            )
+            if not probed:
+                results[target_name] = False
+                if pause_s > 0:
+                    time.sleep(pause_s)
+                continue
+
+            typed = self.send_text(
+                text=f"KS_CODEOPS_NEXT_{target_name.upper()}",
+                press_enter=False,
+                target_name=target_name,
+                allow_command_open=allow_open,
+            )
+            results[target_name] = bool(typed)
+            if pause_s > 0:
+                time.sleep(pause_s)
+
         return results

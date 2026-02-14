@@ -86,6 +86,15 @@ def build_parser():
     self_test.add_argument("--no-clear", action="store_true", help="Do not clear probe text after typing")
     self_test.add_argument("--no-open-commands", action="store_true", help="Do not use extension open commands during test")
 
+    seq_test = sub.add_parser("test-sequence")
+    seq_test.add_argument("--names", nargs="+", help="Target order to test. Defaults to copilot,gemini,codex,kilo,cline if present")
+    seq_test.add_argument("--delay", type=float, default=1.0, help="Delay between targets in seconds")
+    seq_test.add_argument("--prefix", default="KS_CODEOPS_SEQ", help="Prefix for typed test text")
+
+    test_next = sub.add_parser("test-next")
+    test_next.add_argument("--names", nargs="+", required=True, help="Ordered targets to test one-by-one")
+    test_next.add_argument("--pause", type=float, default=1.0, help="Pause in seconds between targets")
+
     return parser
 
 
@@ -253,6 +262,34 @@ def main():
             )
             all_ok = all_ok and ok
             print(f"{target}: {'ok' if ok else 'failed'}")
+        if not all_ok:
+            raise SystemExit(1)
+        return
+
+    if args.cmd == "test-sequence":
+        if args.names:
+            targets = args.names
+        else:
+            preferred = ["copilot", "gemini", "codex", "kilo", "cline"]
+            targets = [name for name in preferred if name in sequencer.list_targets()]
+            if not targets:
+                targets = sequencer.list_targets()
+        results = sequencer.run_target_test_sequence(targets=targets, delay_between_s=max(0.0, float(args.delay)), text_prefix=args.prefix)
+        all_ok = True
+        for name in targets:
+            ok = bool(results.get(name))
+            all_ok = all_ok and ok
+            print(f"{name}: {'pass' if ok else 'fail'}")
+        if not all_ok:
+            raise SystemExit(1)
+        return
+
+    if args.cmd == "test-next":
+        results = sequencer.test_targets_next(args.names, pause_s=max(0.0, float(args.pause)))
+        all_ok = True
+        for target, ok in results.items():
+            print(f"{target}: {'ok' if ok else 'failed'}")
+            all_ok = all_ok and ok
         if not all_ok:
             raise SystemExit(1)
         return

@@ -2,7 +2,19 @@
 
 KS CodeOps — VS Code multi-agent coding orchestrator (formerly PromptSender2VSCode).
 
-This app automates sending prompts and images to VS Code extension chat panels (Copilot, Gemini, Codex, etc.) and runs job pipelines using a single-lane or multi-lane execution model.
+## What this app is for
+
+KS CodeOps exists to turn your idea/blueprint into a repeatable build pipeline using VS Code AI extensions as coordinated "programmer workers."
+
+At a high level, it does this:
+
+1. Take your blueprint, prompts, images, and job steps.
+2. Send each step to selected VS Code chat extensions (Copilot, Gemini, Codex, Kilo, Cline).
+3. Capture and validate outputs (`BEGIN_OUTPUT` / `END_OUTPUT` workflow).
+4. Save artifacts and generated docs/files for each step.
+5. Run iterative job flows so you can move from concept -> documents -> generated app with less manual copy/paste.
+
+Current stable mode is single-lane execution with strong capture/validation, while multi-lane orchestration is planned next.
 
 See `PLANNING.md` and `ROADMAP.md` for details.
 Strategy alignment for this app is documented in `STRATEGY_V4_APPLICATION.md`.
@@ -16,6 +28,35 @@ pip install -r requirements.txt
 ```powershell
 python main.py
 ```
+
+## UI status (current)
+
+The GUI now uses a modern dark control-room layout focused on action hierarchy and operational clarity:
+
+- Dense settings card with aligned fields
+- Action hierarchy (primary run/send, secondary test, separate calibration)
+- Status strip chips (`Target`, `Backend`, `Job State`)
+- Left-aligned slim tabs and dominant text workspace
+- Ordered activity logs with timestamp + session log file under `logs/`
+
+### Visual tokens
+
+- `bg`: `#171A1F`
+- `surface-1`: `#1F242C`
+- `surface-2`: `#272E38`
+- `border`: `#343D4A`
+- `text-primary`: `#E6EBF2`
+- `text-secondary`: `#A8B2C3`
+- `primary`: `#6FA8FF`
+- `primary-hover`: `#86B6FF`
+
+Blue is reserved for primary actions and active tab state.
+
+### Font stack
+
+The UI selects a professional sans-serif stack with runtime fallback:
+
+`Inter` -> `Segoe UI` -> `Roboto` -> `Arial` -> `Helvetica`
 
 ## CLI examples
 ```powershell
