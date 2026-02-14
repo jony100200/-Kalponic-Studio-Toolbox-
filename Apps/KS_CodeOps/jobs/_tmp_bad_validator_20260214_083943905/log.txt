@@ -1,0 +1,9 @@
+[2026-02-14 08:39:44] Job started in single_lane mode: jobs/_tmp_bad_validator_20260214_083943905
+[2026-02-14 08:39:44] ETA remaining ~8s
+[2026-02-14 08:39:44] Running step bad_validator_step (attempt 1/3)
+[2026-02-14 08:39:44] Step failed: bad_validator_step | Unsupported validator type: mystery
+[2026-02-14 08:39:44] Running step bad_validator_step (attempt 2/3)
+[2026-02-14 08:39:44] Step failed: bad_validator_step | Unsupported validator type: mystery
+[2026-02-14 08:39:44] Running step bad_validator_step (attempt 3/3)
+[2026-02-14 08:39:44] Step failed: bad_validator_step | Unsupported validator type: mystery
+[2026-02-14 08:39:44] Job failed at step: bad_validator_step

@@ -1,15 +1,17 @@
 {
   "name": "KS_PDF_Studio_v2",
-  "created_at": "2026-02-14T04:20:47.538928",
+  "created_at": "2026-02-14T07:30:50.470203",
   "source": {
     "brief": "brief.md",
     "design": "design.md"
   },
+  "assignment_policy": "auto_enabled_targets_v1",
   "steps": [
     {
       "id": "step_01_phase_0_foundation",
       "type": "text",
       "target": "copilot",
+      "assignment_reason": "round_robin",
       "prompt_file": "prompts/01_phase_0_foundation.md",
       "press_enter": true,
       "wait": 4,
@@ -26,6 +28,7 @@
       "id": "step_02_phase_1_research_audit",
       "type": "text",
       "target": "copilot",
+      "assignment_reason": "rule_research",
       "prompt_file": "prompts/02_phase_1_research_audit.md",
       "press_enter": true,
       "wait": 4,
@@ -41,7 +44,8 @@
     {
       "id": "step_03_phase_2_design_structure",
       "type": "text",
-      "target": "copilot",
+      "target": "gemini",
+      "assignment_reason": "rule_design",
       "prompt_file": "prompts/03_phase_2_design_structure.md",
       "press_enter": true,
       "wait": 4,
@@ -57,7 +61,8 @@
     {
       "id": "step_04_phase_3_prototype_fast",
       "type": "text",
-      "target": "copilot",
+      "target": "codex",
+      "assignment_reason": "rule_implementation",
       "prompt_file": "prompts/04_phase_3_prototype_fast.md",
       "press_enter": true,
       "wait": 4,
@@ -73,7 +78,8 @@
     {
       "id": "step_05_phase_4_ux_polish",
       "type": "text",
-      "target": "copilot",
+      "target": "cline",
+      "assignment_reason": "round_robin",
       "prompt_file": "prompts/05_phase_4_ux_polish.md",
       "press_enter": true,
       "wait": 4,
@@ -89,7 +95,8 @@
     {
       "id": "step_06_phase_5_qa_profit_effort",
       "type": "text",
-      "target": "copilot",
+      "target": "cline",
+      "assignment_reason": "rule_qa",
       "prompt_file": "prompts/06_phase_5_qa_profit_effort.md",
       "press_enter": true,
       "wait": 4,
@@ -105,7 +112,8 @@
     {
       "id": "step_07_phase_6_package_teach",
       "type": "text",
-      "target": "copilot",
+      "target": "cline",
+      "assignment_reason": "rule_qa",
       "prompt_file": "prompts/07_phase_6_package_teach.md",
       "press_enter": true,
       "wait": 4,
@@ -121,7 +129,8 @@
     {
       "id": "step_08_phase_7_market_expand",
       "type": "text",
-      "target": "copilot",
+      "target": "codex",
+      "assignment_reason": "round_robin",
       "prompt_file": "prompts/08_phase_7_market_expand.md",
       "press_enter": true,
       "wait": 4,
@@ -137,7 +146,8 @@
     {
       "id": "step_09_phase_8_maintain_reflect",
       "type": "text",
-      "target": "copilot",
+      "target": "kilo",
+      "assignment_reason": "round_robin",
       "prompt_file": "prompts/09_phase_8_maintain_reflect.md",
       "press_enter": true,
       "wait": 4,

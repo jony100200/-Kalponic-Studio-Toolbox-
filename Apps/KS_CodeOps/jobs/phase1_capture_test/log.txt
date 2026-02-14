@@ -4,3 +4,7 @@
 [2026-02-14 04:25:38] Captured output for capture_only: blocks=1
 [2026-02-14 04:25:38] Step completed: capture_only
 [2026-02-14 04:25:38] Job completed successfully
+[2026-02-14 08:16:44] Job started in single_lane mode: jobs/phase1_capture_test
+[2026-02-14 08:16:44] ETA remaining ~8s
+[2026-02-14 08:16:44] Skipping completed step: capture_only
+[2026-02-14 08:16:44] Job completed successfully

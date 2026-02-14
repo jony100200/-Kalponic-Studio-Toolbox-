@@ -1,0 +1,16 @@
+{
+  "mode": "single_lane",
+  "state": "failed",
+  "current_step": "must_fail",
+  "steps": {
+    "must_fail": {
+      "state": "failed",
+      "attempts": 3,
+      "last_error": "Validation failed. Required output artifact not ready.",
+      "updated_at": "2026-02-14T08:38:57.854721"
+    }
+  },
+  "started_at": "2026-02-14T08:38:57.846485",
+  "failed_step": "must_fail",
+  "finished_at": "2026-02-14T08:38:57.854721"
+}

@@ -1,0 +1,10 @@
+[2026-02-14 08:39:09] Job started in single_lane mode: jobs/_tmp_resume_fix_20260214_083909195
+[2026-02-14 08:39:09] ETA remaining ~8s
+[2026-02-14 08:39:09] Completed step output missing/invalid, rerunning: step_ok
+[2026-02-14 08:39:09] Running step step_ok (attempt 1/3)
+[2026-02-14 08:39:09] Step failed: step_ok | Validation failed. Required output artifact not ready.
+[2026-02-14 08:39:09] Running step step_ok (attempt 2/3)
+[2026-02-14 08:39:09] Step failed: step_ok | Validation failed. Required output artifact not ready.
+[2026-02-14 08:39:09] Running step step_ok (attempt 3/3)
+[2026-02-14 08:39:09] Step failed: step_ok | Validation failed. Required output artifact not ready.
+[2026-02-14 08:39:09] Job failed at step: step_ok

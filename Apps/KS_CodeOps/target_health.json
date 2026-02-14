@@ -1,0 +1,49 @@
+{
+  "checked_at": "2026-02-14T10:06:08.728155",
+  "open_commands": true,
+  "focus": {
+    "skipped": false,
+    "ok": true
+  },
+  "probe": {
+    "skipped": false
+  },
+  "sequence": {
+    "skipped": false
+  },
+  "targets": {
+    "copilot": {
+      "probe_ok": true,
+      "sequence_ok": true,
+      "healthy": true
+    },
+    "gemini": {
+      "probe_ok": true,
+      "sequence_ok": true,
+      "healthy": true
+    },
+    "codex": {
+      "probe_ok": true,
+      "sequence_ok": true,
+      "healthy": true
+    },
+    "kilo": {
+      "probe_ok": true,
+      "sequence_ok": true,
+      "healthy": true
+    },
+    "cline": {
+      "probe_ok": true,
+      "sequence_ok": true,
+      "healthy": true
+    }
+  },
+  "overall_ok": true,
+  "healthy_targets": [
+    "copilot",
+    "gemini",
+    "codex",
+    "kilo",
+    "cline"
+  ]
+}

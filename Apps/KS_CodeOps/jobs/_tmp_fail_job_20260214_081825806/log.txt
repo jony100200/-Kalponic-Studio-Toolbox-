@@ -1,0 +1,9 @@
+[2026-02-14 08:18:26] Job started in single_lane mode: jobs/_tmp_fail_job_20260214_081825806
+[2026-02-14 08:18:26] ETA remaining ~8s
+[2026-02-14 08:18:26] Running step must_fail (attempt 1/3)
+[2026-02-14 08:18:26] Step failed: must_fail | Validation failed. Required output artifact not ready.
+[2026-02-14 08:18:26] Running step must_fail (attempt 2/3)
+[2026-02-14 08:18:26] Step failed: must_fail | Validation failed. Required output artifact not ready.
+[2026-02-14 08:18:26] Running step must_fail (attempt 3/3)
+[2026-02-14 08:18:26] Step failed: must_fail | Validation failed. Required output artifact not ready.
+[2026-02-14 08:18:26] Job failed at step: must_fail

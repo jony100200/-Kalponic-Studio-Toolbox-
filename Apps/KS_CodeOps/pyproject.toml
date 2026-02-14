@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ks-codeops"
+description = "KS CodeOps VS Code multi-agent orchestration runtime"
+readme = "README.md"
+requires-python = ">=3.10"
+dynamic = ["version"]
+dependencies = [
+  "pyautogui>=0.9.54",
+  "pyperclip>=1.8.2",
+  "pygetwindow>=0.0.9",
+  "Pillow>=10.0.0",
+  "customtkinter>=5.2.0",
+  "uiautomation>=2.0.29",
+  "pywinauto>=0.6.9",
+]
+
+[project.scripts]
+ks-codeops = "cli:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "src.version.__version__"}
+
+[tool.setuptools]
+py-modules = ["cli", "main", "vscode_prompt_sender"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]

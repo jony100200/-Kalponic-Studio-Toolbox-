@@ -14,15 +14,50 @@ At a high level, it does this:
 4. Save artifacts and generated docs/files for each step.
 5. Run iterative job flows so you can move from concept -> documents -> generated app with less manual copy/paste.
 
-Current stable mode is single-lane execution with strong capture/validation, while multi-lane orchestration is planned next.
+Current stable mode is single-lane execution with strong capture/validation.
+Multi-lane orchestration remains planned, but reliability hardening is prioritized first.
 
 See `PLANNING.md` and `ROADMAP.md` for details.
 Strategy alignment for this app is documented in `STRATEGY_V4_APPLICATION.md`.
+Implementation guardrails are documented in `ENGINEERING_GUIDELINES.md`.
 
 ## Install
 ```powershell
 pip install -r requirements.txt
 ```
+
+## Test
+```powershell
+python -m unittest discover -s tests -v
+```
+
+## Roadmap Sync (Run After Each Completed Part)
+```powershell
+python scripts/sync_roadmap.py --apply
+```
+
+Strict verification (fails if roadmap is outdated):
+
+```powershell
+python scripts/sync_roadmap.py --check
+```
+
+One-command part completion flow:
+
+```powershell
+.\scripts\part_done.ps1
+```
+
+or
+
+```cmd
+scripts\part_done.bat
+```
+
+## Operations Docs
+
+- Troubleshooting matrix: `docs/troubleshooting.md`
+- Pre-run regression checklist: `docs/regression_checklist.md`
 
 ## Run (GUI)
 ```powershell
@@ -60,6 +95,8 @@ The UI selects a professional sans-serif stack with runtime fallback:
 
 ## CLI examples
 ```powershell
+python cli.py version
+python cli.py smoke-run
 python cli.py targets
 python cli.py set-target --name copilot
 python cli.py test-target --name copilot
@@ -68,6 +105,54 @@ python cli.py run-job --dir jobs/ks_pdf_studio_v2
 python cli.py dispatch-multi --file dispatch.sample.json
 python cli.py dispatch-multi --file dispatch.sample.json --test-mode
 python cli.py materialize-app --source jobs/simple_app_test/outputs/app_spec.md --out generated_apps/tiny_app
+python cli.py health-check --names copilot gemini codex kilo cline
+```
+
+## Worker Adapter Contract
+
+`run-job` supports `worker_contract` steps for file-based adapter execution.
+
+Per attempt, artifacts are written to:
+
+- `artifacts/<step_id>/attempt_<n>_worker_contract/request.json`
+- `artifacts/<step_id>/attempt_<n>_worker_contract/response.json`
+- `artifacts/<step_id>/attempt_<n>_worker_contract/notes.md` (optional)
+- `artifacts/<step_id>/attempt_<n>_worker_contract/diff.patch` (optional)
+
+Example step:
+
+```json
+{
+  "id": "build_api",
+  "type": "worker_contract",
+  "target": "copilot",
+  "content": "Implement API endpoint",
+  "worker": { "adapter": "copilot_adapter" },
+  "output_file": "outputs/build_api.md",
+  "validator": { "type": "exists" }
+}
+```
+
+Adapter configuration is stored in `config.json` under `worker_adapters`.
+
+Built-in Copilot adapter (`copilot_vscode`) is enabled by default in config and uses:
+
+- `mode: "vscode_chat"`
+- `target: "copilot"`
+- `capture.source: "bridge"` (from `bridge_response_file`)
+- `allow_command_open: false` (safe default)
+
+Copilot step example:
+
+```json
+{
+  "id": "copilot_plan",
+  "type": "worker_contract",
+  "content": "Produce implementation plan with risks",
+  "worker": { "adapter": "copilot_vscode" },
+  "output_file": "outputs/copilot_plan.md",
+  "validator": { "type": "sections", "required": ["# Plan"] }
+}
 ```
 
 ### Target behavior (Copilot-first safe mode)
@@ -83,6 +168,7 @@ Testing without sending:
 python cli.py dispatch-multi --file dispatch.sample.json --test-mode
 python cli.py run-sequence --file sequence.sample.json --test-mode
 python cli.py self-test-targets
+python cli.py test-sequence --names copilot gemini codex kilo cline
 ```
 
 `--test-mode` types into the target chat input but does not press Enter.
@@ -97,6 +183,19 @@ python cli.py set-enabled-targets --names copilot
 
 `self-test-targets` verifies each selected target by activating it, applying settle delay, focusing input, typing a probe marker, and clearing it (no send).
 
+One-command health check:
+
+```powershell
+python cli.py health-check --names copilot gemini codex kilo cline
+```
+
+This runs focus pre-check, per-target probe check, and no-send sequence validation with a final PASS/FAIL summary.
+It also writes a machine-readable health snapshot to `target_health.json` for runtime rerouting decisions.
+
+Safety note: `health-check` and `test-sequence` default to **no extension open commands** to avoid command text leaking into chat inputs during test mode.
+In this safe mode, strict cross-target switching cannot be guaranteed; only the first target is strictly verifiable.
+Use `--open-commands` only when you explicitly want command-based panel opening during tests.
+
 ## UI checkbox mapping (for your app UI)
 
 - UI checkboxes map directly to `enabled_targets` in config.
@@ -110,6 +209,10 @@ Configuration and usage match the previous app; this folder is the new canonical
 - If a job folder has `brief.md` but no `plan.json`, `run-job` auto-generates `plan.json` + prompt files.
 - You can also generate manually with `init-job` for review before execution.
 - A design-aware sample job is included at `jobs/ks_pdf_studio_v2`.
+- `init-job` now supports auto target assignment when `--target` is omitted:
+	- uses enabled worker targets from config (`enabled_targets`)
+	- applies a simple deterministic policy (`auto_enabled_targets_v1`)
+	- stores assignment reason per step in `plan.json`
 
 ## Phase 1: Output capture pipeline
 
@@ -148,6 +251,25 @@ If `send_text` / `send_image` fails but a capture source is configured (`bridge`
 
 Prompt completion detection is enabled via capture polling with timeout/freshness checks.
 By default, fresh-capture is enforced for dynamic chat captures (`bridge`, `clipboard`) and disabled for static capture contexts (`file` source or `validate` steps).
+
+Lane runtime artifacts are written per run:
+
+- `lanes/<lane_id>/worktree/` isolated lane workspace
+- `lanes/<lane_id>/status.json` lane state + metrics
+- `lanes/<lane_id>/lock.json` transient lane step lock
+- `lane_summary.json` post-run lane summary and dispatch metadata
+
+Parallel lane execution is now available when both are enabled in config:
+
+```json
+{
+  "multi_lane_enabled": true,
+  "multi_lane_parallel": true
+}
+```
+
+Current safe scope for parallel execution is contract-driven steps (`worker_contract`) and `validate` steps.
+Unsupported step types automatically fall back to single-lane executor.
 
 Step-level completion override example:
 
@@ -206,3 +328,27 @@ KS CodeOps follows KISS and SOLID by policy:
 - Single responsibility: runner, sequencer, automation, and materializer are kept separate.
 - Open/closed: new automation backends and targets are config-driven.
 - Dependency inversion: job logic depends on abstraction-level services (sequencer/config), not UI details.
+
+## Product release gates (2026)
+
+Reliability and safety gates are required before multi-lane becomes a default workflow:
+
+- `v0.3 Beta` target date: March 15, 2026
+  - fix critical blockers (safe materialization path handling, non-zero exit on failed `run-job`, resume validation, no unintended config mutation in diagnostics)
+- `v0.4 Hardening` target date: April 30, 2026
+  - automated test suite + CI gates for core CLI and job lifecycle paths
+  - regression checklist and troubleshooting matrix included in docs
+- `v1.0` target date: June 30, 2026
+  - reliability gates sustained across releases
+  - multi-lane available with explicit safe fallback to single-lane
+
+## Packaging
+
+Build package artifacts:
+
+```powershell
+python -m pip install build
+python -m build
+```
+
+Version source of truth: `src/version.py` (exposed via `python cli.py version`).

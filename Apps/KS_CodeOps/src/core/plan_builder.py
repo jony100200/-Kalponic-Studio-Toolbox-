@@ -4,10 +4,13 @@ import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from src.core.assignment_policy import TargetAssignmentPolicy
+
 
 class PlanBuilder:
     def __init__(self, config):
         self.config = config
+        self.assignment_policy = TargetAssignmentPolicy(config)
 
     def _read_text(self, path: str) -> str:
         with open(path, "r", encoding="utf-8") as handle:
@@ -84,12 +87,16 @@ class PlanBuilder:
                 "Phase 4 - QA, Packaging, and Launch Checklist",
             ]
 
-        target = target_name or self.config.active_target
+        assignment_context = self.assignment_policy.assignment_pool(target_name or "")
+        target_pool = assignment_context["pool"]
+        assignment_policy = assignment_context["policy"]
+
         steps: List[Dict[str, Any]] = []
 
         os.makedirs(prompts_dir, exist_ok=True)
 
         for index, phase_title in enumerate(phases, start=1):
+            assignment = self.assignment_policy.select_for_phase(phase_title, index, target_pool)
             slug = self._phase_slug(phase_title)
             prompt_filename = f"{index:02d}_{slug}.md"
             prompt_path = os.path.join(prompts_dir, prompt_filename)
@@ -105,7 +112,8 @@ class PlanBuilder:
                 {
                     "id": f"step_{index:02d}_{slug}",
                     "type": "text",
-                    "target": target,
+                    "target": assignment.target,
+                    "assignment_reason": assignment.reason,
                     "prompt_file": os.path.join("prompts", prompt_filename).replace("\\", "/"),
                     "press_enter": True,
                     "wait": 4,
@@ -123,6 +131,7 @@ class PlanBuilder:
                 "brief": os.path.basename(brief_path),
                 "design": os.path.basename(design_path) if design_path else None,
             },
+            "assignment_policy": assignment_policy,
             "steps": steps,
         }
 

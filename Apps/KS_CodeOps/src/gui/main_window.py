@@ -188,6 +188,15 @@ class VSCodePromptSenderGUI:
             text_color=self.COLORS["text_secondary"],
         ).grid(row=1, column=3, padx=self.SPACING_8, pady=self.SPACING_8, sticky="w")
 
+        workers_label = ctk.CTkLabel(top, text="Workers", **label_opts)
+        workers_label.grid(row=2, column=0, padx=self.SPACING_12, pady=self.SPACING_8, sticky="nw")
+        self.workers_frame = ctk.CTkFrame(top, fg_color="transparent")
+        self.workers_frame.grid(row=2, column=1, columnspan=3, padx=self.SPACING_8, pady=self.SPACING_8, sticky="ew")
+        self.workers_frame.grid_columnconfigure((0, 1), weight=1)
+        self.target_check_vars = {}
+        self.target_open_test_vars = {}
+        self._build_target_checkboxes([])
+
         status_strip = ctk.CTkFrame(
             top,
             fg_color=self.COLORS["surface_2"],
@@ -195,7 +204,7 @@ class VSCodePromptSenderGUI:
             border_width=1,
             border_color=self.COLORS["border"],
         )
-        status_strip.grid(row=2, column=0, columnspan=4, sticky="ew", padx=self.SPACING_12, pady=(self.SPACING_8, self.SPACING_12))
+        status_strip.grid(row=3, column=0, columnspan=4, sticky="ew", padx=self.SPACING_12, pady=(self.SPACING_8, self.SPACING_12))
         status_strip.grid_columnconfigure((0, 1, 2), weight=1)
 
         target_wrap = ctk.CTkFrame(status_strip, fg_color="transparent")
@@ -373,6 +382,84 @@ class VSCodePromptSenderGUI:
             self.run_seq_btn,
         ]
 
+    def _build_target_checkboxes(self, names):
+        for child in self.workers_frame.winfo_children():
+            child.destroy()
+        self.target_check_vars = {}
+        self.target_open_test_vars = {}
+
+        if names:
+            ctk.CTkLabel(
+                self.workers_frame,
+                text="Enable",
+                text_color=self.COLORS["text_secondary"],
+                font=self.font_small_bold,
+            ).grid(row=0, column=0, padx=self.SPACING_8, pady=(0, 4), sticky="w")
+            ctk.CTkLabel(
+                self.workers_frame,
+                text="Open Cmd (test)",
+                text_color=self.COLORS["text_secondary"],
+                font=self.font_small_bold,
+            ).grid(row=0, column=1, padx=self.SPACING_8, pady=(0, 4), sticky="w")
+
+        for index, name in enumerate(names):
+            row = index + 1
+            enable_var = tk.BooleanVar(value=False)
+            open_var = tk.BooleanVar(value=False)
+            self.target_check_vars[name] = enable_var
+            self.target_open_test_vars[name] = open_var
+
+            row_wrap = ctk.CTkFrame(self.workers_frame, fg_color="transparent")
+            row_wrap.grid(row=row, column=0, columnspan=2, sticky="ew")
+            row_wrap.grid_columnconfigure(0, weight=1)
+            row_wrap.grid_columnconfigure(1, weight=1)
+
+            ctk.CTkCheckBox(
+                row_wrap,
+                text=name,
+                variable=enable_var,
+                checkbox_height=18,
+                checkbox_width=18,
+                corner_radius=5,
+                border_width=1,
+                border_color=self.COLORS["border"],
+                fg_color=self.COLORS["primary"],
+                hover_color=self.COLORS["primary_hover"],
+                text_color=self.COLORS["text_primary"],
+                font=self.font_small,
+            ).grid(row=0, column=0, padx=self.SPACING_8, pady=3, sticky="w")
+
+            ctk.CTkCheckBox(
+                row_wrap,
+                text=f"{name} open",
+                variable=open_var,
+                checkbox_height=18,
+                checkbox_width=18,
+                corner_radius=5,
+                border_width=1,
+                border_color=self.COLORS["border"],
+                fg_color=self.COLORS["primary"],
+                hover_color=self.COLORS["primary_hover"],
+                text_color=self.COLORS["text_secondary"],
+                font=self.font_small,
+            ).grid(row=0, column=1, padx=self.SPACING_8, pady=3, sticky="w")
+
+    def _set_enabled_target_checks(self, enabled):
+        enabled_set = set(enabled or [])
+        for name, var in self.target_check_vars.items():
+            var.set(name in enabled_set)
+
+    def _selected_enabled_targets(self):
+        return [name for name, var in self.target_check_vars.items() if bool(var.get())]
+
+    def _set_open_test_target_checks(self, open_enabled):
+        open_set = set(open_enabled or [])
+        for name, var in self.target_open_test_vars.items():
+            var.set(name in open_set)
+
+    def _selected_open_test_targets(self):
+        return [name for name, var in self.target_open_test_vars.items() if bool(var.get())]
+
     def _refresh_status_strip(self):
         target = self.target_var.get().strip() if hasattr(self, "target_var") else self.config.active_target
         backend = str(getattr(self.config, "automation_backend", "pyautogui")).upper()
@@ -431,8 +518,19 @@ class VSCodePromptSenderGUI:
         self.profile_var.set(self.config.focus_profile)
         self.auto_enter_var.set(self.config.auto_enter)
         names = list(self.config.targets.keys()) if isinstance(self.config.targets, dict) and self.config.targets else ["copilot"]
+        self._build_target_checkboxes(names)
+        enabled = [name for name in getattr(self.config, "enabled_targets", []) if name in names]
+        if not enabled and names:
+            enabled = ["copilot"] if "copilot" in names else [names[0]]
+        self._set_enabled_target_checks(enabled)
+        open_enabled = [
+            name
+            for name in names
+            if bool((self.config.targets.get(name) or {}).get("command_open_in_test", False))
+        ]
+        self._set_open_test_target_checks(open_enabled)
         self.target_menu.configure(values=names)
-        active = self.config.active_target if self.config.active_target in names else names[0]
+        active = self.config.active_target if self.config.active_target in enabled else enabled[0]
         self.target_var.set(active)
         self._refresh_status_strip()
 
@@ -440,9 +538,25 @@ class VSCodePromptSenderGUI:
         self.config.window_title = self.window_title_var.get().strip() or "Visual Studio Code"
         self.config.focus_profile = self.profile_var.get()
         self.config.auto_enter = self.auto_enter_var.get()
-        self.config.active_target = self.target_var.get().strip() or self.config.active_target
+        enabled_targets = self._selected_enabled_targets()
+        if not enabled_targets:
+            messagebox.showwarning("No Workers Selected", "Select at least one extension worker.")
+            return
+        active_target = self.target_var.get().strip() or self.config.active_target
+        if active_target not in enabled_targets:
+            active_target = enabled_targets[0]
+            self.target_var.set(active_target)
+        open_targets = set(self._selected_open_test_targets())
+        for name, payload in self.config.targets.items():
+            if not isinstance(payload, dict):
+                continue
+            payload["command_open_in_test"] = name in open_targets
+        self.config.enabled_targets = enabled_targets
+        self.config.active_target = active_target
         self.config.save()
-        self._log(f"Settings saved (active target: {self.config.active_target})")
+        self._log(
+            f"Settings saved (active target: {self.config.active_target}, enabled: {', '.join(self.config.enabled_targets)})"
+        )
         self._refresh_status_strip()
 
     def _test_focus(self):

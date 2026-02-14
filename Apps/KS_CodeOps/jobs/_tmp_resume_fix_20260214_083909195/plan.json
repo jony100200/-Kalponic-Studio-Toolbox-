@@ -1,0 +1,11 @@
+{
+  "name": "tmp_resume_fix",
+  "steps": [
+    {
+      "id": "step_ok",
+      "type": "validate",
+      "output_file": "outputs/result.md",
+      "validator": {"type": "exists"}
+    }
+  ]
+}

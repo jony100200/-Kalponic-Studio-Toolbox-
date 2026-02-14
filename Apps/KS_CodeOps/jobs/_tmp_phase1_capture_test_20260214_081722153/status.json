@@ -1,0 +1,15 @@
+{
+  "mode": "single_lane",
+  "state": "completed",
+  "current_step": null,
+  "steps": {
+    "capture_only": {
+      "state": "completed",
+      "attempts": 1,
+      "last_error": null,
+      "updated_at": "2026-02-14T08:17:22.772059"
+    }
+  },
+  "started_at": "2026-02-14T08:17:22.769669",
+  "finished_at": "2026-02-14T08:17:22.772059"
+}

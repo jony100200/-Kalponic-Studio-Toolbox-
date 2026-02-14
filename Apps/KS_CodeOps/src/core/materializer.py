@@ -17,6 +17,24 @@ class AppMaterializer:
                 items[rel_path] = body
         return items
 
+    def _safe_output_path(self, output_dir: str, rel_path: str) -> str:
+        safe_rel_path = os.path.normpath(rel_path)
+        if safe_rel_path in {"", ".", ".."}:
+            raise ValueError(f"Unsafe path: {rel_path}")
+        drive, _ = os.path.splitdrive(safe_rel_path)
+        if drive or os.path.isabs(safe_rel_path):
+            raise ValueError(f"Unsafe absolute path: {rel_path}")
+
+        output_root = os.path.abspath(output_dir)
+        full_path = os.path.abspath(os.path.join(output_root, safe_rel_path))
+        try:
+            common = os.path.commonpath([output_root, full_path])
+        except ValueError as exc:
+            raise ValueError(f"Unsafe path: {rel_path}") from exc
+        if common != output_root:
+            raise ValueError(f"Unsafe relative path: {rel_path}")
+        return full_path
+
     def materialize(self, source_file: str, output_dir: str) -> Dict[str, str]:
         if not os.path.exists(source_file):
             raise FileNotFoundError(source_file)
@@ -30,10 +48,7 @@ class AppMaterializer:
 
         written: Dict[str, str] = {}
         for rel_path, body in files.items():
-            safe_path = os.path.normpath(rel_path)
-            if safe_path.startswith(".."):
-                raise ValueError(f"Unsafe relative path: {rel_path}")
-            full_path = os.path.join(output_dir, safe_path)
+            full_path = self._safe_output_path(output_dir=output_dir, rel_path=rel_path)
             os.makedirs(os.path.dirname(full_path), exist_ok=True)
             with open(full_path, "w", encoding="utf-8") as handle:
                 handle.write(body)

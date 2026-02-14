@@ -1,0 +1,6 @@
+[2026-02-14 08:17:04] Job started in single_lane mode: jobs/_tmp_phase1_capture_test_20260214_081702939
+[2026-02-14 08:17:04] ETA remaining ~8s
+[2026-02-14 08:17:04] Running step capture_only (attempt 1/3)
+[2026-02-14 08:17:14] Captured output for capture_only: blocks=1
+[2026-02-14 08:17:14] Step completed: capture_only
+[2026-02-14 08:17:14] Job completed successfully

@@ -5,3 +5,7 @@
 [2026-02-14 04:25:49] Captured output for fresh_bridge_step: blocks=1
 [2026-02-14 04:25:49] Step completed: fresh_bridge_step
 [2026-02-14 04:25:49] Job completed successfully
+[2026-02-14 08:18:09] Job started in single_lane mode: jobs/completion_fresh_test
+[2026-02-14 08:18:09] ETA remaining ~20s
+[2026-02-14 08:18:09] Skipping completed step: fresh_bridge_step
+[2026-02-14 08:18:09] Job completed successfully

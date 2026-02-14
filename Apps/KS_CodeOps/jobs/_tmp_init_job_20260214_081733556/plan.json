@@ -1,0 +1,79 @@
+{
+  "name": "tmp_job",
+  "created_at": "2026-02-14T08:17:42.050259",
+  "source": {
+    "brief": "brief.md",
+    "design": "design.md"
+  },
+  "assignment_policy": "auto_enabled_targets_v1",
+  "steps": [
+    {
+      "id": "step_01_phase_1_research",
+      "type": "text",
+      "target": "copilot",
+      "assignment_reason": "rule_research",
+      "prompt_file": "prompts/01_phase_1_research.md",
+      "press_enter": true,
+      "wait": 4,
+      "max_retries": 2,
+      "capture": {
+        "source": "bridge"
+      },
+      "output_file": "outputs/01_phase_1_research.md",
+      "validator": {
+        "type": "exists"
+      }
+    },
+    {
+      "id": "step_02_phase_2_design",
+      "type": "text",
+      "target": "gemini",
+      "assignment_reason": "rule_design",
+      "prompt_file": "prompts/02_phase_2_design.md",
+      "press_enter": true,
+      "wait": 4,
+      "max_retries": 2,
+      "capture": {
+        "source": "bridge"
+      },
+      "output_file": "outputs/02_phase_2_design.md",
+      "validator": {
+        "type": "exists"
+      }
+    },
+    {
+      "id": "step_03_phase_3_build",
+      "type": "text",
+      "target": "codex",
+      "assignment_reason": "rule_implementation",
+      "prompt_file": "prompts/03_phase_3_build.md",
+      "press_enter": true,
+      "wait": 4,
+      "max_retries": 2,
+      "capture": {
+        "source": "bridge"
+      },
+      "output_file": "outputs/03_phase_3_build.md",
+      "validator": {
+        "type": "exists"
+      }
+    },
+    {
+      "id": "step_04_phase_4_qa",
+      "type": "text",
+      "target": "cline",
+      "assignment_reason": "rule_qa",
+      "prompt_file": "prompts/04_phase_4_qa.md",
+      "press_enter": true,
+      "wait": 4,
+      "max_retries": 2,
+      "capture": {
+        "source": "bridge"
+      },
+      "output_file": "outputs/04_phase_4_qa.md",
+      "validator": {
+        "type": "exists"
+      }
+    }
+  ]
+}

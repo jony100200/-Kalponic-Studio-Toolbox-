@@ -1,8 +1,8 @@
-# KS CodeOps — Strategy v4 Application
+# KS CodeOps - Strategy v4 Application
 
-This document applies `KS Creation & Development Strategy Guide (Final v4.0)` to the current KS CodeOps application.
+This document applies `KS Creation & Development Strategy Guide (Final v4.0)` to KS CodeOps.
 
-## Phase 0 — Foundation
+## Phase 0 - Foundation
 
 **Goal in KS CodeOps:** Build a reusable orchestration core for AI-assisted production work.
 
@@ -15,7 +15,7 @@ This document applies `KS Creation & Development Strategy Guide (Final v4.0)` to
 - Stable layered architecture exists (`core`, `automation`, `gui`).
 - Config-driven behavior and target profiles are in place.
 
-## Phase 1 — Research & Audit
+## Phase 1 - Research & Audit
 
 **Goal in KS CodeOps:** Validate whether VS Code can be automated reliably enough for job orchestration.
 
@@ -28,7 +28,7 @@ This document applies `KS Creation & Development Strategy Guide (Final v4.0)` to
 - Known constraints documented.
 - At least one fallback path exists for each critical action.
 
-## Phase 2 — Design & Structure
+## Phase 2 - Design & Structure
 
 **Goal in KS CodeOps:** Keep orchestration modular and evolvable.
 
@@ -36,40 +36,40 @@ This document applies `KS Creation & Development Strategy Guide (Final v4.0)` to
 - `VSCodeSequencer` handles target routing and execution semantics.
 - `JobRunner` handles retries/status/log/validation.
 - `PlanBuilder` handles `brief.md` + `design.md` to `plan.json` generation.
-- Automation backend is now selectable (`pyautogui` or `uia`).
+- Automation backend is selectable (`pyautogui` or `uia`).
 
 **Exit Criteria:**
 - No single module owns all responsibilities.
 - Backend or target changes do not require runner rewrite.
 
-## Phase 3 — Prototype Fast
+## Phase 3 - Prototype Fast
 
 **Goal in KS CodeOps:** Prove the end-to-end core loop quickly.
 
 **Applied:**
-- Single-lane job execution works with retries and persisted status.
-- Capture pipeline proved with extraction markers and artifact writes.
-- Bridge extension scaffold added for deterministic manual capture handoff.
+- Single-lane job execution with retries and persisted status.
+- Capture pipeline with extraction markers and artifact writes.
+- Bridge extension scaffold for deterministic capture handoff.
 
 **Exit Criteria:**
 - A sample job can run from plan to validated output artifact.
 
-## Phase 4 — UX & Polish
+## Phase 4 - UX & Polish
 
 **Goal in KS CodeOps:** Keep operation simple for daily usage.
 
 **Applied:**
-- GUI supports active target selection, test target, and click recording.
+- GUI supports active target selection, worker enablement, test target, and click recording.
 - CLI supports `init-job`, `run-job`, target management, and sequence runs.
 
 **Next Improvements:**
 - Add GUI panel for capture source (`clipboard`, `file`, `bridge`).
-- Add one-click “open bridge file” helper from app UI.
+- Add one-click "open bridge file" helper from app UI.
 
 **Exit Criteria:**
 - Main flows are executable without editing JSON manually.
 
-## Phase 5 — Profit / Effort Balance
+## Phase 5 - Profit / Effort Balance
 
 **Goal in KS CodeOps:** Prioritize high-ROI reliability work.
 
@@ -79,12 +79,12 @@ This document applies `KS Creation & Development Strategy Guide (Final v4.0)` to
 3. Bridge extension scaffold.
 
 **Next Priority:**
-- Multi-lane scheduler only after capture reliability is stable.
+- Reliability hardening and regression automation before multi-lane default rollout.
 
 **Exit Criteria:**
 - Failure recovery cost per job decreases over time.
 
-## Phase 6 — Package + Teach
+## Phase 6 - Package + Teach
 
 **Goal in KS CodeOps:** Make operation repeatable for you and collaborators.
 
@@ -99,7 +99,7 @@ This document applies `KS Creation & Development Strategy Guide (Final v4.0)` to
 **Exit Criteria:**
 - New user can execute one sample job without custom setup beyond dependencies.
 
-## Phase 7 — Market + Expand
+## Phase 7 - Market + Expand
 
 **Goal in KS CodeOps:** Turn internal tool into ecosystem utility.
 
@@ -110,7 +110,7 @@ This document applies `KS Creation & Development Strategy Guide (Final v4.0)` to
 **Exit Criteria:**
 - At least one reusable pack works across multiple projects.
 
-## Phase 8 — Maintain + Reflect
+## Phase 8 - Maintain + Reflect
 
 **Goal in KS CodeOps:** Continuous reliability gains.
 
@@ -122,12 +122,25 @@ This document applies `KS Creation & Development Strategy Guide (Final v4.0)` to
 **Exit Criteria:**
 - Failure categories trend down release-over-release.
 
+## Commercial readiness gates
+
+- `v0.3 Beta` target date: March 15, 2026
+  - close critical reliability/safety blockers
+  - verify failed job paths return non-zero exit code
+- `v0.4 Hardening` target date: April 30, 2026
+  - CI-backed regression suite for plan/run/capture/validation/materialization
+  - release checklist includes rollback criteria and smoke run on sample jobs
+- `v1.0` target date: June 30, 2026
+  - reliability trend is stable release-over-release
+  - multi-lane remains available with explicit single-lane fallback
+
 ## Immediate Next Execution Plan (In Order)
 
-1. Implement multi-lane scheduler skeleton with lane metadata and queued steps.
-2. Add lane-level status files and lock files.
-3. Add health scoring and automatic lane fallback to single-lane.
-4. Add post-run summary generator (`success rate`, `step retries`, `failure reasons`).
+1. Expand worker adapter implementations per extension using the contract runtime.
+2. Add dependency-aware lane scheduling and selective lane reruns.
+3. Add release automation around package build, changelog, and smoke-run gates.
+4. Add richer operational metrics (lane throughput, retry trends, failure categories).
+5. Keep multi-lane fallback behavior explicit and verifiable in every release.
 
 ---
 

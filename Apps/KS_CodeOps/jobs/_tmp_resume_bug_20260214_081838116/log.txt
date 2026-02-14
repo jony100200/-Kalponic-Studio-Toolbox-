@@ -1,0 +1,4 @@
+[2026-02-14 08:18:43] Job started in single_lane mode: jobs/_tmp_resume_bug_20260214_081838116
+[2026-02-14 08:18:43] ETA remaining ~8s
+[2026-02-14 08:18:43] Skipping completed step: step_ok
+[2026-02-14 08:18:43] Job completed successfully

@@ -3,3 +3,7 @@
 [2026-02-14 04:17:05] Captured output for app_spec: blocks=1
 [2026-02-14 04:17:05] Step completed: app_spec
 [2026-02-14 04:17:05] Job completed successfully
+[2026-02-14 08:16:44] Job started in single_lane mode: jobs/simple_app_test
+[2026-02-14 08:16:44] ETA remaining ~8s
+[2026-02-14 08:16:44] Skipping completed step: app_spec
+[2026-02-14 08:16:44] Job completed successfully

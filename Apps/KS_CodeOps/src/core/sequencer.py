@@ -2,12 +2,27 @@ import json
 import time
 from typing import Callable, Optional, Dict, Any, List
 
+from src.core.input_verifier import TargetInputVerifier
+from src.core.target_activation import TargetActivator
+
 
 class VSCodeSequencer:
     def __init__(self, automation, config):
         self.automation = automation
         self.config = config
         self.log_callback: Optional[Callable[[str], None]] = None
+        self.activator = TargetActivator(
+            automation=self.automation,
+            config=self.config,
+            is_target_enabled=self._is_target_enabled,
+            log=self._log,
+        )
+        self.input_verifier = TargetInputVerifier(
+            automation=self.automation,
+            config=self.config,
+            log=self._log,
+            activate_target=self.activate_target,
+        )
 
     def set_log_callback(self, callback: Callable[[str], None]):
         self.log_callback = callback
@@ -75,12 +90,7 @@ class VSCodeSequencer:
         return bool(target.get("command_open_in_test", False))
 
     def _focus_window_with_retry(self, retries: int = 3, sleep_s: float = 0.12) -> bool:
-        for attempt in range(1, retries + 1):
-            if self.automation.focus_window():
-                return True
-            if attempt < retries:
-                time.sleep(sleep_s)
-        return False
+        return self.activator.focus_window_with_retry(retries=retries, sleep_s=sleep_s)
 
     def activate_target(
         self,
@@ -89,55 +99,11 @@ class VSCodeSequencer:
         allow_command_open: bool = True,
     ) -> bool:
         target = self._target_payload(target_name)
-        name = target["name"]
-        if not self._is_target_enabled(name):
-            self._log(f"Target {name} is disabled")
-            return False
-        self._log(f"Activating target: {name}")
-        assume_open = bool(target.get("assume_open", False))
-        click_only_activation = bool(target.get("click_only_activation", False))
-        ok = False
-        if force_open and allow_command_open:
-            for attempt in range(1, 4):
-                ok = self.automation.activate_panel(
-                    command=target.get("command"),
-                    focus_sequence=target.get("focus_sequence"),
-                    fallback_click=target.get("fallback_click"),
-                )
-                if ok:
-                    break
-                self._log(f"Target {name} force-open retry {attempt}/3")
-                time.sleep(0.12)
-        elif force_open and not allow_command_open:
-            self._log(f"Target {name} force-open suppressed in test mode")
-            ok = self._focus_window_with_retry()
-        elif click_only_activation:
-            self._log(f"Target {name} click-only activation: no command/icon interactions")
-            ok = self._focus_window_with_retry()
-        elif not allow_command_open:
-            self._log(f"Target {name} test-mode activation: no command/icon interactions")
-            ok = self._focus_window_with_retry()
-        elif assume_open:
-            self._log(f"Target {name} assume-open mode: skipping open-chat command")
-            ok = self._focus_window_with_retry()
-        else:
-            for attempt in range(1, 4):
-                ok = self.automation.activate_panel(
-                    command=target.get("command"),
-                    focus_sequence=target.get("focus_sequence"),
-                    fallback_click=target.get("fallback_click"),
-                )
-                if ok:
-                    break
-                self._log(f"Target {name} activation retry {attempt}/3")
-                time.sleep(0.12)
-
-        settle_delay_s = float(target.get("settle_delay_s", self.config.target_settle_delay_s))
-        if ok and settle_delay_s > 0:
-            self._log(f"Waiting {settle_delay_s:.2f}s for target settle")
-            time.sleep(settle_delay_s)
-        self._log(f"Target {name} ready" if ok else f"Target {name} activation failed")
-        return ok
+        return self.activator.activate_target(
+            target=target,
+            force_open=force_open,
+            allow_command_open=allow_command_open,
+        )
 
     def record_click(self, seconds: int = 4):
         self._log(f"Recording fallback click in {seconds} seconds...")
@@ -160,45 +126,11 @@ class VSCodeSequencer:
         target_name: str,
         allow_command_open: bool = True,
     ) -> bool:
-        base = target.get("fallback_click") or {}
-        base_x = float(base.get("x_rel", 0.86))
-        y_candidates = [
-            float(base.get("y_rel", 0.90)),
-            0.92,
-            0.90,
-            0.88,
-            0.86,
-            0.92,
-        ]
-        probe_text = f"KS_CODEOPS_INPUT_VERIFY_{target_name.upper()}"
-        for y_rel in y_candidates:
-            click = {"x_rel": base_x, "y_rel": y_rel}
-            if not self.automation.focus_target_input(click):
-                continue
-            if self.automation.probe_type_text(probe_text, clear_after=True):
-                if target.get("fallback_click") != click:
-                    target["fallback_click"] = dict(click)
-                    self.config.targets[target_name] = {k: v for k, v in target.items() if k != "name"}
-                    self.config.save()
-                    self._log(f"Adjusted target click for {target_name}: {click}")
-                return True
-
-        if bool(target.get("open_if_needed", False)) and allow_command_open:
-            self._log(f"Input verify failed for {target_name}; trying open-if-needed path")
-            if self.activate_target(target_name, force_open=True, allow_command_open=True):
-                for y_rel in y_candidates:
-                    click = {"x_rel": base_x, "y_rel": y_rel}
-                    if not self.automation.focus_target_input(click):
-                        continue
-                    if self.automation.probe_type_text(probe_text, clear_after=True):
-                        if target.get("fallback_click") != click:
-                            target["fallback_click"] = dict(click)
-                            self.config.targets[target_name] = {k: v for k, v in target.items() if k != "name"}
-                            self.config.save()
-                            self._log(f"Adjusted target click for {target_name}: {click}")
-                        return True
-
-        return False
+        return self.input_verifier.focus_and_verify_target_input(
+            target=target,
+            target_name=target_name,
+            allow_command_open=allow_command_open,
+        )
 
     def send_text(
         self,
@@ -267,7 +199,7 @@ class VSCodeSequencer:
         activated = self.activate_target(name, allow_command_open=allow_command_open)
         if not activated:
             self._log(f"Probe activation failed for {name}; trying in-place focus fallback")
-            if not self.automation.focus_window():
+            if not self._focus_window_with_retry():
                 self._log(f"Probe failed: target activation failed ({name})")
                 return False
         if not self._focus_and_verify_target_input(target, name, allow_command_open=allow_command_open):
@@ -390,7 +322,13 @@ class VSCodeSequencer:
             results[target] = bool(ok)
         return results
 
-    def run_target_test_sequence(self, targets: List[str], delay_between_s: float = 1.0, text_prefix: str = "KS_CODEOPS_SEQ") -> Dict[str, bool]:
+    def run_target_test_sequence(
+        self,
+        targets: List[str],
+        delay_between_s: float = 1.0,
+        text_prefix: str = "KS_CODEOPS_SEQ",
+        allow_command_open: bool = False,
+    ) -> Dict[str, bool]:
         if not targets:
             raise ValueError("No targets provided for test sequence")
 
@@ -400,25 +338,43 @@ class VSCodeSequencer:
                 raise ValueError(f"Unknown target: {name}")
             if name not in valid_targets:
                 valid_targets.append(name)
+        original_enabled = list(getattr(self.config, "enabled_targets", []) or [])
+        original_active = getattr(self.config, "active_target", None)
+        self.config.enabled_targets = list(valid_targets)
+        if self.config.active_target not in self.config.enabled_targets:
+            self.config.active_target = self.config.enabled_targets[0]
 
-        self.set_enabled_targets(valid_targets)
-
-        results: Dict[str, bool] = {}
-        for index, name in enumerate(valid_targets, start=1):
-            self._log(f"[SEQUENCE] {index}/{len(valid_targets)} target={name}")
-            payload = f"{text_prefix}_{name.upper()}"
-            ok = self.send_text(
-                payload,
-                press_enter=False,
-                target_name=name,
-                allow_command_open=True,
-            )
-            results[name] = bool(ok)
-            self._log(f"[SEQUENCE] {'PASS' if ok else 'FAIL'} target={name}")
-            if index < len(valid_targets) and delay_between_s > 0:
-                time.sleep(delay_between_s)
-
-        return results
+        try:
+            results: Dict[str, bool] = {}
+            for index, name in enumerate(valid_targets, start=1):
+                self._log(f"[SEQUENCE] {index}/{len(valid_targets)} target={name}")
+                if not allow_command_open and index > 1:
+                    self._log(
+                        f"[SEQUENCE] SKIP target={name} (safe mode cannot verify cross-target switching without open commands)"
+                    )
+                    results[name] = False
+                    if index < len(valid_targets) and delay_between_s > 0:
+                        time.sleep(delay_between_s)
+                    continue
+                payload = f"{text_prefix}_{name.upper()}"
+                target_allow_open = bool(allow_command_open and self._target_payload(name).get("command_open_in_test", False))
+                if allow_command_open and not target_allow_open:
+                    self._log(f"[SEQUENCE] {name} command-open disabled by target policy; using safe activation")
+                ok = self.send_text(
+                    payload,
+                    press_enter=False,
+                    target_name=name,
+                    allow_command_open=target_allow_open,
+                )
+                results[name] = bool(ok)
+                self._log(f"[SEQUENCE] {'PASS' if ok else 'FAIL'} target={name}")
+                if index < len(valid_targets) and delay_between_s > 0:
+                    time.sleep(delay_between_s)
+            return results
+        finally:
+            self.config.enabled_targets = original_enabled
+            if isinstance(original_active, str) and original_active:
+                self.config.active_target = original_active
 
     def test_targets_next(self, target_names: List[str], pause_s: float = 1.0) -> Dict[str, bool]:
         results: Dict[str, bool] = {}

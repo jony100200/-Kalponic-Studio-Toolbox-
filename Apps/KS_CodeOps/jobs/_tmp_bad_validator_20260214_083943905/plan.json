@@ -1,0 +1,11 @@
+{
+  "name": "tmp_bad_validator",
+  "steps": [
+    {
+      "id": "bad_validator_step",
+      "type": "validate",
+      "output_file": "outputs/result.md",
+      "validator": {"type": "mystery"}
+    }
+  ]
+}

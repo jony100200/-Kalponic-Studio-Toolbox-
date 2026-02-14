@@ -1,0 +1,16 @@
+{
+  "mode": "single_lane",
+  "state": "failed",
+  "current_step": "bad_validator_step",
+  "steps": {
+    "bad_validator_step": {
+      "state": "failed",
+      "attempts": 3,
+      "last_error": "Unsupported validator type: mystery",
+      "updated_at": "2026-02-14T08:39:44.574226"
+    }
+  },
+  "started_at": "2026-02-14T08:39:44.569479",
+  "failed_step": "bad_validator_step",
+  "finished_at": "2026-02-14T08:39:44.575233"
+}

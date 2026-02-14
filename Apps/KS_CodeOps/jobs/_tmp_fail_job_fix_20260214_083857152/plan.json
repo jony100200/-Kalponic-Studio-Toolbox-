@@ -1,0 +1,11 @@
+{
+  "name": "tmp_fail",
+  "steps": [
+    {
+      "id": "must_fail",
+      "type": "validate",
+      "output_file": "outputs/missing.md",
+      "validator": {"type": "exists"}
+    }
+  ]
+}

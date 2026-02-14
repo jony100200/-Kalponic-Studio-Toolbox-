@@ -1,0 +1,106 @@
+{
+  "roadmap_file": "ROADMAP.md",
+  "checks": [
+    {
+      "item": "Block absolute/escaping paths in materialization output handling",
+      "commands": [
+        "python -m unittest discover -s tests -p test_materializer.py -v"
+      ]
+    },
+    {
+      "item": "Return non-zero CLI exit code when `run-job` fails",
+      "commands": [
+        "python -m unittest discover -s tests -p test_cli_run_job_exit.py -v"
+      ]
+    },
+    {
+      "item": "Re-validate outputs when skipping previously completed steps",
+      "commands": [
+        "python -m unittest discover -s tests -p test_job_runner_resume.py -v"
+      ]
+    },
+    {
+      "item": "Prevent diagnostic commands (`test-sequence`/`health-check`) from mutating persistent config by default",
+      "commands": [
+        "python -m unittest discover -s tests -p test_sequencer_config_mutation.py -v"
+      ]
+    },
+    {
+      "item": "Fail fast on unknown validator type (or add explicit strict mode default)",
+      "commands": [
+        "python -m unittest discover -s tests -p test_step_validator.py -v"
+      ]
+    },
+    {
+      "item": "Add troubleshooting matrix and pre-run regression checklist",
+      "paths_all_exist": [
+        "docs/troubleshooting.md",
+        "docs/regression_checklist.md"
+      ]
+    },
+    {
+      "item": "Add automated tests (unit + CLI integration)",
+      "commands": [
+        "python -m unittest discover -s tests -v"
+      ]
+    },
+    {
+      "item": "Add CI gates for automated tests",
+      "paths_all_exist": [
+        "../../.github/workflows/ks_codeops-tests.yml"
+      ]
+    },
+    {
+      "item": "Rule-based scheduler for task-to-target assignment (fit/speed/reliability)",
+      "commands": [
+        "python -m unittest discover -s tests -p test_runtime_scheduler.py -v"
+      ]
+    },
+    {
+      "item": "Multi-lane dispatcher skeleton with safe fallback to single-lane",
+      "commands": [
+        "python -m unittest discover -s tests -p test_multi_lane_dispatcher.py -v"
+      ]
+    },
+    {
+      "item": "Lane/worktree isolation and health-based rerouting",
+      "commands": [
+        "python -m unittest discover -s tests -p test_job_runner_lane_runtime.py -v"
+      ]
+    },
+    {
+      "item": "Lane-level status/lock files and post-run summary metrics",
+      "commands": [
+        "python -m unittest discover -s tests -p test_lane_runtime.py -v"
+      ]
+    },
+    {
+      "item": "Worker adapter contract execution with request/response artifact standard",
+      "commands": [
+        "python -m unittest discover -s tests -p test_job_runner_worker_contract.py -v"
+      ]
+    },
+    {
+      "item": "Copilot built-in worker adapter (`copilot_vscode`) with bridge-capture contract flow",
+      "commands": [
+        "python -m unittest discover -s tests -p test_job_runner_copilot_adapter.py -v"
+      ]
+    },
+    {
+      "item": "True parallel lane execution for contract-safe workloads",
+      "commands": [
+        "python -m unittest discover -s tests -p test_job_runner_parallel_lanes.py -v"
+      ]
+    },
+    {
+      "item": "Release hardening: packaged build metadata, semantic versioning, smoke-run command",
+      "commands": [
+        "python -m unittest discover -s tests -p test_cli_release_commands.py -v"
+      ],
+      "paths_all_exist": [
+        "pyproject.toml",
+        "src/version.py"
+      ]
+    }
+  ]
+}

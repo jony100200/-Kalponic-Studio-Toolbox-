@@ -45,3 +45,43 @@
 [2026-02-14 04:25:26] Captured output for step_09_phase_8_maintain_reflect: blocks=1
 [2026-02-14 04:25:26] Step completed: step_09_phase_8_maintain_reflect
 [2026-02-14 04:25:26] Job completed successfully
+[2026-02-14 07:30:15] Job started in single_lane mode: jobs/ks_pdf_studio_v2
+[2026-02-14 07:30:15] ETA remaining ~108s
+[2026-02-14 07:30:15] Skipping completed step: step_01_phase_0_foundation
+[2026-02-14 07:30:15] ETA remaining ~96s
+[2026-02-14 07:30:15] Skipping completed step: step_02_phase_1_research_audit
+[2026-02-14 07:30:15] ETA remaining ~84s
+[2026-02-14 07:30:15] Skipping completed step: step_03_phase_2_design_structure
+[2026-02-14 07:30:15] ETA remaining ~72s
+[2026-02-14 07:30:15] Skipping completed step: step_04_phase_3_prototype_fast
+[2026-02-14 07:30:15] ETA remaining ~60s
+[2026-02-14 07:30:15] Skipping completed step: step_05_phase_4_ux_polish
+[2026-02-14 07:30:15] ETA remaining ~48s
+[2026-02-14 07:30:15] Skipping completed step: step_06_phase_5_qa_profit_effort
+[2026-02-14 07:30:15] ETA remaining ~36s
+[2026-02-14 07:30:15] Skipping completed step: step_07_phase_6_package_teach
+[2026-02-14 07:30:15] ETA remaining ~24s
+[2026-02-14 07:30:15] Skipping completed step: step_08_phase_7_market_expand
+[2026-02-14 07:30:15] ETA remaining ~12s
+[2026-02-14 07:30:15] Skipping completed step: step_09_phase_8_maintain_reflect
+[2026-02-14 07:30:15] Job completed successfully
+[2026-02-14 07:30:50] Job started in single_lane mode: jobs/ks_pdf_studio_v2
+[2026-02-14 07:30:50] ETA remaining ~108s
+[2026-02-14 07:30:50] Skipping completed step: step_01_phase_0_foundation
+[2026-02-14 07:30:50] ETA remaining ~96s
+[2026-02-14 07:30:50] Skipping completed step: step_02_phase_1_research_audit
+[2026-02-14 07:30:50] ETA remaining ~84s
+[2026-02-14 07:30:50] Skipping completed step: step_03_phase_2_design_structure
+[2026-02-14 07:30:50] ETA remaining ~72s
+[2026-02-14 07:30:50] Skipping completed step: step_04_phase_3_prototype_fast
+[2026-02-14 07:30:50] ETA remaining ~60s
+[2026-02-14 07:30:50] Skipping completed step: step_05_phase_4_ux_polish
+[2026-02-14 07:30:50] ETA remaining ~48s
+[2026-02-14 07:30:50] Skipping completed step: step_06_phase_5_qa_profit_effort
+[2026-02-14 07:30:50] ETA remaining ~36s
+[2026-02-14 07:30:50] Skipping completed step: step_07_phase_6_package_teach
+[2026-02-14 07:30:50] ETA remaining ~24s
+[2026-02-14 07:30:50] Skipping completed step: step_08_phase_7_market_expand
+[2026-02-14 07:30:50] ETA remaining ~12s
+[2026-02-14 07:30:50] Skipping completed step: step_09_phase_8_maintain_reflect
+[2026-02-14 07:30:50] Job completed successfully

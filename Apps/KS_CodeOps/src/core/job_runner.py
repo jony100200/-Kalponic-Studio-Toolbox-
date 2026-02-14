@@ -1,20 +1,27 @@
 import json
 import os
-import re
+import threading
 import time
-import hashlib
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
-import pyperclip
-
+from src.core.capture_runtime import CaptureRuntime
+from src.core.lane_runtime import LaneRuntimeCoordinator
+from src.core.multi_lane_dispatcher import MultiLaneDispatcher
 from src.core.plan_builder import PlanBuilder
+from src.core.runtime_scheduler import RuleBasedTaskScheduler
+from src.core.step_validator import StepValidator
+from src.core.worker_contract import WorkerContractRuntime
 
 
 class JobRunner:
     def __init__(self, sequencer, config):
         self.sequencer = sequencer
         self.config = config
+        self.capture_runtime = CaptureRuntime(config=self.config, artifacts_dir_provider=self._artifacts_dir)
+        self.step_validator = StepValidator()
+        self.worker_contract = WorkerContractRuntime(config=self.config)
 
     def _status_path(self, job_dir: str) -> str:
         return os.path.join(job_dir, "status.json")
@@ -95,158 +102,25 @@ class JobRunner:
             return handle.read()
 
     def _validate_step(self, job_dir: str, step: Dict[str, Any]) -> bool:
-        output_file = step.get("output_file")
-        validator = step.get("validator")
-
-        if not output_file or not validator:
-            return True
-
-        out_path = os.path.join(job_dir, output_file)
-        if not os.path.exists(out_path):
-            return False
-
-        vtype = validator.get("type", "exists")
-
-        if vtype == "exists":
-            return True
-
-        if vtype == "json":
-            try:
-                with open(out_path, "r", encoding="utf-8") as handle:
-                    json.load(handle)
-                return True
-            except Exception:
-                return False
-
-        if vtype == "sections":
-            required = validator.get("required", [])
-            with open(out_path, "r", encoding="utf-8") as handle:
-                content = handle.read()
-            return all(section in content for section in required)
-
-        return True
+        return self.step_validator.validate_step(job_dir, step)
 
     def _extract_output_blocks(self, content: str) -> List[str]:
-        begin = re.escape(self.config.capture_begin_marker)
-        end = re.escape(self.config.capture_end_marker)
-        pattern = re.compile(rf"{begin}\s*(.*?)\s*{end}", re.DOTALL | re.IGNORECASE)
-        return [match.strip() for match in pattern.findall(content) if match.strip()]
+        return self.capture_runtime.extract_output_blocks(content)
 
     def _capture_source_text(self, job_dir: str, step: Dict[str, Any]) -> str:
-        capture = step.get("capture") or {}
-        source = str(capture.get("source", "none")).lower()
-
-        if source in ("", "none"):
-            return ""
-
-        if source == "clipboard":
-            return pyperclip.paste() or ""
-
-        if source == "file":
-            path = capture.get("path")
-            if not path:
-                raise ValueError("capture.source=file requires capture.path")
-            full_path = path if os.path.isabs(path) else os.path.join(job_dir, path)
-            if not os.path.exists(full_path):
-                raise FileNotFoundError(full_path)
-            with open(full_path, "r", encoding="utf-8") as handle:
-                return handle.read()
-
-        if source == "bridge":
-            path = capture.get("path") or self.config.bridge_response_file
-            if os.path.isabs(path):
-                full_path = path
-            else:
-                full_path = os.path.join(job_dir, path)
-                if not os.path.exists(full_path):
-                    full_path = os.path.join(os.getcwd(), path)
-            if not os.path.exists(full_path):
-                return ""
-            with open(full_path, "r", encoding="utf-8") as handle:
-                return handle.read()
-
-        raise ValueError(f"Unsupported capture source: {source}")
+        return self.capture_runtime.capture_source_text(job_dir, step)
 
     def _capture_signature(self, text: str) -> str:
-        return hashlib.sha256(text.encode("utf-8")).hexdigest() if text else ""
+        return self.capture_runtime.capture_signature(text)
 
     def _default_require_fresh_capture(self, step: Dict[str, Any], source: str) -> bool:
-        step_type = str(step.get("type", "text")).lower()
-        if step_type == "validate":
-            return False
-        if source in {"file", "none", ""}:
-            return False
-        return bool(self.config.completion_require_fresh_capture)
+        return self.capture_runtime.default_require_fresh_capture(step, source)
 
     def _wait_for_completion(self, job_dir: str, step: Dict[str, Any], baseline_signature: str) -> Dict[str, Any]:
-        capture = step.get("capture") or {}
-        source = str(capture.get("source", "none")).lower()
-        if source in ("", "none"):
-            return {"ready": True, "reason": "no_capture"}
-
-        completion = step.get("completion") or {}
-        timeout_s = float(completion.get("timeout_s", self.config.completion_timeout_s))
-        poll_s = float(completion.get("poll_interval_s", self.config.completion_poll_interval_s))
-        default_fresh = self._default_require_fresh_capture(step, source)
-        require_fresh = bool(completion.get("require_fresh_capture", default_fresh))
-
-        start = time.time()
-        last_signature = baseline_signature
-        while (time.time() - start) <= timeout_s:
-            raw = self._capture_source_text(job_dir, step)
-            signature = self._capture_signature(raw)
-            blocks = self._extract_output_blocks(raw)
-            extracted = "\n\n".join(blocks).strip() if blocks else raw.strip()
-
-            if extracted:
-                if require_fresh:
-                    if signature and signature != baseline_signature and signature != last_signature:
-                        return {"ready": True, "raw": raw, "extracted": extracted, "blocks": len(blocks)}
-                else:
-                    return {"ready": True, "raw": raw, "extracted": extracted, "blocks": len(blocks)}
-
-            last_signature = signature
-            time.sleep(max(0.1, poll_s))
-
-        return {"ready": False, "reason": "timeout"}
+        return self.capture_runtime.wait_for_completion(job_dir, step, baseline_signature)
 
     def _persist_step_artifacts(self, job_dir: str, step: Dict[str, Any], step_id: str, attempt: int) -> Dict[str, Any]:
-        capture = step.get("capture") or {}
-        source = str(capture.get("source", "none")).lower()
-        if source in ("", "none"):
-            return {"captured": False}
-
-        raw = self._capture_source_text(job_dir, step)
-        blocks = self._extract_output_blocks(raw)
-        extracted = "\n\n".join(blocks).strip() if blocks else raw.strip()
-
-        step_artifacts = self._artifacts_dir(job_dir, step_id)
-        os.makedirs(step_artifacts, exist_ok=True)
-
-        raw_file = os.path.join(step_artifacts, f"attempt_{attempt}_raw.txt")
-        with open(raw_file, "w", encoding="utf-8") as handle:
-            handle.write(raw)
-
-        extracted_file = os.path.join(step_artifacts, f"attempt_{attempt}_extracted.txt")
-        with open(extracted_file, "w", encoding="utf-8") as handle:
-            handle.write(extracted)
-
-        output_file = step.get("output_file")
-        output_written = None
-        if output_file and extracted:
-            out_path = os.path.join(job_dir, output_file)
-            os.makedirs(os.path.dirname(out_path), exist_ok=True)
-            with open(out_path, "w", encoding="utf-8") as handle:
-                handle.write(extracted)
-            output_written = out_path
-
-        return {
-            "captured": True,
-            "raw_file": raw_file,
-            "extracted_file": extracted_file,
-            "block_count": len(blocks),
-            "output_written": output_written,
-        }
+        return self.capture_runtime.persist_step_artifacts(job_dir, step, step_id, attempt)
 
     def _estimate_eta_seconds(self, steps: List[Dict[str, Any]], start_index: int) -> float:
         total = 0.0
@@ -262,9 +136,275 @@ class JobRunner:
         step_state["updated_at"] = datetime.now().isoformat()
 
     def _can_capture_fallback(self, step: Dict[str, Any]) -> bool:
-        capture = step.get("capture") or {}
-        source = str(capture.get("source", "none")).lower()
-        return source in {"bridge", "file", "clipboard"}
+        return self.capture_runtime.can_capture_fallback(step)
+
+    def _step_output_is_ready(self, job_dir: str, step: Dict[str, Any]) -> bool:
+        try:
+            return bool(self._validate_step(job_dir, step))
+        except Exception:
+            return False
+
+    def _parallel_supported(self, steps: List[Dict[str, Any]]) -> Tuple[bool, Optional[str]]:
+        for step in steps:
+            step_type = str(step.get("type", "text")).lower()
+            if step_type in {"worker_contract", "validate"}:
+                continue
+            return False, f"unsupported_step_type:{step_type}"
+        return True, None
+
+    def _run_worker_contract_step(
+        self,
+        job_dir: str,
+        step: Dict[str, Any],
+        step_id: str,
+        attempt: int,
+        lane_id: Optional[str],
+        target: Optional[str],
+    ) -> Dict[str, Any]:
+        return self.worker_contract.execute_step(
+            job_dir=job_dir,
+            step=step,
+            step_id=step_id,
+            attempt=attempt,
+            lane_id=lane_id,
+            target=target,
+            send_text_fn=self.sequencer.send_text,
+            capture_runtime=self.capture_runtime,
+            log_fn=lambda message: self._log(job_dir, message),
+        )
+
+    def _collect_lane_steps(
+        self,
+        steps: List[Dict[str, Any]],
+        dispatch_plan: Dict[str, Any],
+        lane_runtime: LaneRuntimeCoordinator,
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        steps_by_id = {str(step.get("id")): step for step in steps}
+        lane_steps: Dict[str, List[Dict[str, Any]]] = {}
+
+        lanes = dispatch_plan.get("lanes") if isinstance(dispatch_plan.get("lanes"), list) else []
+        for lane in lanes:
+            lane_id = str(lane.get("id") or "")
+            if not lane_id:
+                continue
+            assigned: List[Dict[str, Any]] = []
+            raw_ids = lane.get("step_ids") if isinstance(lane.get("step_ids"), list) else []
+            for step_id in raw_ids:
+                step = steps_by_id.get(str(step_id))
+                if step is not None and step not in assigned:
+                    assigned.append(step)
+            lane_steps[lane_id] = assigned
+
+        for step in steps:
+            step_id = str(step.get("id"))
+            lane_id = lane_runtime.lane_for_step(step_id)
+            lane_steps.setdefault(lane_id, [])
+            if step not in lane_steps[lane_id]:
+                lane_steps[lane_id].append(step)
+
+        return lane_steps
+
+    def _run_parallel_worker_lanes(
+        self,
+        job_dir: str,
+        steps: List[Dict[str, Any]],
+        status: Dict[str, Any],
+        dispatch_plan: Dict[str, Any],
+        lane_runtime: LaneRuntimeCoordinator,
+    ) -> bool:
+        lane_steps = self._collect_lane_steps(steps=steps, dispatch_plan=dispatch_plan, lane_runtime=lane_runtime)
+        lane_ids = [lane_id for lane_id, items in lane_steps.items() if items]
+        if not lane_ids:
+            status["state"] = "completed"
+            status["current_step"] = None
+            status["current_lane"] = None
+            status["finished_at"] = datetime.now().isoformat()
+            summary = lane_runtime.finalize_run(job_dir, dispatch_plan, overall_state="completed")
+            status["lane_summary_state"] = summary.get("state")
+            self._save_status(job_dir, status)
+            return True
+
+        status_lock = threading.Lock()
+        stop_event = threading.Event()
+        failure: Dict[str, Any] = {"step_id": None, "lane_id": None, "error": None}
+
+        status.setdefault("lane_current_steps", {})
+        status["lane_current_steps"] = {}
+
+        def _set_failure(step_id: str, lane_id: str, error: str):
+            with status_lock:
+                if failure["step_id"] is None:
+                    failure["step_id"] = step_id
+                    failure["lane_id"] = lane_id
+                    failure["error"] = error
+            stop_event.set()
+
+        def _run_lane(lane_id: str):
+            lane_items = lane_steps.get(lane_id, [])
+            for step_index, step in enumerate(lane_items):
+                if stop_event.is_set():
+                    break
+
+                step_id = str(step.get("id"))
+                step_state = status["steps"][step_id]
+                step_state["lane_id"] = lane_id
+
+                with status_lock:
+                    status["current_lane"] = lane_id
+                    status["current_step"] = step_id
+                    lane_current = status.setdefault("lane_current_steps", {})
+                    lane_current[lane_id] = step_id
+                    self._save_status(job_dir, status)
+
+                eta_s = self._estimate_eta_seconds(lane_items, step_index)
+                self._log(job_dir, f"[PARALLEL] lane={lane_id} step={step_id} eta~{int(eta_s)}s")
+
+                if step_state["state"] == "completed":
+                    if self._step_output_is_ready(job_dir, step):
+                        self._log(job_dir, f"[PARALLEL] lane={lane_id} skip completed step: {step_id}")
+                        continue
+                    with status_lock:
+                        step_state["state"] = "pending"
+                        step_state["attempts"] = 0
+                        step_state["last_error"] = "Previously completed output missing/invalid; rerun required"
+                        step_state["updated_at"] = datetime.now().isoformat()
+                        self._save_status(job_dir, status)
+
+                if step_state["state"] == "failed":
+                    with status_lock:
+                        step_state["attempts"] = 0
+                        step_state["last_error"] = None
+                        step_state["updated_at"] = datetime.now().isoformat()
+                        self._save_status(job_dir, status)
+
+                max_retries = int(step.get("max_retries", 2))
+                step_type = str(step.get("type", "text")).lower()
+                target = step.get("target")
+                success = False
+
+                for attempt in range(step_state.get("attempts", 0) + 1, max_retries + 2):
+                    if stop_event.is_set():
+                        break
+
+                    attempt_started = time.time()
+                    attempt_success = False
+                    attempt_error = None
+                    execution_target = target
+
+                    with status_lock:
+                        step_state["attempts"] = attempt
+                        self._mark_step(step_state, "running")
+                        self._save_status(job_dir, status)
+                    self._log(job_dir, f"[PARALLEL] lane={lane_id} running {step_id} (attempt {attempt}/{max_retries + 1})")
+
+                    try:
+                        if step_type != "validate":
+                            resolved_target, reroute_reason = lane_runtime.resolve_target(target, lane_id)
+                            if resolved_target:
+                                execution_target = resolved_target
+                            if reroute_reason and execution_target != target:
+                                lane_runtime.record_reroute(
+                                    job_dir=job_dir,
+                                    lane_id=lane_id,
+                                    from_target=str(target),
+                                    to_target=str(execution_target),
+                                    reason=reroute_reason,
+                                )
+                                self._log(
+                                    job_dir,
+                                    f"[HEALTH] Rerouted step {step_id} from {target} to {execution_target} ({reroute_reason})",
+                                )
+
+                        lane_runtime.start_step_attempt(
+                            job_dir=job_dir,
+                            lane_id=lane_id,
+                            step_id=step_id,
+                            attempt=attempt,
+                            target=execution_target,
+                        )
+
+                        if step_type == "worker_contract":
+                            contract_result = self._run_worker_contract_step(
+                                job_dir=job_dir,
+                                step=step,
+                                step_id=step_id,
+                                attempt=attempt,
+                                lane_id=lane_id,
+                                target=execution_target,
+                            )
+                            output_written = contract_result.get("output_written")
+                            if output_written:
+                                self._log(job_dir, f"[WORKER] step={step_id} wrote {output_written}")
+                        elif step_type == "validate":
+                            pass
+                        else:
+                            raise RuntimeError(f"Parallel lane executor does not support step type: {step_type}")
+
+                        if not self._validate_step(job_dir, step):
+                            raise RuntimeError("Validation failed. Required output artifact not ready.")
+
+                        with status_lock:
+                            self._mark_step(step_state, "completed")
+                            self._save_status(job_dir, status)
+                        self._log(job_dir, f"[PARALLEL] lane={lane_id} completed step: {step_id}")
+                        attempt_success = True
+                        success = True
+                        break
+
+                    except Exception as exc:
+                        attempt_error = str(exc)
+                        with status_lock:
+                            self._mark_step(step_state, "failed", error=attempt_error)
+                            self._save_status(job_dir, status)
+                        self._log(job_dir, f"[PARALLEL] lane={lane_id} failed step {step_id}: {attempt_error}")
+                    finally:
+                        lane_runtime.finish_step_attempt(
+                            job_dir=job_dir,
+                            lane_id=lane_id,
+                            step_id=step_id,
+                            success=attempt_success,
+                            duration_s=max(0.0, time.time() - attempt_started),
+                            error=attempt_error,
+                        )
+
+                if not success:
+                    _set_failure(step_id=step_id, lane_id=lane_id, error=str(step_state.get("last_error") or "failed"))
+                    break
+
+            with status_lock:
+                lane_current = status.setdefault("lane_current_steps", {})
+                lane_current.pop(lane_id, None)
+                self._save_status(job_dir, status)
+
+        worker_limit = max(1, min(int(getattr(self.config, "multi_lane_max_lanes", len(lane_ids))), len(lane_ids)))
+        with ThreadPoolExecutor(max_workers=worker_limit) as executor:
+            futures = [executor.submit(_run_lane, lane_id) for lane_id in lane_ids]
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as exc:
+                    _set_failure(step_id="unknown", lane_id="unknown", error=str(exc))
+
+        if failure["step_id"] is not None:
+            status["state"] = "failed"
+            status["failed_step"] = failure["step_id"]
+            status["current_lane"] = failure.get("lane_id")
+            status["finished_at"] = datetime.now().isoformat()
+            summary = lane_runtime.finalize_run(job_dir, dispatch_plan, overall_state="failed")
+            status["lane_summary_state"] = summary.get("state")
+            self._save_status(job_dir, status)
+            self._log(job_dir, f"Job failed at step: {failure['step_id']}")
+            return False
+
+        status["state"] = "completed"
+        status["current_step"] = None
+        status["current_lane"] = None
+        status["finished_at"] = datetime.now().isoformat()
+        summary = lane_runtime.finalize_run(job_dir, dispatch_plan, overall_state="completed")
+        status["lane_summary_state"] = summary.get("state")
+        self._save_status(job_dir, status)
+        self._log(job_dir, "Job completed successfully")
+        return True
 
     def run_job(self, job_dir: str):
         plan_path = self._plan_path(job_dir)
@@ -298,22 +438,99 @@ class JobRunner:
             step["id"] = step_id
             step_ids.append(step_id)
 
+        scheduler = RuleBasedTaskScheduler(self.config)
+        scheduled = scheduler.assign_missing_targets(steps)
+        dispatcher = MultiLaneDispatcher(self.config)
+        dispatch_plan = dispatcher.build_dispatch_plan(steps)
+        if scheduled:
+            plan["runtime_assignment_policy"] = scheduler.POLICY_NAME
+            for item in scheduled:
+                self._log(
+                    job_dir,
+                    f"[SCHEDULER] step={item['step_id']} target={item['target']} reason={item['reason']}",
+                )
+
+        plan["dispatch"] = dispatch_plan
+        self._write_json(plan_path, plan)
+
+        lane_runtime = LaneRuntimeCoordinator(self.config)
+        lane_context = lane_runtime.initialize(
+            job_dir=job_dir,
+            dispatch_plan=dispatch_plan,
+            step_ids=step_ids,
+        )
+
         status = self._load_status(job_dir, step_ids)
+        status["state"] = "running"
+        status["mode"] = str(dispatch_plan.get("execution_mode", "single_lane"))
+        status["dispatch_mode"] = str(dispatch_plan.get("dispatch_mode", "single_lane"))
+        status["dispatch_policy"] = str(dispatch_plan.get("policy", "single_lane_only"))
+        status["dispatch_lanes"] = dispatch_plan.get("lanes", [])
+        status["dispatch_fallback_reason"] = dispatch_plan.get("fallback_reason")
+        status["current_lane"] = None
+        status["lanes_root"] = lane_context.get("lanes_root")
+        status["lane_summary_file"] = lane_context.get("summary_path")
+        status["lane_health"] = lane_context.get("health")
+        status.pop("failed_step", None)
+        status.pop("finished_at", None)
         self._save_status(job_dir, status)
 
-        self._log(job_dir, f"Job started in single_lane mode: {job_dir}")
+        self._log(job_dir, f"Job started in {status['mode']} mode: {job_dir}")
+        self._log(job_dir, f"[LANES] Runtime directory: {lane_context.get('lanes_root')}")
+        if status["dispatch_mode"] == "multi_lane_skeleton":
+            self._log(
+                job_dir,
+                "[DISPATCH] Multi-lane skeleton active; using single-lane fallback executor for safe execution",
+            )
+        else:
+            reason = status.get("dispatch_fallback_reason") or "single_lane"
+            self._log(job_dir, f"[DISPATCH] Single-lane dispatch mode ({reason})")
+        lane_health = lane_context.get("health") or {}
+        if lane_health.get("usable"):
+            healthy_targets = lane_health.get("healthy_targets", [])
+            self._log(job_dir, f"[HEALTH] Snapshot active ({', '.join(healthy_targets)})")
+        else:
+            self._log(job_dir, f"[HEALTH] Snapshot unavailable ({lane_health.get('reason', 'unknown')})")
+
+        if status["mode"] == "parallel_lanes":
+            supported, reason = self._parallel_supported(steps)
+            if supported:
+                self._log(job_dir, "[DISPATCH] Parallel lane executor active")
+                return self._run_parallel_worker_lanes(
+                    job_dir=job_dir,
+                    steps=steps,
+                    status=status,
+                    dispatch_plan=dispatch_plan,
+                    lane_runtime=lane_runtime,
+                )
+            fallback_reason = f"parallel_executor_fallback:{reason}"
+            status["mode"] = "single_lane_fallback"
+            status["dispatch_fallback_reason"] = fallback_reason
+            self._save_status(job_dir, status)
+            self._log(job_dir, f"[DISPATCH] Falling back to single-lane executor ({fallback_reason})")
 
         for step_index, step in enumerate(steps):
             step_id = step["id"]
+            lane_id = lane_runtime.lane_for_step(step_id)
             status["current_step"] = step_id
+            status["current_lane"] = lane_id
             step_state = status["steps"][step_id]
+            step_state["lane_id"] = lane_id
+            self._save_status(job_dir, status)
 
             eta_s = self._estimate_eta_seconds(steps, step_index)
-            self._log(job_dir, f"ETA remaining ~{int(eta_s)}s")
+            self._log(job_dir, f"ETA remaining ~{int(eta_s)}s (lane={lane_id})")
 
             if step_state["state"] == "completed":
-                self._log(job_dir, f"Skipping completed step: {step_id}")
-                continue
+                if self._step_output_is_ready(job_dir, step):
+                    self._log(job_dir, f"Skipping completed step: {step_id}")
+                    continue
+                step_state["state"] = "pending"
+                step_state["attempts"] = 0
+                step_state["last_error"] = "Previously completed output missing/invalid; rerun required"
+                step_state["updated_at"] = datetime.now().isoformat()
+                self._save_status(job_dir, status)
+                self._log(job_dir, f"Completed step output missing/invalid, rerunning: {step_id}")
 
             if step_state["state"] == "failed":
                 step_state["attempts"] = 0
@@ -328,12 +545,42 @@ class JobRunner:
 
             success = False
             for attempt in range(step_state.get("attempts", 0) + 1, max_retries + 2):
+                attempt_started = time.time()
+                attempt_success = False
+                attempt_error = None
+                execution_target = target
+
                 step_state["attempts"] = attempt
                 self._mark_step(step_state, "running")
                 self._save_status(job_dir, status)
                 self._log(job_dir, f"Running step {step_id} (attempt {attempt}/{max_retries + 1})")
 
                 try:
+                    if str(step_type).lower() != "validate":
+                        resolved_target, reroute_reason = lane_runtime.resolve_target(target, lane_id)
+                        if resolved_target:
+                            execution_target = resolved_target
+                        if reroute_reason and execution_target != target:
+                            lane_runtime.record_reroute(
+                                job_dir=job_dir,
+                                lane_id=lane_id,
+                                from_target=str(target),
+                                to_target=str(execution_target),
+                                reason=reroute_reason,
+                            )
+                            self._log(
+                                job_dir,
+                                f"[HEALTH] Rerouted step {step_id} from {target} to {execution_target} ({reroute_reason})",
+                            )
+
+                    lane_runtime.start_step_attempt(
+                        job_dir=job_dir,
+                        lane_id=lane_id,
+                        step_id=step_id,
+                        attempt=attempt,
+                        target=execution_target,
+                    )
+
                     baseline_raw = ""
                     if self._can_capture_fallback(step):
                         try:
@@ -345,7 +592,11 @@ class JobRunner:
                     send_success = True
                     if step_type == "text":
                         text = self._get_step_text(job_dir, step)
-                        sent = self.sequencer.send_text(text, press_enter=bool(step.get("press_enter", True)), target_name=target)
+                        sent = self.sequencer.send_text(
+                            text,
+                            press_enter=bool(step.get("press_enter", True)),
+                            target_name=execution_target,
+                        )
                         if not sent:
                             send_success = False
                     elif step_type == "image":
@@ -353,11 +604,27 @@ class JobRunner:
                         if not image_path:
                             raise ValueError(f"Step '{step_id}' missing image_path")
                         full_path = os.path.join(job_dir, image_path)
-                        sent = self.sequencer.send_image(full_path, press_enter=bool(step.get("press_enter", False)), target_name=target)
+                        sent = self.sequencer.send_image(
+                            full_path,
+                            press_enter=bool(step.get("press_enter", False)),
+                            target_name=execution_target,
+                        )
                         if not sent:
                             send_success = False
                     elif step_type == "validate":
                         pass
+                    elif step_type == "worker_contract":
+                        contract_result = self._run_worker_contract_step(
+                            job_dir=job_dir,
+                            step=step,
+                            step_id=step_id,
+                            attempt=attempt,
+                            lane_id=lane_id,
+                            target=execution_target,
+                        )
+                        output_written = contract_result.get("output_written")
+                        if output_written:
+                            self._log(job_dir, f"[WORKER] step={step_id} wrote {output_written}")
                     else:
                         raise ValueError(f"Unsupported step type: {step_type}")
 
@@ -391,26 +658,50 @@ class JobRunner:
                     self._mark_step(step_state, "completed")
                     self._save_status(job_dir, status)
                     self._log(job_dir, f"Step completed: {step_id}")
+                    attempt_success = True
                     success = True
                     break
 
                 except Exception as exc:
-                    error = str(exc)
-                    self._mark_step(step_state, "failed", error=error)
+                    attempt_error = str(exc)
+                    self._mark_step(step_state, "failed", error=attempt_error)
                     self._save_status(job_dir, status)
-                    self._log(job_dir, f"Step failed: {step_id} | {error}")
+                    self._log(job_dir, f"Step failed: {step_id} | {attempt_error}")
+                finally:
+                    lane_runtime.finish_step_attempt(
+                        job_dir=job_dir,
+                        lane_id=lane_id,
+                        step_id=step_id,
+                        success=attempt_success,
+                        duration_s=max(0.0, time.time() - attempt_started),
+                        error=attempt_error,
+                    )
 
             if not success:
                 status["state"] = "failed"
                 status["failed_step"] = step_id
                 status["finished_at"] = datetime.now().isoformat()
+                status["current_lane"] = lane_id
+                summary = lane_runtime.finalize_run(
+                    job_dir=job_dir,
+                    dispatch_plan=dispatch_plan,
+                    overall_state="failed",
+                )
+                status["lane_summary_state"] = summary.get("state")
                 self._save_status(job_dir, status)
                 self._log(job_dir, f"Job failed at step: {step_id}")
                 return False
 
         status["state"] = "completed"
         status["current_step"] = None
+        status["current_lane"] = None
         status["finished_at"] = datetime.now().isoformat()
+        summary = lane_runtime.finalize_run(
+            job_dir=job_dir,
+            dispatch_plan=dispatch_plan,
+            overall_state="completed",
+        )
+        status["lane_summary_state"] = summary.get("state")
         self._save_status(job_dir, status)
         self._log(job_dir, "Job completed successfully")
         return True

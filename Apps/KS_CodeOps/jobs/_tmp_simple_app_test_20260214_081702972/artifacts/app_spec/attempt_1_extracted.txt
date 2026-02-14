@@ -1,0 +1,19 @@
+# Tiny App Spec
+
+FILE: main.py
+```python
+print('Hello from KS CodeOps tiny app!')
+```
+
+FILE: README.md
+```markdown
+# Tiny App
+
+This app was materialized from KS CodeOps output.
+
+Run:
+
+```powershell
+python main.py
+```
+```
