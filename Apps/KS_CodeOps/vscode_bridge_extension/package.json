@@ -1,0 +1,26 @@
+{
+  "name": "ks-codeops-bridge",
+  "displayName": "KS CodeOps Bridge",
+  "description": "Manual bridge commands for KS CodeOps output capture",
+  "version": "0.0.1",
+  "publisher": "kalponicstudio",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ksCodeOpsBridge.writeClipboardToBridge",
+        "title": "KS CodeOps: Write Clipboard to Bridge"
+      },
+      {
+        "command": "ksCodeOpsBridge.openBridgeFile",
+        "title": "KS CodeOps: Open Bridge Response File"
+      }
+    ]
+  }
+}

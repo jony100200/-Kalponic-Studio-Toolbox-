@@ -1,0 +1,5 @@
+[2026-02-14 04:17:05] Job started in single_lane mode: jobs/simple_app_test
+[2026-02-14 04:17:05] Running step app_spec (attempt 1/3)
+[2026-02-14 04:17:05] Captured output for app_spec: blocks=1
+[2026-02-14 04:17:05] Step completed: app_spec
+[2026-02-14 04:17:05] Job completed successfully

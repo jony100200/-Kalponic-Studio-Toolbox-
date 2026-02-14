@@ -1,0 +1,28 @@
+{
+  "job_id": "JOB-YYYYMMDD-001",
+  "created_at": "YYYY-MM-DDTHH:MM:SS",
+  "owner": "your_name",
+  "priority": "medium",
+  "role": "writer",
+  "title": "Short task title",
+  "objective": "What should be produced?",
+  "inputs": [
+    "List links, files, references"
+  ],
+  "constraints": [
+    "Style rules",
+    "Technical limits",
+    "Deadline"
+  ],
+  "output": {
+    "format": "md",
+    "destination": "06_outputs/drafts",
+    "naming": "JOB-YYYYMMDD-001_output_v1.md"
+  },
+  "definition_of_done": [
+    "Requirement 1",
+    "Requirement 2",
+    "QA reviewed"
+  ],
+  "status": "inbox"
+}

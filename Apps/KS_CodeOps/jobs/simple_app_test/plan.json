@@ -1,0 +1,12 @@
+{
+  "name": "simple_app_test",
+  "steps": [
+    {
+      "id": "app_spec",
+      "type": "validate",
+      "capture": { "source": "file", "path": "ai_response.txt" },
+      "output_file": "outputs/app_spec.md",
+      "validator": { "type": "sections", "required": ["FILE: main.py", "FILE: README.md"] }
+    }
+  ]
+}

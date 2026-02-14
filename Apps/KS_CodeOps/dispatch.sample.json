@@ -1,0 +1,12 @@
+[
+  {
+    "target": "copilot",
+    "content": "Analyze this folder and summarize TODOs.",
+    "press_enter": true
+  },
+  {
+    "target": "gemini",
+    "content": "Create a quick risk checklist for this project.",
+    "press_enter": true
+  }
+]

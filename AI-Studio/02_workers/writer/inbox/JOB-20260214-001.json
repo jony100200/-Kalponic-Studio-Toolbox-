@@ -1,0 +1,27 @@
+{
+  "job_id": "JOB-20260214-001",
+  "created_at": "2026-02-14T03:22:11",
+  "owner": "ahme0",
+  "priority": "medium",
+  "role": "writer",
+  "title": "Local studio smoke test",
+  "objective": "",
+  "inputs": [],
+  "constraints": [],
+  "output": {
+    "format": "md",
+    "destination": "06_outputs/drafts",
+    "naming": "JOB-20260214-001_local-studio-smoke-test_output_v1.md"
+  },
+  "definition_of_done": [
+    "Requirement 1",
+    "Requirement 2",
+    "QA reviewed"
+  ],
+  "status": "inbox",
+  "dispatch": {
+    "source_job_card": "00_inbox/JOB-20260214-001.json",
+    "worker_role": "writer",
+    "dispatched_at": "2026-02-14T03:24:52"
+  }
+}

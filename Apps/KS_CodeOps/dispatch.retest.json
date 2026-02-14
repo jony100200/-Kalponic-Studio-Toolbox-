@@ -1,0 +1,7 @@
+[
+  {"target":"copilot","content":"KS_CODEOPS_RETEST_COPILOT","press_enter":false},
+  {"target":"gemini","content":"KS_CODEOPS_RETEST_GEMINI","press_enter":false},
+  {"target":"codex","content":"KS_CODEOPS_RETEST_CODEX","press_enter":false},
+  {"target":"kilo","content":"KS_CODEOPS_RETEST_KILO","press_enter":false},
+  {"target":"cline","content":"KS_CODEOPS_RETEST_CLINE","press_enter":false}
+]

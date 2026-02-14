@@ -1,0 +1,56 @@
+{
+  "name": "AI-Studio Pipeline (Stub)",
+  "nodes": [
+    {
+      "id": "manual_trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "notes": "Start pipeline manually while prototyping."
+    },
+    {
+      "id": "scan_inbox",
+      "name": "Scan Inbox",
+      "type": "n8n-nodes-base.readBinaryFiles",
+      "notes": "Read job cards from 00_inbox/*.json"
+    },
+    {
+      "id": "parse_job",
+      "name": "Parse Job Card",
+      "type": "n8n-nodes-base.code",
+      "notes": "Extract role, priority, title, objective."
+    },
+    {
+      "id": "route_role",
+      "name": "Route by Role",
+      "type": "n8n-nodes-base.switch",
+      "notes": "writer / artist_comfyui / programmer / youtube / qa"
+    },
+    {
+      "id": "invoke_worker",
+      "name": "Invoke Worker",
+      "type": "n8n-nodes-base.httpRequest",
+      "notes": "Call local endpoint/tool for selected worker."
+    },
+    {
+      "id": "qa_gate",
+      "name": "QA Gate",
+      "type": "n8n-nodes-base.if",
+      "notes": "Pass -> approved, Fail -> return for revision"
+    },
+    {
+      "id": "archive",
+      "name": "Archive Job",
+      "type": "n8n-nodes-base.moveBinaryFile",
+      "notes": "Move completed package to 08_archive"
+    }
+  ],
+  "connections": [
+    ["manual_trigger", "scan_inbox"],
+    ["scan_inbox", "parse_job"],
+    ["parse_job", "route_role"],
+    ["route_role", "invoke_worker"],
+    ["invoke_worker", "qa_gate"],
+    ["qa_gate", "archive"]
+  ],
+  "notes": "Stub file for architecture guidance; map to your actual n8n node schema before import."
+}

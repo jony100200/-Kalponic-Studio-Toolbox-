@@ -1,0 +1,12 @@
+{
+  "name": "phase1_capture_test",
+  "steps": [
+    {
+      "id": "capture_only",
+      "type": "validate",
+      "capture": { "source": "file", "path": "input.txt" },
+      "output_file": "outputs/result.md",
+      "validator": { "type": "sections", "required": ["# Architecture", "# Tasks"] }
+    }
+  ]
+}

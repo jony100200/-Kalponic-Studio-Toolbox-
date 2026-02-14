@@ -1,0 +1,17 @@
+{
+  "name": "completion_fresh_test",
+  "steps": [
+    {
+      "id": "fresh_bridge_step",
+      "type": "text",
+      "content": "Ping from KS_CodeOps completion test",
+      "target": "copilot",
+      "press_enter": true,
+      "max_retries": 0,
+      "capture": { "source": "bridge", "path": ".ks_codeops/bridge/latest_response.txt" },
+      "output_file": "outputs/result.md",
+      "validator": { "type": "exists" },
+      "completion": { "timeout_s": 20, "poll_interval_s": 1 }
+    }
+  ]
+}

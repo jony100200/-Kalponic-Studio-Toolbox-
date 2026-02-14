@@ -1,0 +1,7 @@
+[2026-02-14 04:25:48] Job started in single_lane mode: jobs/completion_fresh_test
+[2026-02-14 04:25:48] ETA remaining ~20s
+[2026-02-14 04:25:48] Running step fresh_bridge_step (attempt 1/1)
+[2026-02-14 04:25:48] Send failed for fresh_bridge_step, continuing with capture fallback (bridge)
+[2026-02-14 04:25:49] Captured output for fresh_bridge_step: blocks=1
+[2026-02-14 04:25:49] Step completed: fresh_bridge_step
+[2026-02-14 04:25:49] Job completed successfully

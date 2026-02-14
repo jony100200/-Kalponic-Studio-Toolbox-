@@ -1,0 +1,47 @@
+[2026-02-14 04:24:50] Job started in single_lane mode: jobs/ks_pdf_studio_v2
+[2026-02-14 04:24:50] ETA remaining ~108s
+[2026-02-14 04:24:50] Running step step_01_phase_0_foundation (attempt 1/3)
+[2026-02-14 04:24:50] Send failed for step_01_phase_0_foundation, continuing with capture fallback (bridge)
+[2026-02-14 04:24:54] Captured output for step_01_phase_0_foundation: blocks=1
+[2026-02-14 04:24:54] Step completed: step_01_phase_0_foundation
+[2026-02-14 04:24:54] ETA remaining ~96s
+[2026-02-14 04:24:54] Running step step_02_phase_1_research_audit (attempt 1/3)
+[2026-02-14 04:24:54] Send failed for step_02_phase_1_research_audit, continuing with capture fallback (bridge)
+[2026-02-14 04:24:58] Captured output for step_02_phase_1_research_audit: blocks=1
+[2026-02-14 04:24:58] Step completed: step_02_phase_1_research_audit
+[2026-02-14 04:24:58] ETA remaining ~84s
+[2026-02-14 04:24:58] Running step step_03_phase_2_design_structure (attempt 1/3)
+[2026-02-14 04:24:58] Send failed for step_03_phase_2_design_structure, continuing with capture fallback (bridge)
+[2026-02-14 04:25:02] Captured output for step_03_phase_2_design_structure: blocks=1
+[2026-02-14 04:25:02] Step completed: step_03_phase_2_design_structure
+[2026-02-14 04:25:02] ETA remaining ~72s
+[2026-02-14 04:25:02] Running step step_04_phase_3_prototype_fast (attempt 1/3)
+[2026-02-14 04:25:02] Send failed for step_04_phase_3_prototype_fast, continuing with capture fallback (bridge)
+[2026-02-14 04:25:06] Captured output for step_04_phase_3_prototype_fast: blocks=1
+[2026-02-14 04:25:06] Step completed: step_04_phase_3_prototype_fast
+[2026-02-14 04:25:06] ETA remaining ~60s
+[2026-02-14 04:25:06] Running step step_05_phase_4_ux_polish (attempt 1/3)
+[2026-02-14 04:25:06] Send failed for step_05_phase_4_ux_polish, continuing with capture fallback (bridge)
+[2026-02-14 04:25:10] Captured output for step_05_phase_4_ux_polish: blocks=1
+[2026-02-14 04:25:10] Step completed: step_05_phase_4_ux_polish
+[2026-02-14 04:25:10] ETA remaining ~48s
+[2026-02-14 04:25:10] Running step step_06_phase_5_qa_profit_effort (attempt 1/3)
+[2026-02-14 04:25:10] Send failed for step_06_phase_5_qa_profit_effort, continuing with capture fallback (bridge)
+[2026-02-14 04:25:14] Captured output for step_06_phase_5_qa_profit_effort: blocks=1
+[2026-02-14 04:25:14] Step completed: step_06_phase_5_qa_profit_effort
+[2026-02-14 04:25:14] ETA remaining ~36s
+[2026-02-14 04:25:14] Running step step_07_phase_6_package_teach (attempt 1/3)
+[2026-02-14 04:25:14] Send failed for step_07_phase_6_package_teach, continuing with capture fallback (bridge)
+[2026-02-14 04:25:18] Captured output for step_07_phase_6_package_teach: blocks=1
+[2026-02-14 04:25:18] Step completed: step_07_phase_6_package_teach
+[2026-02-14 04:25:18] ETA remaining ~24s
+[2026-02-14 04:25:18] Running step step_08_phase_7_market_expand (attempt 1/3)
+[2026-02-14 04:25:18] Send failed for step_08_phase_7_market_expand, continuing with capture fallback (bridge)
+[2026-02-14 04:25:22] Captured output for step_08_phase_7_market_expand: blocks=1
+[2026-02-14 04:25:22] Step completed: step_08_phase_7_market_expand
+[2026-02-14 04:25:22] ETA remaining ~12s
+[2026-02-14 04:25:22] Running step step_09_phase_8_maintain_reflect (attempt 1/3)
+[2026-02-14 04:25:22] Send failed for step_09_phase_8_maintain_reflect, continuing with capture fallback (bridge)
+[2026-02-14 04:25:26] Captured output for step_09_phase_8_maintain_reflect: blocks=1
+[2026-02-14 04:25:26] Step completed: step_09_phase_8_maintain_reflect
+[2026-02-14 04:25:26] Job completed successfully

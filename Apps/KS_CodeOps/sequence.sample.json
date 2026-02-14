@@ -1,0 +1,16 @@
+[
+  {
+    "target": "copilot",
+    "type": "text",
+    "content": "Create a Unity C# utility script for snapping transforms to grid with undo support.",
+    "press_enter": true,
+    "wait": 4
+  },
+  {
+    "target": "gemini",
+    "type": "text",
+    "content": "Now include a custom EditorWindow UI and usage instructions.",
+    "press_enter": true,
+    "wait": 4
+  }
+]

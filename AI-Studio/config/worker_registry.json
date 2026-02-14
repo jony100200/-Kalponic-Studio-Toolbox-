@@ -1,0 +1,31 @@
+{
+  "version": "1.0.0",
+  "priorities": ["low", "medium", "high"],
+  "roles": {
+    "writer": {
+      "description": "Creates written content from briefs.",
+      "prompt_template": "09_docs/prompts/writer_prompt.md",
+      "default_output_dir": "06_outputs/drafts"
+    },
+    "artist_comfyui": {
+      "description": "Creates visual assets via ComfyUI workflows.",
+      "prompt_template": "09_docs/prompts/artist_comfyui_prompt.md",
+      "default_output_dir": "05_assets/images"
+    },
+    "programmer": {
+      "description": "Generates code plans, patches, and test steps.",
+      "prompt_template": "09_docs/prompts/programmer_prompt.md",
+      "default_output_dir": "04_projects"
+    },
+    "youtube": {
+      "description": "Creates YouTube scripts, metadata, and thumbnail briefs.",
+      "prompt_template": "09_docs/prompts/youtube_prompt.md",
+      "default_output_dir": "06_outputs/drafts"
+    },
+    "qa": {
+      "description": "Verifies outputs against the brief and definition of done.",
+      "prompt_template": "09_docs/prompts/qa_prompt.md",
+      "default_output_dir": "07_reviews"
+    }
+  }
+}

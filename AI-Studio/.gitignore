@@ -1,0 +1,16 @@
+# OS / editor
+Thumbs.db
+.DS_Store
+
+# Runtime artifacts
+10_logs/*.log
+10_logs/*.txt
+*.tmp
+__pycache__/
+*.pyc
+.venv/
+
+# Local environment files
+config/.env
+config/.env.*
+!config/.env.example
