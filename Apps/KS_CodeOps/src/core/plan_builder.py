@@ -12,6 +12,28 @@ class PlanBuilder:
         self.config = config
         self.assignment_policy = TargetAssignmentPolicy(config)
 
+    def _worker_adapter_for_target(self, target_name: str) -> Optional[str]:
+        target = str(target_name or "").strip()
+        if not target:
+            return None
+        adapters = getattr(self.config, "worker_adapters", None)
+        if not isinstance(adapters, dict):
+            return None
+        candidate = f"{target}_vscode"
+        if isinstance(adapters.get(candidate), dict):
+            return candidate
+        return None
+
+    def _is_vscode_chat_adapter(self, adapter_name: str) -> bool:
+        adapters = getattr(self.config, "worker_adapters", None)
+        if not isinstance(adapters, dict):
+            return False
+        payload = adapters.get(adapter_name)
+        if not isinstance(payload, dict):
+            return False
+        mode = str(payload.get("mode", "")).strip().lower()
+        return mode in {"vscode_chat", "copilot_vscode_chat"}
+
     def _read_text(self, path: str) -> str:
         with open(path, "r", encoding="utf-8") as handle:
             return handle.read()
@@ -63,6 +85,7 @@ class PlanBuilder:
         target_name: Optional[str] = None,
         force: bool = False,
         project_name: str = "KS CodeOps Job",
+        prefer_worker_contract: bool = True,
     ) -> Dict[str, Any]:
         if not os.path.exists(brief_path):
             raise FileNotFoundError(f"Missing brief file: {brief_path}")
@@ -108,21 +131,30 @@ class PlanBuilder:
             )
             self._write_text(prompt_path, prompt_text)
 
-            steps.append(
-                {
-                    "id": f"step_{index:02d}_{slug}",
-                    "type": "text",
-                    "target": assignment.target,
-                    "assignment_reason": assignment.reason,
-                    "prompt_file": os.path.join("prompts", prompt_filename).replace("\\", "/"),
-                    "press_enter": True,
-                    "wait": 4,
-                    "max_retries": 2,
-                    "capture": {"source": "bridge"},
-                    "output_file": f"outputs/{index:02d}_{slug}.md",
-                    "validator": {"type": "exists"},
-                }
-            )
+            prompt_file_rel = os.path.join("prompts", prompt_filename).replace("\\", "/")
+            step_payload: Dict[str, Any] = {
+                "id": f"step_{index:02d}_{slug}",
+                "target": assignment.target,
+                "assignment_reason": assignment.reason,
+                "prompt_file": prompt_file_rel,
+                "press_enter": True,
+                "wait": 4,
+                "max_retries": 2,
+                "output_file": f"outputs/{index:02d}_{slug}.md",
+                "validator": {"type": "exists"},
+            }
+
+            adapter_name = self._worker_adapter_for_target(assignment.target) if prefer_worker_contract else None
+            if adapter_name:
+                step_payload["type"] = "worker_contract"
+                step_payload["worker"] = {"adapter": adapter_name}
+                if self._is_vscode_chat_adapter(adapter_name):
+                    step_payload["capture"] = {"source": "bridge"}
+            else:
+                step_payload["type"] = "text"
+                step_payload["capture"] = {"source": "bridge"}
+
+            steps.append(step_payload)
 
         plan = {
             "name": project_name,

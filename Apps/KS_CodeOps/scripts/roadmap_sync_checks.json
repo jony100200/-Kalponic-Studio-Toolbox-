@@ -111,6 +111,13 @@
       ]
     },
     {
+      "item": "Contract-first job bootstrapping from `init-job` (defaults to `worker_contract`; legacy text mode optional)",
+      "commands": [
+        "python -m unittest discover -s tests -p test_plan_builder_contract_mode.py -v",
+        "python -m unittest discover -s tests -p test_cli_init_job_contract_mode.py -v"
+      ]
+    },
+    {
       "item": "True parallel lane execution for contract-safe workloads",
       "commands": [
         "python -m unittest discover -s tests -p test_job_runner_parallel_lanes.py -v"

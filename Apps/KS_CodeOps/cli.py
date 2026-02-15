@@ -182,6 +182,11 @@ def build_parser():
     init_job.add_argument("--target")
     init_job.add_argument("--name")
     init_job.add_argument("--force", action="store_true")
+    init_job.add_argument(
+        "--legacy-text-steps",
+        action="store_true",
+        help="Generate legacy text steps instead of worker_contract adapter steps",
+    )
 
     materialize = sub.add_parser("materialize-app")
     materialize.add_argument("--source", required=True, help="Source markdown/text file that contains FILE blocks")
@@ -344,6 +349,7 @@ def main():
             target_name=args.target,
             force=args.force,
             project_name=project_name,
+            prefer_worker_contract=not bool(args.legacy_text_steps),
         )
         print(
             f"Created plan with {len(plan.get('steps', []))} steps at {job_dir}/plan.json "

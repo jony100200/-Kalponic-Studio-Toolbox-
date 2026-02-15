@@ -247,6 +247,8 @@ Configuration and usage match the previous app; this folder is the new canonical
 	- uses enabled worker targets from config (`enabled_targets`)
 	- applies a simple deterministic policy (`auto_enabled_targets_v1`)
 	- stores assignment reason per step in `plan.json`
+- `init-job` defaults to contract-first steps (`worker_contract`) when a built-in adapter exists for the selected target (for example `copilot_vscode`).
+- Use `init-job --legacy-text-steps` to force older `text` step generation.
 
 ## Phase 1: Output capture pipeline
 

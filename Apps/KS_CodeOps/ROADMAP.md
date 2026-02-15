@@ -46,5 +46,6 @@ This file tracks what is done and what is next for KS CodeOps.
 - [x] Gemini built-in worker adapter (`gemini_vscode`) with bridge-capture contract flow
 - [x] Codex built-in worker adapter (`codex_vscode`) with bridge-capture contract flow
 - [x] Kilo built-in worker adapter (`kilo_vscode`) with bridge-capture contract flow
+- [x] Contract-first job bootstrapping from `init-job` (defaults to `worker_contract`; legacy text mode optional)
 - [x] True parallel lane execution for contract-safe workloads
 - [x] Release hardening: packaged build metadata, semantic versioning, smoke-run command
