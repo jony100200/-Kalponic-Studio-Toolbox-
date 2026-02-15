@@ -135,12 +135,18 @@ Example step:
 
 Adapter configuration is stored in `config.json` under `worker_adapters`.
 
-Built-in Copilot adapter (`copilot_vscode`) is enabled by default in config and uses:
+Built-in adapters enabled by default in config:
 
-- `mode: "vscode_chat"`
-- `target: "copilot"`
-- `capture.source: "bridge"` (from `bridge_response_file`)
-- `allow_command_open: false` (safe default)
+- `copilot_vscode`
+  - `mode: "vscode_chat"`
+  - `target: "copilot"`
+  - `capture.source: "bridge"` (from `bridge_response_file`)
+  - `allow_command_open: false` (safe default)
+- `cline_vscode`
+  - `mode: "vscode_chat"`
+  - `target: "cline"`
+  - `capture.source: "bridge"` (from `bridge_response_file`)
+  - `allow_command_open: true` (uses Cline open command path)
 
 Copilot step example:
 
@@ -152,6 +158,19 @@ Copilot step example:
   "worker": { "adapter": "copilot_vscode" },
   "output_file": "outputs/copilot_plan.md",
   "validator": { "type": "sections", "required": ["# Plan"] }
+}
+```
+
+Cline step example:
+
+```json
+{
+  "id": "cline_review",
+  "type": "worker_contract",
+  "content": "Review architecture and identify risks",
+  "worker": { "adapter": "cline_vscode" },
+  "output_file": "outputs/cline_review.md",
+  "validator": { "type": "sections", "required": ["# Risks"] }
 }
 ```
 

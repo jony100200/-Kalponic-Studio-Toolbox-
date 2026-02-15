@@ -111,16 +111,98 @@ class VSCodePromptSenderGUI:
         )
         return chip
 
+    def _badge(self, parent, text: str, fg: str, text_color: str = "#0F1218"):
+        return ctk.CTkLabel(
+            parent,
+            text=text,
+            fg_color=fg,
+            text_color=text_color,
+            corner_radius=9,
+            padx=8,
+            pady=2,
+            font=self.font_small,
+        )
+
+    def _build_timeline_bar(self):
+        self.timeline_frame = ctk.CTkFrame(
+            self.root,
+            fg_color=self.COLORS["surface_1"],
+            corner_radius=10,
+            border_width=1,
+            border_color=self.COLORS["border"],
+        )
+        self.timeline_frame.grid(row=0, column=0, sticky="ew", padx=self.SPACING_16, pady=(self.SPACING_8, 0))
+
+        self._timeline_stages = ["Plan", "Dispatch", "Execute", "Capture", "Validate", "Done"]
+        self._timeline_stage_widgets = {}
+        self._timeline_active = None
+
+        stage_row = ctk.CTkFrame(self.timeline_frame, fg_color="transparent")
+        stage_row.pack(fill="x", padx=self.SPACING_12, pady=self.SPACING_8)
+
+        for index, stage in enumerate(self._timeline_stages):
+            chip = ctk.CTkLabel(
+                stage_row,
+                text=stage,
+                fg_color=self.COLORS["surface_2"],
+                text_color=self.COLORS["text_secondary"],
+                corner_radius=10,
+                padx=10,
+                pady=4,
+                font=self.font_small_bold,
+            )
+            chip.pack(side="left")
+            self._timeline_stage_widgets[stage] = chip
+            if index < len(self._timeline_stages) - 1:
+                sep = ctk.CTkLabel(
+                    stage_row,
+                    text=">",
+                    text_color=self.COLORS["text_secondary"],
+                    font=self.font_small_bold,
+                )
+                sep.pack(side="left", padx=(6, 6))
+
+        self._set_timeline_stage(None)
+
+    def _set_timeline_stage(self, stage: str, failed: bool = False):
+        def apply():
+            active = stage if stage in self._timeline_stages else None
+            active_index = self._timeline_stages.index(active) if active else -1
+            self._timeline_active = active
+            for idx, name in enumerate(self._timeline_stages):
+                widget = self._timeline_stage_widgets.get(name)
+                if not widget:
+                    continue
+                if failed and name == active:
+                    fg = self.COLORS["error"]
+                    tc = "#111111"
+                elif active and idx < active_index:
+                    fg = self.COLORS["success"]
+                    tc = "#111111"
+                elif active and idx == active_index:
+                    fg = self.COLORS["warning"]
+                    tc = "#111111"
+                else:
+                    fg = self.COLORS["surface_2"]
+                    tc = self.COLORS["text_secondary"]
+                widget.configure(fg_color=fg, text_color=tc)
+
+        if threading.current_thread() is threading.main_thread():
+            apply()
+        else:
+            self.root.after(0, apply)
+
     def _build_ui(self):
         self.root.grid_columnconfigure(0, weight=1)
-        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_rowconfigure(1, weight=1)
+        self._build_timeline_bar()
 
         self.page = ctk.CTkScrollableFrame(
             self.root,
             fg_color=self.COLORS["bg"],
             corner_radius=0,
         )
-        self.page.grid(row=0, column=0, sticky="nsew")
+        self.page.grid(row=1, column=0, sticky="nsew")
         self.page.grid_columnconfigure(0, weight=1)
 
         top = ctk.CTkFrame(
@@ -206,6 +288,9 @@ class VSCodePromptSenderGUI:
         self.workers_frame.grid_columnconfigure((0, 1, 2), weight=1)
         self.target_check_vars = {}
         self.target_open_test_vars = {}
+        self._worker_enabled_badges = {}
+        self._worker_health_badges = {}
+        self._worker_capability_badges = {}
         self._build_target_checkboxes([])
 
         status_strip = ctk.CTkFrame(
@@ -492,20 +577,98 @@ class VSCodePromptSenderGUI:
             self.run_seq_btn,
         ]
 
+    def _load_health_snapshot_map(self):
+        health_file = str(getattr(self.config, "target_health_file", "target_health.json"))
+        if not os.path.isabs(health_file):
+            health_file = os.path.join(os.getcwd(), health_file)
+        if not os.path.exists(health_file):
+            return {}
+        try:
+            with open(health_file, "r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+        except Exception:
+            return {}
+        targets = payload.get("targets")
+        if not isinstance(targets, dict):
+            return {}
+        mapped = {}
+        for name, value in targets.items():
+            if isinstance(value, dict):
+                mapped[str(name)] = value.get("healthy")
+            else:
+                mapped[str(name)] = bool(value)
+        return mapped
+
+    def _worker_capability_tags(self, name: str):
+        tags = []
+        target_payload = self.config.targets.get(name) if isinstance(self.config.targets, dict) else {}
+        if isinstance(target_payload, dict):
+            if bool(target_payload.get("assume_open", False)):
+                tags.append("assume-open")
+            if bool(target_payload.get("command_open_in_test", False)):
+                tags.append("test-open")
+        adapters = getattr(self.config, "worker_adapters", {})
+        if isinstance(adapters, dict) and f"{name}_vscode" in adapters:
+            tags.append("contract")
+        if not tags:
+            tags.append("basic")
+        return tags
+
+    def _update_worker_enabled_badge(self, name: str):
+        badge = self._worker_enabled_badges.get(name)
+        var = self.target_check_vars.get(name)
+        if not badge or var is None:
+            return
+        if bool(var.get()):
+            badge.configure(text="Enabled", fg_color=self.COLORS["success"], text_color="#111111")
+        else:
+            badge.configure(text="Disabled", fg_color=self.COLORS["neutral_status"], text_color="#111111")
+
+    def _refresh_worker_health_badges(self):
+        health_map = self._load_health_snapshot_map()
+        for name, badge in self._worker_health_badges.items():
+            state = health_map.get(name, None)
+            if state is True:
+                badge.configure(text="Healthy", fg_color=self.COLORS["success"], text_color="#111111")
+            elif state is False:
+                badge.configure(text="Degraded", fg_color=self.COLORS["error"], text_color="#111111")
+            else:
+                badge.configure(text="Unknown", fg_color=self.COLORS["neutral_status"], text_color="#111111")
+
+    def _refresh_worker_capability_badges(self):
+        for name, badge in self._worker_capability_badges.items():
+            caps = ", ".join(self._worker_capability_tags(name))
+            badge.configure(text=f"Cap: {caps}")
+
     def _build_target_checkboxes(self, names):
         for child in self.workers_frame.winfo_children():
             child.destroy()
         self.target_check_vars = {}
+        self._worker_enabled_badges = {}
+        self._worker_health_badges = {}
+        self._worker_capability_badges = {}
+
         for index, name in enumerate(names):
             row = index // 3
             col = index % 3
+            card = ctk.CTkFrame(
+                self.workers_frame,
+                fg_color=self.COLORS["surface_2"],
+                corner_radius=10,
+                border_width=1,
+                border_color=self.COLORS["border"],
+            )
+            card.grid(row=row, column=col, padx=self.SPACING_8, pady=self.SPACING_8, sticky="ew")
+            card.grid_columnconfigure(0, weight=1)
+
             enable_var = tk.BooleanVar(value=False)
             self.target_check_vars[name] = enable_var
 
             ctk.CTkCheckBox(
-                self.workers_frame,
+                card,
                 text=name,
                 variable=enable_var,
+                command=lambda worker=name: self._update_worker_enabled_badge(worker),
                 checkbox_height=18,
                 checkbox_width=18,
                 corner_radius=5,
@@ -514,8 +677,32 @@ class VSCodePromptSenderGUI:
                 fg_color=self.COLORS["primary"],
                 hover_color=self.COLORS["primary_hover"],
                 text_color=self.COLORS["text_primary"],
+                font=self.font_small_bold,
+            ).grid(row=0, column=0, padx=self.SPACING_8, pady=(self.SPACING_8, 4), sticky="w")
+
+            badge_row = ctk.CTkFrame(card, fg_color="transparent")
+            badge_row.grid(row=1, column=0, padx=self.SPACING_8, pady=(0, self.SPACING_8), sticky="w")
+
+            enabled_badge = self._badge(badge_row, "Disabled", self.COLORS["neutral_status"])
+            enabled_badge.pack(side="left", padx=(0, 6))
+            self._worker_enabled_badges[name] = enabled_badge
+
+            health_badge = self._badge(badge_row, "Unknown", self.COLORS["neutral_status"])
+            health_badge.pack(side="left", padx=(0, 6))
+            self._worker_health_badges[name] = health_badge
+
+            caps = ", ".join(self._worker_capability_tags(name))
+            cap_badge = ctk.CTkLabel(
+                card,
+                text=f"Cap: {caps}",
+                text_color=self.COLORS["text_secondary"],
+                fg_color="transparent",
                 font=self.font_small,
-            ).grid(row=row, column=col, padx=self.SPACING_8, pady=3, sticky="w")
+            )
+            cap_badge.grid(row=2, column=0, padx=self.SPACING_8, pady=(0, self.SPACING_8), sticky="w")
+            self._worker_capability_badges[name] = cap_badge
+
+        self._refresh_worker_health_badges()
 
     def _build_open_test_checkboxes(self, names):
         for child in self.open_cmd_frame.winfo_children():
@@ -555,6 +742,7 @@ class VSCodePromptSenderGUI:
         enabled_set = set(enabled or [])
         for name, var in self.target_check_vars.items():
             var.set(name in enabled_set)
+            self._update_worker_enabled_badge(name)
 
     def _selected_enabled_targets(self):
         return [name for name, var in self.target_check_vars.items() if bool(var.get())]
@@ -609,10 +797,13 @@ class VSCodePromptSenderGUI:
         def runner():
             self.root.after(0, lambda: self._set_controls_enabled(False))
             self.root.after(0, lambda: self._set_job_state("Running"))
+            self._set_timeline_stage("Plan")
             try:
                 fn()
+                self._set_timeline_stage("Done")
                 self.root.after(0, lambda: self._set_job_state("Ready"))
             except Exception as exc:
+                self._set_timeline_stage(self._timeline_active or "Execute", failed=True)
                 self.root.after(0, lambda: self._set_job_state("Error"))
                 self.root.after(0, lambda: self._log(f"Error: {exc}"))
             finally:
@@ -656,6 +847,8 @@ class VSCodePromptSenderGUI:
         self.target_var.set(active)
         default_jobs_dir = os.path.join(os.getcwd(), "jobs")
         self.job_dir_var.set(default_jobs_dir if os.path.isdir(default_jobs_dir) else os.getcwd())
+        self._refresh_worker_capability_badges()
+        self._refresh_worker_health_badges()
         self._refresh_status_strip()
 
     def _save_settings(self):
@@ -678,6 +871,7 @@ class VSCodePromptSenderGUI:
         self.config.enabled_targets = enabled_targets
         self.config.active_target = active_target
         self.config.save()
+        self._refresh_worker_capability_badges()
         self._log(
             f"Settings saved (active target: {self.config.active_target}, enabled: {', '.join(self.config.enabled_targets)})"
         )
@@ -705,6 +899,7 @@ class VSCodePromptSenderGUI:
 
     def _send_text(self):
         self._save_settings()
+        self._set_timeline_stage("Execute")
         text = self.text_box.get("1.0", "end").strip()
         if not text:
             messagebox.showwarning("No Text", "Enter text to send.")
@@ -713,6 +908,7 @@ class VSCodePromptSenderGUI:
 
     def _send_image(self):
         self._save_settings()
+        self._set_timeline_stage("Execute")
         image_path = self.image_path_var.get().strip()
         if not image_path:
             messagebox.showwarning("No Image", "Pick an image path first.")
@@ -721,28 +917,35 @@ class VSCodePromptSenderGUI:
 
     def _run_sequence(self):
         self._save_settings()
+        self._set_timeline_stage("Dispatch")
         sequence_file = self.sequence_path_var.get().strip()
         if not sequence_file:
             messagebox.showwarning("No Sequence", "Pick a sequence JSON file first.")
             return
+        self._set_timeline_stage("Execute")
         self.sequencer.run_sequence(sequence_file)
 
     def _run_job(self):
         self._save_settings()
+        self._set_timeline_stage("Dispatch")
         job_dir = self.job_dir_var.get().strip()
         if not job_dir:
             messagebox.showwarning("No Job Folder", "Choose a job folder first.")
             return
         if not os.path.isdir(job_dir):
             raise FileNotFoundError(f"Job folder not found: {job_dir}")
+        self._set_timeline_stage("Execute")
         runner = JobRunner(self.sequencer, self.config)
         ok = runner.run_job(job_dir)
         if not ok:
             raise RuntimeError(f"run-job failed: {job_dir}")
+        self._set_timeline_stage("Capture")
+        self._set_timeline_stage("Validate")
         self._log(f"run-job completed: {job_dir}")
 
     def _health_check(self):
         self._save_settings()
+        self._set_timeline_stage("Validate")
         targets = self._selected_enabled_targets() or self.sequencer.enabled_targets() or self.sequencer.list_targets()
         if not targets:
             raise ValueError("No targets available for health-check")
@@ -835,6 +1038,7 @@ class VSCodePromptSenderGUI:
         health_report["overall_ok"] = bool(overall_ok)
         health_report["healthy_targets"] = healthy_targets
         self._write_health_snapshot(health_report)
+        self._refresh_worker_health_badges()
 
         self._log(f"health-check: {'PASS' if overall_ok else 'FAIL'}")
         if not overall_ok:

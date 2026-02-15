@@ -87,6 +87,12 @@
       ]
     },
     {
+      "item": "Cline built-in worker adapter (`cline_vscode`) with bridge-capture contract flow",
+      "commands": [
+        "python -m unittest discover -s tests -p test_job_runner_cline_adapter.py -v"
+      ]
+    },
+    {
       "item": "True parallel lane execution for contract-safe workloads",
       "commands": [
         "python -m unittest discover -s tests -p test_job_runner_parallel_lanes.py -v"

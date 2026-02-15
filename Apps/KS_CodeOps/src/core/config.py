@@ -70,6 +70,15 @@ def default_worker_adapters() -> Dict[str, Dict[str, Any]]:
             "capture": {"source": "bridge"},
             "timeout_s": 120.0,
             "poll_interval_s": 1.0,
+        },
+        "cline_vscode": {
+            "mode": "vscode_chat",
+            "target": "cline",
+            "allow_command_open": True,
+            "press_enter": True,
+            "capture": {"source": "bridge"},
+            "timeout_s": 120.0,
+            "poll_interval_s": 1.0,
         }
     }
 
