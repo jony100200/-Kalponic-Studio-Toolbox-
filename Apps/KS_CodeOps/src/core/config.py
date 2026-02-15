@@ -79,7 +79,34 @@ def default_worker_adapters() -> Dict[str, Dict[str, Any]]:
             "capture": {"source": "bridge"},
             "timeout_s": 120.0,
             "poll_interval_s": 1.0,
-        }
+        },
+        "gemini_vscode": {
+            "mode": "vscode_chat",
+            "target": "gemini",
+            "allow_command_open": True,
+            "press_enter": True,
+            "capture": {"source": "bridge"},
+            "timeout_s": 120.0,
+            "poll_interval_s": 1.0,
+        },
+        "codex_vscode": {
+            "mode": "vscode_chat",
+            "target": "codex",
+            "allow_command_open": True,
+            "press_enter": True,
+            "capture": {"source": "bridge"},
+            "timeout_s": 120.0,
+            "poll_interval_s": 1.0,
+        },
+        "kilo_vscode": {
+            "mode": "vscode_chat",
+            "target": "kilo",
+            "allow_command_open": True,
+            "press_enter": True,
+            "capture": {"source": "bridge"},
+            "timeout_s": 120.0,
+            "poll_interval_s": 1.0,
+        },
     }
 
 

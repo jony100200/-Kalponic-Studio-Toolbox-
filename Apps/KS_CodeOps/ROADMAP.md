@@ -43,5 +43,8 @@ This file tracks what is done and what is next for KS CodeOps.
 - [x] Worker adapter contract execution with request/response artifact standard
 - [x] Copilot built-in worker adapter (`copilot_vscode`) with bridge-capture contract flow
 - [x] Cline built-in worker adapter (`cline_vscode`) with bridge-capture contract flow
+- [x] Gemini built-in worker adapter (`gemini_vscode`) with bridge-capture contract flow
+- [x] Codex built-in worker adapter (`codex_vscode`) with bridge-capture contract flow
+- [x] Kilo built-in worker adapter (`kilo_vscode`) with bridge-capture contract flow
 - [x] True parallel lane execution for contract-safe workloads
 - [x] Release hardening: packaged build metadata, semantic versioning, smoke-run command

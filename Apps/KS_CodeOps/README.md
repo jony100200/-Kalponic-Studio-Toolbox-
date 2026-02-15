@@ -127,7 +127,7 @@ Example step:
   "type": "worker_contract",
   "target": "copilot",
   "content": "Implement API endpoint",
-  "worker": { "adapter": "copilot_adapter" },
+  "worker": { "adapter": "copilot_vscode" },
   "output_file": "outputs/build_api.md",
   "validator": { "type": "exists" }
 }
@@ -142,6 +142,21 @@ Built-in adapters enabled by default in config:
   - `target: "copilot"`
   - `capture.source: "bridge"` (from `bridge_response_file`)
   - `allow_command_open: false` (safe default)
+- `gemini_vscode`
+  - `mode: "vscode_chat"`
+  - `target: "gemini"`
+  - `capture.source: "bridge"` (from `bridge_response_file`)
+  - `allow_command_open: true`
+- `codex_vscode`
+  - `mode: "vscode_chat"`
+  - `target: "codex"`
+  - `capture.source: "bridge"` (from `bridge_response_file`)
+  - `allow_command_open: true`
+- `kilo_vscode`
+  - `mode: "vscode_chat"`
+  - `target: "kilo"`
+  - `capture.source: "bridge"` (from `bridge_response_file`)
+  - `allow_command_open: true`
 - `cline_vscode`
   - `mode: "vscode_chat"`
   - `target: "cline"`
