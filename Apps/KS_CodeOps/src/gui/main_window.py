@@ -1,3 +1,4 @@
+import json
 import threading
 import tkinter as tk
 import tkinter.font as tkfont
@@ -6,6 +7,7 @@ import os
 from datetime import datetime
 
 import customtkinter as ctk
+from src.core.job_runner import JobRunner
 
 
 class VSCodePromptSenderGUI:
@@ -35,6 +37,7 @@ class VSCodePromptSenderGUI:
         self.sequencer.set_log_callback(self._log)
         self._log_index = 0
         self._job_state = "Idle"
+        self._advanced_visible = False
         os.makedirs("logs", exist_ok=True)
         self._activity_log_path = os.path.join("logs", f"ks_codeops_ui_activity_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
 
@@ -89,7 +92,7 @@ class VSCodePromptSenderGUI:
             text=text,
             command=command,
             width=width,
-            height=34,
+            height=32,
             corner_radius=10,
             font=self.font_body,
             **style,
@@ -110,16 +113,24 @@ class VSCodePromptSenderGUI:
 
     def _build_ui(self):
         self.root.grid_columnconfigure(0, weight=1)
-        self.root.grid_rowconfigure(1, weight=1)
+        self.root.grid_rowconfigure(0, weight=1)
+
+        self.page = ctk.CTkScrollableFrame(
+            self.root,
+            fg_color=self.COLORS["bg"],
+            corner_radius=0,
+        )
+        self.page.grid(row=0, column=0, sticky="nsew")
+        self.page.grid_columnconfigure(0, weight=1)
 
         top = ctk.CTkFrame(
-            self.root,
+            self.page,
             fg_color=self.COLORS["surface_1"],
             corner_radius=12,
             border_width=1,
             border_color=self.COLORS["border"],
         )
-        top.grid(row=0, column=0, sticky="ew", padx=self.SPACING_16, pady=self.SPACING_16)
+        top.grid(row=0, column=0, sticky="ew", padx=self.SPACING_16, pady=(self.SPACING_16, self.SPACING_8))
         top.grid_columnconfigure(1, weight=1)
         top.grid_columnconfigure(3, weight=1)
 
@@ -129,7 +140,7 @@ class VSCodePromptSenderGUI:
             "border_color": self.COLORS["border"],
             "text_color": self.COLORS["text_primary"],
             "corner_radius": 10,
-            "height": 34,
+            "height": 32,
         }
 
         ctk.CTkLabel(top, text="Window Title", **label_opts).grid(row=0, column=0, padx=self.SPACING_12, pady=self.SPACING_8, sticky="w")
@@ -192,7 +203,7 @@ class VSCodePromptSenderGUI:
         workers_label.grid(row=2, column=0, padx=self.SPACING_12, pady=self.SPACING_8, sticky="nw")
         self.workers_frame = ctk.CTkFrame(top, fg_color="transparent")
         self.workers_frame.grid(row=2, column=1, columnspan=3, padx=self.SPACING_8, pady=self.SPACING_8, sticky="ew")
-        self.workers_frame.grid_columnconfigure((0, 1), weight=1)
+        self.workers_frame.grid_columnconfigure((0, 1, 2), weight=1)
         self.target_check_vars = {}
         self.target_open_test_vars = {}
         self._build_target_checkboxes([])
@@ -226,15 +237,14 @@ class VSCodePromptSenderGUI:
         self.state_chip.pack(side="left")
 
         actions = ctk.CTkFrame(
-            self.root,
+            self.page,
             fg_color=self.COLORS["surface_1"],
             corner_radius=12,
             border_width=1,
             border_color=self.COLORS["border"],
         )
-        actions.grid(row=1, column=0, sticky="nsew", padx=self.SPACING_16, pady=(0, self.SPACING_16))
+        actions.grid(row=1, column=0, sticky="ew", padx=self.SPACING_16, pady=(0, self.SPACING_16))
         actions.grid_columnconfigure(0, weight=1)
-        actions.grid_rowconfigure(2, weight=1)
 
         button_row = ctk.CTkFrame(actions, fg_color="transparent")
         button_row.grid(row=0, column=0, sticky="ew", padx=self.SPACING_12, pady=(self.SPACING_12, self.SPACING_8))
@@ -242,9 +252,13 @@ class VSCodePromptSenderGUI:
 
         primary_group = ctk.CTkFrame(button_row, fg_color="transparent")
         primary_group.grid(row=0, column=0, sticky="w")
-        self.save_btn = self._make_button(primary_group, "Save Settings", self._save_settings, kind="neutral", width=130)
+        self.save_btn = self._make_button(primary_group, "Save", self._save_settings, kind="neutral", width=94)
         self.save_btn.pack(side="left", padx=(0, self.SPACING_8))
-        self.run_btn = self._make_button(primary_group, "Run Sequence", self._run_in_thread(self._run_sequence), kind="primary", width=138)
+        self.run_job_btn = self._make_button(primary_group, "Run Job", self._run_in_thread(self._run_job), kind="primary", width=114)
+        self.run_job_btn.pack(side="left", padx=(0, self.SPACING_8))
+        self.health_btn = self._make_button(primary_group, "Health Check", self._run_in_thread(self._health_check), kind="neutral", width=130)
+        self.health_btn.pack(side="left", padx=(0, self.SPACING_8))
+        self.run_btn = self._make_button(primary_group, "Run Sequence", self._run_in_thread(self._run_sequence), kind="neutral", width=128)
         self.run_btn.pack(side="left")
 
         secondary_group = ctk.CTkFrame(button_row, fg_color="transparent")
@@ -252,33 +266,125 @@ class VSCodePromptSenderGUI:
         self.test_focus_btn = self._make_button(secondary_group, "Test Focus", self._run_in_thread(self._test_focus), kind="neutral", width=120)
         self.test_focus_btn.pack(side="left", padx=(0, self.SPACING_8))
         self.test_target_btn = self._make_button(secondary_group, "Test Target", self._run_in_thread(self._test_target), kind="neutral", width=120)
-        self.test_target_btn.pack(side="left")
+        self.test_target_btn.pack(side="left", padx=(0, self.SPACING_8))
+        self.advanced_btn = self._make_button(secondary_group, "Show Advanced", self._toggle_advanced, kind="neutral", width=142)
+        self.advanced_btn.pack(side="left")
 
-        calibration_section = ctk.CTkFrame(
+        job_section = ctk.CTkFrame(
+            actions,
+            fg_color=self.COLORS["surface_2"],
+            corner_radius=10,
+            border_width=1,
+            border_color=self.COLORS["border"],
+        )
+        job_section.grid(row=1, column=0, sticky="ew", padx=self.SPACING_12, pady=(0, self.SPACING_8))
+        job_section.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(
+            job_section,
+            text="Job Folder",
+            text_color=self.COLORS["text_secondary"],
+            font=self.font_small,
+        ).grid(row=0, column=0, padx=self.SPACING_12, pady=self.SPACING_8, sticky="w")
+        self.job_dir_var = tk.StringVar()
+        ctk.CTkEntry(job_section, textvariable=self.job_dir_var, **entry_opts).grid(
+            row=0, column=1, padx=self.SPACING_8, pady=self.SPACING_8, sticky="ew"
+        )
+        self.browse_job_btn = self._make_button(job_section, "Browse", self._pick_job_dir, kind="neutral", width=100)
+        self.browse_job_btn.grid(row=0, column=2, padx=self.SPACING_8, pady=self.SPACING_8)
+
+        self.advanced_section = ctk.CTkFrame(
             actions,
             fg_color=self.COLORS["surface_2"],
             corner_radius=12,
             border_width=1,
             border_color=self.COLORS["border"],
         )
-        calibration_section.grid(row=1, column=0, sticky="ew", padx=self.SPACING_12, pady=(0, self.SPACING_8))
+        self.advanced_section.grid(row=2, column=0, sticky="ew", padx=self.SPACING_12, pady=(0, self.SPACING_8))
+        self.advanced_section.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(
-            calibration_section,
-            text="Calibration",
+            self.advanced_section,
+            text="Advanced",
             text_color=self.COLORS["text_secondary"],
             font=self.font_small_bold,
-        ).pack(side="left", padx=self.SPACING_12, pady=self.SPACING_8)
+        ).grid(row=0, column=0, padx=self.SPACING_12, pady=self.SPACING_8, sticky="w")
 
-        self.record_click_btn = self._make_button(calibration_section, "Record Click", self._run_in_thread(self._record_click), kind="neutral", width=130)
-        self.record_click_btn.pack(side="left", padx=(0, self.SPACING_8), pady=self.SPACING_8)
+        health_options = ctk.CTkFrame(self.advanced_section, fg_color="transparent")
+        health_options.grid(row=0, column=1, padx=self.SPACING_8, pady=self.SPACING_8, sticky="w")
+        self.health_open_commands_var = tk.BooleanVar(value=False)
+        self.health_skip_focus_var = tk.BooleanVar(value=False)
+        self.health_skip_probe_var = tk.BooleanVar(value=False)
+        self.health_skip_sequence_var = tk.BooleanVar(value=False)
+        ctk.CTkCheckBox(
+            health_options,
+            text="allow open-cmd",
+            variable=self.health_open_commands_var,
+            checkbox_height=18,
+            checkbox_width=18,
+            corner_radius=5,
+            border_width=1,
+            border_color=self.COLORS["border"],
+            fg_color=self.COLORS["primary"],
+            hover_color=self.COLORS["primary_hover"],
+            text_color=self.COLORS["text_secondary"],
+            font=self.font_small,
+        ).pack(side="left", padx=(0, self.SPACING_12))
+        ctk.CTkCheckBox(
+            health_options,
+            text="skip focus",
+            variable=self.health_skip_focus_var,
+            checkbox_height=18,
+            checkbox_width=18,
+            corner_radius=5,
+            border_width=1,
+            border_color=self.COLORS["border"],
+            fg_color=self.COLORS["primary"],
+            hover_color=self.COLORS["primary_hover"],
+            text_color=self.COLORS["text_secondary"],
+            font=self.font_small,
+        ).pack(side="left", padx=(0, self.SPACING_12))
+        ctk.CTkCheckBox(
+            health_options,
+            text="skip probe",
+            variable=self.health_skip_probe_var,
+            checkbox_height=18,
+            checkbox_width=18,
+            corner_radius=5,
+            border_width=1,
+            border_color=self.COLORS["border"],
+            fg_color=self.COLORS["primary"],
+            hover_color=self.COLORS["primary_hover"],
+            text_color=self.COLORS["text_secondary"],
+            font=self.font_small,
+        ).pack(side="left", padx=(0, self.SPACING_12))
+        ctk.CTkCheckBox(
+            health_options,
+            text="skip sequence",
+            variable=self.health_skip_sequence_var,
+            checkbox_height=18,
+            checkbox_width=18,
+            corner_radius=5,
+            border_width=1,
+            border_color=self.COLORS["border"],
+            fg_color=self.COLORS["primary"],
+            hover_color=self.COLORS["primary_hover"],
+            text_color=self.COLORS["text_secondary"],
+            font=self.font_small,
+        ).pack(side="left")
+
+        self.open_cmd_frame = ctk.CTkFrame(self.advanced_section, fg_color="transparent")
+        self.open_cmd_frame.grid(row=1, column=0, columnspan=2, padx=self.SPACING_8, pady=(0, self.SPACING_8), sticky="w")
+
+        self.record_click_btn = self._make_button(self.advanced_section, "Record Click", self._run_in_thread(self._record_click), kind="neutral", width=130)
+        self.record_click_btn.grid(row=2, column=0, padx=self.SPACING_12, pady=(0, self.SPACING_8), sticky="w")
         self.record_target_click_btn = self._make_button(
-            calibration_section,
+            self.advanced_section,
             "Record Target Click",
             self._run_in_thread(self._record_target_click),
             kind="neutral",
             width=160,
         )
-        self.record_target_click_btn.pack(side="left", pady=self.SPACING_8)
+        self.record_target_click_btn.grid(row=2, column=1, padx=self.SPACING_8, pady=(0, self.SPACING_8), sticky="w")
+        self.advanced_section.grid_remove()
 
         tabs = ctk.CTkTabview(
             actions,
@@ -292,7 +398,7 @@ class VSCodePromptSenderGUI:
             corner_radius=12,
             border_width=0,
         )
-        tabs.grid(row=2, column=0, sticky="nsew", padx=self.SPACING_12, pady=(0, self.SPACING_12))
+        tabs.grid(row=3, column=0, sticky="ew", padx=self.SPACING_12, pady=(0, self.SPACING_12))
         tabs.add("Text")
         tabs.add("Image")
         tabs.add("Sequence")
@@ -370,9 +476,13 @@ class VSCodePromptSenderGUI:
 
         self._action_buttons = [
             self.save_btn,
+            self.run_job_btn,
+            self.health_btn,
             self.run_btn,
             self.test_focus_btn,
             self.test_target_btn,
+            self.advanced_btn,
+            self.browse_job_btn,
             self.record_click_btn,
             self.record_target_click_btn,
             self.send_text_btn,
@@ -386,36 +496,14 @@ class VSCodePromptSenderGUI:
         for child in self.workers_frame.winfo_children():
             child.destroy()
         self.target_check_vars = {}
-        self.target_open_test_vars = {}
-
-        if names:
-            ctk.CTkLabel(
-                self.workers_frame,
-                text="Enable",
-                text_color=self.COLORS["text_secondary"],
-                font=self.font_small_bold,
-            ).grid(row=0, column=0, padx=self.SPACING_8, pady=(0, 4), sticky="w")
-            ctk.CTkLabel(
-                self.workers_frame,
-                text="Open Cmd (test)",
-                text_color=self.COLORS["text_secondary"],
-                font=self.font_small_bold,
-            ).grid(row=0, column=1, padx=self.SPACING_8, pady=(0, 4), sticky="w")
-
         for index, name in enumerate(names):
-            row = index + 1
+            row = index // 3
+            col = index % 3
             enable_var = tk.BooleanVar(value=False)
-            open_var = tk.BooleanVar(value=False)
             self.target_check_vars[name] = enable_var
-            self.target_open_test_vars[name] = open_var
-
-            row_wrap = ctk.CTkFrame(self.workers_frame, fg_color="transparent")
-            row_wrap.grid(row=row, column=0, columnspan=2, sticky="ew")
-            row_wrap.grid_columnconfigure(0, weight=1)
-            row_wrap.grid_columnconfigure(1, weight=1)
 
             ctk.CTkCheckBox(
-                row_wrap,
+                self.workers_frame,
                 text=name,
                 variable=enable_var,
                 checkbox_height=18,
@@ -427,10 +515,29 @@ class VSCodePromptSenderGUI:
                 hover_color=self.COLORS["primary_hover"],
                 text_color=self.COLORS["text_primary"],
                 font=self.font_small,
-            ).grid(row=0, column=0, padx=self.SPACING_8, pady=3, sticky="w")
+            ).grid(row=row, column=col, padx=self.SPACING_8, pady=3, sticky="w")
+
+    def _build_open_test_checkboxes(self, names):
+        for child in self.open_cmd_frame.winfo_children():
+            child.destroy()
+        self.target_open_test_vars = {}
+
+        if names:
+            ctk.CTkLabel(
+                self.open_cmd_frame,
+                text="Open Cmd (test) per target",
+                text_color=self.COLORS["text_secondary"],
+                font=self.font_small_bold,
+            ).grid(row=0, column=0, columnspan=3, padx=self.SPACING_8, pady=(0, 4), sticky="w")
+
+        for index, name in enumerate(names):
+            row = 1 + (index // 3)
+            col = index % 3
+            open_var = tk.BooleanVar(value=False)
+            self.target_open_test_vars[name] = open_var
 
             ctk.CTkCheckBox(
-                row_wrap,
+                self.open_cmd_frame,
                 text=f"{name} open",
                 variable=open_var,
                 checkbox_height=18,
@@ -442,7 +549,7 @@ class VSCodePromptSenderGUI:
                 hover_color=self.COLORS["primary_hover"],
                 text_color=self.COLORS["text_secondary"],
                 font=self.font_small,
-            ).grid(row=0, column=1, padx=self.SPACING_8, pady=3, sticky="w")
+            ).grid(row=row, column=col, padx=self.SPACING_8, pady=3, sticky="w")
 
     def _set_enabled_target_checks(self, enabled):
         enabled_set = set(enabled or [])
@@ -459,6 +566,15 @@ class VSCodePromptSenderGUI:
 
     def _selected_open_test_targets(self):
         return [name for name, var in self.target_open_test_vars.items() if bool(var.get())]
+
+    def _toggle_advanced(self):
+        self._advanced_visible = not self._advanced_visible
+        if self._advanced_visible:
+            self.advanced_section.grid()
+            self.advanced_btn.configure(text="Hide Advanced")
+        else:
+            self.advanced_section.grid_remove()
+            self.advanced_btn.configure(text="Show Advanced")
 
     def _refresh_status_strip(self):
         target = self.target_var.get().strip() if hasattr(self, "target_var") else self.config.active_target
@@ -513,12 +629,18 @@ class VSCodePromptSenderGUI:
         if path:
             self.sequence_path_var.set(path)
 
+    def _pick_job_dir(self):
+        path = filedialog.askdirectory()
+        if path:
+            self.job_dir_var.set(path)
+
     def _load_config_to_ui(self):
         self.window_title_var.set(self.config.window_title)
         self.profile_var.set(self.config.focus_profile)
         self.auto_enter_var.set(self.config.auto_enter)
         names = list(self.config.targets.keys()) if isinstance(self.config.targets, dict) and self.config.targets else ["copilot"]
         self._build_target_checkboxes(names)
+        self._build_open_test_checkboxes(names)
         enabled = [name for name in getattr(self.config, "enabled_targets", []) if name in names]
         if not enabled and names:
             enabled = ["copilot"] if "copilot" in names else [names[0]]
@@ -532,6 +654,8 @@ class VSCodePromptSenderGUI:
         self.target_menu.configure(values=names)
         active = self.config.active_target if self.config.active_target in enabled else enabled[0]
         self.target_var.set(active)
+        default_jobs_dir = os.path.join(os.getcwd(), "jobs")
+        self.job_dir_var.set(default_jobs_dir if os.path.isdir(default_jobs_dir) else os.getcwd())
         self._refresh_status_strip()
 
     def _save_settings(self):
@@ -602,6 +726,130 @@ class VSCodePromptSenderGUI:
             messagebox.showwarning("No Sequence", "Pick a sequence JSON file first.")
             return
         self.sequencer.run_sequence(sequence_file)
+
+    def _run_job(self):
+        self._save_settings()
+        job_dir = self.job_dir_var.get().strip()
+        if not job_dir:
+            messagebox.showwarning("No Job Folder", "Choose a job folder first.")
+            return
+        if not os.path.isdir(job_dir):
+            raise FileNotFoundError(f"Job folder not found: {job_dir}")
+        runner = JobRunner(self.sequencer, self.config)
+        ok = runner.run_job(job_dir)
+        if not ok:
+            raise RuntimeError(f"run-job failed: {job_dir}")
+        self._log(f"run-job completed: {job_dir}")
+
+    def _health_check(self):
+        self._save_settings()
+        targets = self._selected_enabled_targets() or self.sequencer.enabled_targets() or self.sequencer.list_targets()
+        if not targets:
+            raise ValueError("No targets available for health-check")
+
+        open_commands = bool(self.health_open_commands_var.get())
+        skip_focus = bool(self.health_skip_focus_var.get())
+        skip_probe = bool(self.health_skip_probe_var.get())
+        skip_sequence = bool(self.health_skip_sequence_var.get())
+
+        overall_ok = True
+        health_report = {
+            "checked_at": datetime.now().isoformat(),
+            "open_commands": open_commands,
+            "focus": {"skipped": skip_focus, "ok": None},
+            "probe": {"skipped": skip_probe},
+            "sequence": {"skipped": skip_sequence},
+            "targets": {},
+        }
+
+        self._log("== KS CodeOps Health Check ==")
+        self._log(f"Targets: {', '.join(targets)}")
+
+        if skip_focus:
+            self._log("focus: skipped")
+        else:
+            focus_ok = self.sequencer.test_focus()
+            self._log(f"focus: {'ok' if focus_ok else 'failed'}")
+            overall_ok = overall_ok and bool(focus_ok)
+            health_report["focus"]["ok"] = bool(focus_ok)
+
+        if skip_probe:
+            self._log("probe: skipped")
+            for target in targets:
+                entry = health_report["targets"].setdefault(target, {})
+                entry["probe_ok"] = None
+        else:
+            probe_all_ok = True
+            for target in targets:
+                allow_open = bool(open_commands and self.sequencer._target_payload(target).get("command_open_in_test", False))
+                probe_text = f"KS_CODEOPS_HEALTH_PROBE_{target.upper()}"
+                ok = self.sequencer.probe_target_input(
+                    target_name=target,
+                    probe_text=probe_text,
+                    clear_after=True,
+                    allow_command_open=allow_open,
+                )
+                entry = health_report["targets"].setdefault(target, {})
+                entry["probe_ok"] = bool(ok)
+                probe_all_ok = probe_all_ok and bool(ok)
+                self._log(f"probe[{target}]: {'ok' if ok else 'failed'}")
+            overall_ok = overall_ok and probe_all_ok
+
+        if skip_sequence:
+            self._log("sequence: skipped")
+            for target in targets:
+                entry = health_report["targets"].setdefault(target, {})
+                entry["sequence_ok"] = None
+        else:
+            seq_results = self.sequencer.run_target_test_sequence(
+                targets=targets,
+                delay_between_s=1.0,
+                text_prefix="KS_CODEOPS_HEALTH",
+                allow_command_open=open_commands,
+            )
+            seq_all_ok = True
+            for target in targets:
+                ok = bool(seq_results.get(target))
+                entry = health_report["targets"].setdefault(target, {})
+                entry["sequence_ok"] = ok
+                seq_all_ok = seq_all_ok and ok
+                self._log(f"sequence[{target}]: {'pass' if ok else 'fail'}")
+            overall_ok = overall_ok and seq_all_ok
+
+        healthy_targets = []
+        for target in targets:
+            entry = health_report["targets"].setdefault(target, {})
+            probe_ok = entry.get("probe_ok")
+            sequence_ok = entry.get("sequence_ok")
+            healthy = True
+            if probe_ok is not None:
+                healthy = healthy and bool(probe_ok)
+            if sequence_ok is not None:
+                healthy = healthy and bool(sequence_ok)
+            if probe_ok is None and sequence_ok is None:
+                healthy = bool(overall_ok)
+            entry["healthy"] = bool(healthy)
+            if entry["healthy"]:
+                healthy_targets.append(target)
+
+        health_report["overall_ok"] = bool(overall_ok)
+        health_report["healthy_targets"] = healthy_targets
+        self._write_health_snapshot(health_report)
+
+        self._log(f"health-check: {'PASS' if overall_ok else 'FAIL'}")
+        if not overall_ok:
+            raise RuntimeError("health-check failed")
+
+    def _write_health_snapshot(self, payload: dict):
+        health_file = str(getattr(self.config, "target_health_file", "target_health.json"))
+        if not os.path.isabs(health_file):
+            health_file = os.path.join(os.getcwd(), health_file)
+        parent = os.path.dirname(health_file)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        with open(health_file, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, indent=2)
+        self._log(f"health-snapshot: {health_file}")
 
     def _log(self, message: str):
         self._log_index += 1
