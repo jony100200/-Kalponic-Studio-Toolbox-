@@ -1,5 +1,3 @@
-echo Starting main_v2.py ...
-echo Exit code: %EXIT_CODE%
 @echo off
 REM run_main_v2.bat - Simple launcher for Enhanced Batch Background Remover (main_v2.py)
 

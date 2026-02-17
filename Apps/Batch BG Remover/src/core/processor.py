@@ -5,11 +5,9 @@ KISS: Simple processing logic with clear interfaces
 """
 
 import logging
-import threading
 from pathlib import Path
 from typing import Callable, Optional, List, Tuple
 from dataclasses import dataclass, field
-from typing import List
 
 from .factory import RemoverManager, RemoverType
 from ..config.settings import config
@@ -58,6 +56,14 @@ class ProcessingEngine:
         """Cancel the current processing operation."""
         self._cancelled = True
         self._logger.info("Processing cancellation requested")
+
+    def reset_cancel(self):
+        """Reset cancellation flag before starting a new operation."""
+        self._cancelled = False
+
+    def is_cancelled(self) -> bool:
+        """Return True if cancellation was requested."""
+        return self._cancelled
     
     def reset_stats(self):
         """Reset processing statistics."""
@@ -66,6 +72,14 @@ class ProcessingEngine:
     def get_stats(self) -> ProcessingStats:
         """Get current processing statistics."""
         return self._stats
+
+    def _collect_image_files(self, folder: Path) -> List[Path]:
+        """Collect supported image files from a folder using a single directory scan."""
+        folder = Path(folder)
+        return sorted(
+            p for p in folder.iterdir()
+            if p.is_file() and p.suffix.lower() in self.SUPPORTED_EXTENSIONS
+        )
     
     def process_single_image(self, input_path: Path, output_path: Path) -> bool:
         """
@@ -81,18 +95,16 @@ class ProcessingEngine:
         try:
             # Read input image
             image_data = input_path.read_bytes()
-            
-            # Process with background remover - use advanced processing if available
-            remover_info = self._remover_manager.get_active_remover_info()
-            if remover_info.get('advanced_features', False):
-                # Use material-specific processing for LayerDiffuse
-                active_remover = self._remover_manager._primary_remover
-                if hasattr(active_remover, 'remove_with_material_type'):
-                    result_data = active_remover.remove_with_material_type(image_data, self.material_hint)
-                else:
-                    result_data = self._remover_manager.remove_background(image_data)
+
+            # Use material-specific processing only when the active primary remover supports it.
+            active_remover = self._remover_manager._primary_remover
+            if (
+                active_remover
+                and hasattr(active_remover, "remove_with_material_type")
+                and active_remover.is_available()
+            ):
+                result_data = active_remover.remove_with_material_type(image_data, self.material_hint)
             else:
-                # Standard processing
                 result_data = self._remover_manager.remove_background(image_data)
             
             # Ensure output directory exists
@@ -131,14 +143,9 @@ class ProcessingEngine:
         """
         input_folder = Path(input_folder)
         output_folder = Path(output_folder)
-        
-        # Find all supported image files
-        image_files = []
-        for ext in self.SUPPORTED_EXTENSIONS:
-            image_files.extend(input_folder.glob(f"*{ext}"))
-            image_files.extend(input_folder.glob(f"*{ext.upper()}"))
-        
-        image_files = sorted(set(image_files))  # Remove duplicates and sort
+
+        # Find all supported image files.
+        image_files = self._collect_image_files(input_folder)
         
         if not image_files:
             raise FileNotFoundError(f"No supported image files found in {input_folder}")
@@ -167,6 +174,11 @@ class ProcessingEngine:
                 self._logger.debug(f"Skipping existing file: {output_filename}")
                 folder_stats.skipped_files += 1
                 folder_stats.skipped_paths.append(str(input_path))
+                if progress_callback:
+                    try:
+                        progress_callback(idx, len(image_files), f"{input_path.name} (skipped)")
+                    except Exception as e:
+                        self._logger.warning(f"Progress callback failed: {e}")
                 continue
             
             # Process the image
@@ -217,15 +229,13 @@ class ProcessingEngine:
         """
         # Reset stats
         self.reset_stats()
+        self.reset_cancel()
         
         # Count total files across all folders
         for input_folder, _ in folder_pairs:
             try:
-                image_files = []
-                for ext in self.SUPPORTED_EXTENSIONS:
-                    image_files.extend(Path(input_folder).glob(f"*{ext}"))
-                    image_files.extend(Path(input_folder).glob(f"*{ext.upper()}"))
-                self._stats.total_files += len(set(image_files))
+                image_files = self._collect_image_files(Path(input_folder))
+                self._stats.total_files += len(image_files)
             except Exception as e:
                 self._logger.warning(f"Could not count files in {input_folder}: {e}")
         
@@ -249,10 +259,10 @@ class ProcessingEngine:
                 folder_stats = self.process_folder(
                     input_folder,
                     output_folder,
-                    progress_callback=lambda curr, total: progress_callback(
+                    progress_callback=lambda curr, total, filename: progress_callback(
                         current_file + curr, 
                         self._stats.total_files,
-                        f"Folder: {folder_name}"
+                        f"{folder_name}/{filename}"
                     ) if progress_callback else None,
                     preview_callback=preview_callback,
                     show_preview=show_preview
@@ -273,13 +283,11 @@ class ProcessingEngine:
                 self._logger.error(f"Failed to process folder {folder_name}: {e}")
                 # Still update file counter for failed folders
                 try:
-                    image_files = []
-                    for ext in self.SUPPORTED_EXTENSIONS:
-                        image_files.extend(Path(input_folder).glob(f"*{ext}"))
-                    current_file += len(set(image_files))
-                    self._stats.failed_files += len(set(image_files))
-                except:
-                    pass
+                    image_files = self._collect_image_files(Path(input_folder))
+                    current_file += len(image_files)
+                    self._stats.failed_files += len(image_files)
+                except Exception as counter_error:
+                    self._logger.warning(f"Could not update failure counters for {folder_name}: {counter_error}")
         
         self._logger.info(f"Queue processing finished: {self._stats}")
         return self._stats

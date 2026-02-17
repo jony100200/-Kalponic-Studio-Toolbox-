@@ -13,9 +13,24 @@ import customtkinter as ctk
 from PIL import Image, ImageTk
 from tkinter import filedialog
 
+try:
+    from tkinterdnd2 import DND_FILES, TkinterDnD  # type: ignore
+except ImportError:  # pragma: no cover - optional runtime dependency
+    DND_FILES = None
+    TkinterDnD = None
+
 from .controller import UIController, CyberpunkTheme
 from ..config import config
 from ..core import RemoverType
+
+
+if TkinterDnD:
+    class CTkDnD(TkinterDnD.DnDWrapper, ctk.CTk):
+        """CustomTkinter root with TkDnD support."""
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.TkdndVersion = TkinterDnD._require(self)
 
 
 class MainWindow:
@@ -25,13 +40,17 @@ class MainWindow:
     SOLID: Single Responsibility - manages UI widgets and layout
     KISS: Simple widget creation and event binding
     """
+
+    SUPPORTED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"}
     
     def __init__(self):
         # Apply cyberpunk theme
         CyberpunkTheme.apply_to_app()
-        
+
+        self._dnd_available = TkinterDnD is not None and DND_FILES is not None
+
         # Create main window
-        self.root = ctk.CTk()
+        self.root = CTkDnD() if self._dnd_available else ctk.CTk()
         self.root.title("KS BG Eraser v2.0")
         self.root.geometry("1200x700")
         self.root.minsize(880, 540)
@@ -39,6 +58,7 @@ class MainWindow:
         
         # Initialize controller
         self.controller = UIController(self)
+        self._logger = logging.getLogger(self.__class__.__name__)
         
         # UI variables
         self.output_folder = ctk.StringVar()
@@ -53,15 +73,19 @@ class MainWindow:
         self.progress_bar: Optional[ctk.CTkProgressBar] = None
         self.status_label: Optional[ctk.CTkLabel] = None
         self.preview_label: Optional[ctk.CTkLabel] = None
+        self.preview_frame: Optional[ctk.CTkFrame] = None
+        self.output_entry: Optional[ctk.CTkEntry] = None
+        self.input_drop_label: Optional[ctk.CTkLabel] = None
         self.threshold_label: Optional[ctk.CTkLabel] = None
+        self._config_save_after_id: Optional[str] = None
         
         # Create main scrollable content and widgets
         self._create_main_content()
+        self._setup_drag_and_drop()
         
         # Set up variable tracing to update config
         self._setup_variable_tracing()
-        
-        self._logger = logging.getLogger(self.__class__.__name__)
+
         self._logger.info("MainWindow initialized")
     
     def _create_main_content(self):
@@ -114,6 +138,7 @@ class MainWindow:
         self._create_settings_section()
         self._create_progress_section()
         self._create_preview_section()
+        self._update_preview_visibility()
 
     def _create_controls_content(self, parent):
         """Create the fixed bottom controls section."""
@@ -205,6 +230,14 @@ class MainWindow:
             fg_color=CyberpunkTheme.ERROR,
             hover_color="#cc2020"
         ).pack(side="left", padx=5)
+
+        self.input_drop_label = ctk.CTkLabel(
+            input_frame,
+            text="Drag and drop files/folders here",
+            font=CyberpunkTheme.get_body_font(),
+            text_color=CyberpunkTheme.SECONDARY
+        )
+        self.input_drop_label.pack(padx=15, pady=(0, 12), fill="x")
     
     def _create_output_section(self):
         """Create the output folder section."""
@@ -226,13 +259,14 @@ class MainWindow:
             text_color=CyberpunkTheme.SECONDARY
         ).grid(row=0, column=0, padx=15, pady=15, sticky="w")
         
-        ctk.CTkEntry(
+        self.output_entry = ctk.CTkEntry(
             output_frame,
             textvariable=self.output_folder,
             font=CyberpunkTheme.get_body_font(),
             border_width=1,
             border_color=CyberpunkTheme.ACCENT
-        ).grid(row=0, column=1, padx=10, sticky="ew")
+        )
+        self.output_entry.grid(row=0, column=1, padx=10, sticky="ew")
         
         ctk.CTkButton(
             output_frame,
@@ -406,23 +440,173 @@ class MainWindow:
     
     def _create_preview_section(self):
         """Create the preview section."""
-        preview_frame = ctk.CTkFrame(
+        self.preview_frame = ctk.CTkFrame(
             self.scrollable,
             fg_color=CyberpunkTheme.FRAME,
             border_width=1,
             border_color=CyberpunkTheme.ACCENT
         )
-        preview_frame.grid(row=4, column=0, padx=20, pady=10)
+        self.preview_frame.grid(row=4, column=0, padx=20, pady=10)
         
         ctk.CTkLabel(
-            preview_frame,
+            self.preview_frame,
             text="🖼️ LIVE PREVIEW",
             font=CyberpunkTheme.get_bold_font(),
             text_color=CyberpunkTheme.ACCENT
         ).pack(pady=(10, 5))
         
-        self.preview_label = ctk.CTkLabel(preview_frame, text="")
+        self.preview_label = ctk.CTkLabel(self.preview_frame, text="")
         self.preview_label.pack(pady=(0, 10))
+
+    def _save_config(self):
+        """Persist current settings to disk."""
+        self._config_save_after_id = None
+        config.save_config()
+
+    def _schedule_config_save(self):
+        """Debounce config writes to avoid saving on every slider tick."""
+        if self._config_save_after_id is not None:
+            self.root.after_cancel(self._config_save_after_id)
+        self._config_save_after_id = self.root.after(300, self._save_config)
+
+    def _update_preview_visibility(self):
+        """Show or hide preview area based on preference."""
+        if not self.preview_frame:
+            return
+
+        if self.show_preview.get():
+            self.preview_frame.grid()
+        else:
+            self.preview_frame.grid_remove()
+            if self.preview_label:
+                self.preview_label.configure(image=None)
+                self.preview_label.image = None
+
+    def _setup_drag_and_drop(self):
+        """Configure drag-and-drop targets if tkinterdnd2 is available."""
+        if not self._dnd_available:
+            if self.input_drop_label:
+                self.input_drop_label.configure(
+                    text="Drag and drop unavailable (install tkinterdnd2)"
+                )
+            return
+
+        def register_target(widget, handler):
+            if not widget:
+                return
+            widget.drop_target_register(DND_FILES)
+            widget.dnd_bind("<<Drop>>", handler)
+
+        register_target(self.folder_listbox, self._on_input_drop)
+        register_target(self.input_drop_label, self._on_input_drop)
+        register_target(self.output_entry, self._on_output_drop)
+
+        self._logger.info("Drag and drop initialized")
+
+    def _parse_drop_paths(self, data: str) -> list[Path]:
+        """Parse a TkDnD drop payload into filesystem paths."""
+        try:
+            raw_paths = self.root.tk.splitlist(data)
+        except Exception:
+            raw_paths = [data]
+
+        parsed = []
+        for raw_path in raw_paths:
+            cleaned = str(raw_path).strip().strip("{}").strip("\"")
+            if cleaned:
+                parsed.append(Path(cleaned))
+        return parsed
+
+    def _on_input_drop(self, event):
+        """Handle dropped input paths (folders and image files)."""
+        paths = self._parse_drop_paths(event.data)
+        if not paths:
+            return
+
+        file_paths = []
+        ignored_files = 0
+        for path in paths:
+            if path.is_dir():
+                self.controller.add_input_folder(str(path))
+            elif path.is_file() and path.suffix.lower() in self.SUPPORTED_IMAGE_EXTENSIONS:
+                file_paths.append(path)
+            elif path.is_file():
+                ignored_files += 1
+
+        if ignored_files:
+            self.set_status(f"Ignored {ignored_files} unsupported file(s)")
+
+        if not file_paths:
+            return
+
+        # Keep drag-and-drop behavior predictable:
+        # one file -> single-file mode, multiple files -> batch file mode.
+        if len(file_paths) == 1:
+            self._process_single_file(str(file_paths[0]))
+            return
+
+        self._process_file_batch([str(path) for path in file_paths])
+
+    def _on_output_drop(self, event):
+        """Handle dropped output target path."""
+        paths = self._parse_drop_paths(event.data)
+        if not paths:
+            return
+
+        first = paths[0]
+        if first.is_dir():
+            self.output_folder.set(str(first))
+            self.set_status(f"Output folder set: {first}")
+        elif first.is_file():
+            self.output_folder.set(str(first.parent))
+            self.set_status(f"Output folder set: {first.parent}")
+
+    def _ensure_output_folder(self, title: str) -> Optional[str]:
+        """Return output folder, prompting user if not already selected."""
+        output_folder = self.output_folder.get().strip()
+        if output_folder:
+            return output_folder
+
+        selected = filedialog.askdirectory(title=title)
+        if not selected:
+            return None
+
+        self.output_folder.set(selected)
+        return selected
+
+    def _process_single_file(self, file_path: str):
+        """Process one file using current settings."""
+        output_folder = self._ensure_output_folder("Select Output Folder for Single File")
+        if not output_folder:
+            return
+
+        remover_choice = self.remover_combo.get() if hasattr(self, 'remover_combo') else ""
+        material_choice = self.material_combo.get() if hasattr(self, 'material_combo') else ""
+
+        self.controller.start_single_file(
+            file_path,
+            output_folder,
+            self.show_preview.get(),
+            remover_choice,
+            material_choice
+        )
+
+    def _process_file_batch(self, file_paths: list[str]):
+        """Process multiple files as one run."""
+        output_folder = self._ensure_output_folder("Select Output Folder for Dropped Files")
+        if not output_folder:
+            return
+
+        remover_choice = self.remover_combo.get() if hasattr(self, 'remover_combo') else ""
+        material_choice = self.material_combo.get() if hasattr(self, 'material_combo') else ""
+
+        self.controller.start_file_batch(
+            file_paths,
+            output_folder,
+            self.show_preview.get(),
+            remover_choice,
+            material_choice
+        )
     
     def _setup_variable_tracing(self):
         """Set up variable tracing to update configuration."""
@@ -430,11 +614,15 @@ class MainWindow:
             config.removal_settings.threshold = self.threshold.get()
             config.removal_settings.use_jit = self.use_jit.get()
             config.ui_settings.show_preview = self.show_preview.get()
-            config.save_config()
+            self._schedule_config_save()
+
+        def update_preview(*args):
+            update_config()
+            self._update_preview_visibility()
         
         self.threshold.trace_add('write', update_config)
         self.use_jit.trace_add('write', update_config)
-        self.show_preview.trace_add('write', update_config)
+        self.show_preview.trace_add('write', update_preview)
     
     # Event handlers
     def _add_input_folder(self):
@@ -451,28 +639,7 @@ class MainWindow:
         ])
         if not file_path:
             return
-
-        # Use currently selected output folder if present
-        output_folder = self.output_folder.get()
-        if not output_folder:
-            # Prompt for output folder if not set
-            out = filedialog.askdirectory(title="Select Output Folder for Single File")
-            if not out:
-                return
-            output_folder = out
-            self.output_folder.set(output_folder)
-
-        remover_choice = self.remover_combo.get() if hasattr(self, 'remover_combo') else ""
-        material_choice = self.material_combo.get() if hasattr(self, 'material_combo') else ""
-
-        # Start single-file processing through controller
-        self.controller.start_single_file(
-            file_path,
-            output_folder,
-            self.show_preview.get(),
-            remover_choice,
-            material_choice
-        )
+        self._process_single_file(file_path)
     
     def _clear_folders(self):
         """Clear all input folders."""
@@ -509,6 +676,9 @@ class MainWindow:
         """Handle window closing."""
         if self.controller.is_processing:
             self.controller.cancel_processing()
+        if self._config_save_after_id is not None:
+            self.root.after_cancel(self._config_save_after_id)
+            self._save_config()
         self.controller.cleanup()
         self.root.destroy()
     
@@ -540,9 +710,6 @@ class MainWindow:
             if info:
                 status_text += f" - {info}"
             self.set_status(status_text)
-        
-        # Force UI update
-        self.root.update_idletasks()
     
     def set_status(self, text: str):
         """Set status label text."""

@@ -5,15 +5,15 @@ KISS: Clean separation of UI components and business logic
 """
 
 import threading
+import time
 from tkinter import messagebox, filedialog
 from pathlib import Path
-from typing import Optional, List, Callable
+from typing import Optional, List
 import logging
 
 import customtkinter as ctk
-from PIL import Image, ImageTk
 
-from ..core import ProcessingEngine, RemoverType
+from ..core import ProcessingEngine, RemoverType, ProcessingStats
 from ..config import config
 
 
@@ -35,6 +35,9 @@ class UIController:
         self.input_folders: List[str] = []
         self.is_processing = False
         self.material_hint = "general"  # Default material hint
+        self._run_started_at: Optional[float] = None
+        self._last_preview_at = 0.0
+        self._preview_min_interval_sec = 0.25
         
         # Initialize processing engine
         self._initialize_engine()
@@ -79,13 +82,13 @@ class UIController:
             messagebox.showerror("Error", "Processing engine not initialized")
             return
         
-        # Switch remover based on selection
-        if "LayerDiffuse" in remover_choice:
-            try:
-                self.engine.switch_remover(RemoverType.LAYERDIFFUSE)
-                self._logger.info("Switched to LayerDiffuse Enhanced")
-            except Exception as e:
-                self._logger.warning(f"Failed to switch to LayerDiffuse, using default: {e}")
+        # Switch remover based on selection.
+        target_remover = RemoverType.LAYERDIFFUSE if "LayerDiffuse" in remover_choice else RemoverType.INSPYRENET
+        try:
+            self.engine.switch_remover(target_remover)
+            self._logger.info(f"Switched to {target_remover.value}")
+        except Exception as e:
+            self._logger.warning(f"Failed to switch remover to {target_remover.value}: {e}")
         
         # Store material choice for processing
         material_map = {
@@ -98,6 +101,8 @@ class UIController:
         
         # Update UI state
         self.is_processing = True
+        self._run_started_at = time.monotonic()
+        self._last_preview_at = 0.0
         self.app.set_processing_state(True)
         
         # Configure engine with current settings
@@ -160,13 +165,13 @@ class UIController:
             messagebox.showerror("Error", "Processing engine not initialized")
             return
 
-        # Switch remover if requested
-        if "LayerDiffuse" in remover_choice:
-            try:
-                self.engine.switch_remover(RemoverType.LAYERDIFFUSE)
-                self._logger.info("Switched to LayerDiffuse Enhanced")
-            except Exception as e:
-                self._logger.warning(f"Failed to switch to LayerDiffuse, using default: {e}")
+        # Switch remover based on selection.
+        target_remover = RemoverType.LAYERDIFFUSE if "LayerDiffuse" in remover_choice else RemoverType.INSPYRENET
+        try:
+            self.engine.switch_remover(target_remover)
+            self._logger.info(f"Switched to {target_remover.value}")
+        except Exception as e:
+            self._logger.warning(f"Failed to switch remover to {target_remover.value}: {e}")
 
         # Material choice map
         material_map = {
@@ -184,6 +189,8 @@ class UIController:
 
         # UI state
         self.is_processing = True
+        self._run_started_at = time.monotonic()
+        self._last_preview_at = 0.0
         self.app.set_processing_state(True)
 
         input_path = Path(input_file)
@@ -218,11 +225,113 @@ class UIController:
 
             except Exception as e:
                 self._logger.error(f"Single-file processing failed: {e}")
-                self.app.root.after(0, lambda: [
-                    setattr(self, 'is_processing', False),
-                    self.app.set_processing_state(False),
+                def fail():
+                    self.is_processing = False
+                    self.app.set_processing_state(False)
                     messagebox.showerror("Error", f"Processing failed: {e}")
-                ])
+
+                self.app.root.after(0, fail)
+
+        self.worker_thread = threading.Thread(target=worker, daemon=True)
+        self.worker_thread.start()
+
+    def start_file_batch(
+        self,
+        input_files: List[str],
+        output_folder: str,
+        show_preview: bool = False,
+        remover_choice: str = "",
+        material_choice: str = "",
+    ):
+        """Process multiple files in a single queued run."""
+        if self.is_processing:
+            self._logger.warning("Processing already in progress")
+            messagebox.showwarning("Busy", "Processing already in progress")
+            return
+
+        file_paths = [Path(p) for p in input_files if Path(p).is_file()]
+        if not file_paths:
+            messagebox.showerror("Error", "No valid input files were provided")
+            return
+
+        if not output_folder:
+            messagebox.showerror("Error", "Please select an output folder")
+            return
+
+        if not self.engine:
+            messagebox.showerror("Error", "Processing engine not initialized")
+            return
+
+        # Switch remover based on selection.
+        target_remover = RemoverType.LAYERDIFFUSE if "LayerDiffuse" in remover_choice else RemoverType.INSPYRENET
+        try:
+            self.engine.switch_remover(target_remover)
+            self._logger.info(f"Switched to {target_remover.value}")
+        except Exception as e:
+            self._logger.warning(f"Failed to switch remover to {target_remover.value}: {e}")
+
+        # Material choice map
+        material_map = {
+            "General (Standard)": "general",
+            "Glass (Transparent)": "glass",
+            "Hair/Fur (Fine Details)": "hair",
+            "Semi-Transparent (Glowing)": "transparent"
+        }
+        self.material_hint = material_map.get(material_choice, "general")
+
+        # Configure engine
+        self._configure_engine()
+        if hasattr(self.engine, 'material_hint'):
+            self.engine.material_hint = self.material_hint
+        self.engine.reset_cancel()
+
+        # UI state
+        self.is_processing = True
+        self._run_started_at = time.monotonic()
+        self._last_preview_at = 0.0
+        self.app.set_processing_state(True)
+        self.app.set_status(f"Queued {len(file_paths)} files")
+
+        output_base = Path(output_folder)
+
+        def worker():
+            stats = ProcessingStats(total_files=len(file_paths))
+            try:
+                self._logger.info(f"Starting multi-file processing: {len(file_paths)} files")
+
+                for idx, input_path in enumerate(file_paths, 1):
+                    if self.engine and self.engine.is_cancelled():
+                        self._logger.info("Multi-file processing cancelled by user")
+                        break
+
+                    output_filename = input_path.stem + config.processing_settings.suffix + ".png"
+                    output_path = output_base / output_filename
+
+                    if output_path.exists():
+                        stats.skipped_files += 1
+                        stats.skipped_paths.append(str(input_path))
+                        self._on_progress(idx, stats.total_files, f"{input_path.name} (skipped)")
+                        continue
+
+                    success = self.engine.process_single_image(input_path, output_path)
+                    if success:
+                        stats.processed_files += 1
+                        if show_preview:
+                            try:
+                                data = output_path.read_bytes()
+                                self._on_preview(data)
+                            except Exception as preview_error:
+                                self._logger.warning(f"Could not load preview: {preview_error}")
+                    else:
+                        stats.failed_files += 1
+                        stats.failed_paths.append(str(input_path))
+
+                    self._on_progress(idx, stats.total_files, input_path.name)
+
+                self.app.root.after(0, lambda: self._on_processing_complete(stats, None))
+            except Exception as e:
+                self._logger.error(f"Multi-file processing failed: {e}")
+                self.app.root.after(0, lambda: self._on_processing_complete(None, e))
 
         self.worker_thread = threading.Thread(target=worker, daemon=True)
         self.worker_thread.start()
@@ -250,6 +359,14 @@ class UIController:
     
     def _on_progress(self, current: int, total: int, info: str = ""):
         """Handle progress updates from the processing engine."""
+        if self._run_started_at and current > 0 and total > current:
+            elapsed = max(time.monotonic() - self._run_started_at, 0.001)
+            rate = current / elapsed
+            if rate > 0:
+                eta_seconds = int((total - current) / rate)
+                eta_text = self._format_duration(eta_seconds)
+                info = f"{info} | ETA {eta_text}" if info else f"ETA {eta_text}"
+
         def update_ui():
             self.app.update_progress(current, total, info)
         
@@ -257,15 +374,42 @@ class UIController:
     
     def _on_preview(self, image_data: bytes):
         """Handle preview updates from the processing engine."""
+        now = time.monotonic()
+        if now - self._last_preview_at < self._preview_min_interval_sec:
+            return
+        self._last_preview_at = now
+
         def update_preview():
             self.app.show_preview(image_data)
         
         self.app.root.after(0, update_preview)
+
+    def _format_duration(self, total_seconds: int) -> str:
+        """Format seconds into mm:ss or hh:mm:ss."""
+        hours, rem = divmod(max(total_seconds, 0), 3600)
+        minutes, seconds = divmod(rem, 60)
+        if hours:
+            return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        return f"{minutes:02d}:{seconds:02d}"
     
     def _on_processing_complete(self, stats, error):
         """Handle processing completion."""
         self.is_processing = False
+        self._run_started_at = None
         self.app.set_processing_state(False)
+        was_cancelled = self.engine.is_cancelled() if self.engine else False
+        if self.engine:
+            self.engine.reset_cancel()
+
+        if was_cancelled and not error and stats is not None:
+            messagebox.showinfo(
+                "Processing Cancelled",
+                f"Processing was cancelled.\n\n{stats}"
+            )
+            self.app.set_status(f"Cancelled: {stats.processed_files}/{stats.total_files} processed")
+            self._logger.info(f"Processing cancelled. Stats: {stats}")
+            return
+
         if error:
             if "No supported image files" in str(error):
                 messagebox.showwarning("No Images", str(error))
