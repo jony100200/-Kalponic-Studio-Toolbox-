@@ -10,6 +10,7 @@ import threading
 import os
 import time
 import logging
+import glob
 from typing import Optional
 
 from ..core.sequencer import PromptSequencer, SequencerState
@@ -122,7 +123,13 @@ class PromptSequencerGUI:
             pause_callback=self._pause_sequencer,
             resume_callback=self._resume_sequencer,
             stop_callback=self._stop_sequencer,
-            manual_resume_callback=self._manual_resume_sequencer
+            manual_resume_callback=self._manual_resume_sequencer,
+            preflight_callback=self._run_preflight_ui,
+            resume_snapshot_callback=self._resume_snapshot_ui,
+            show_last_summary_callback=self._open_last_summary_ui,
+            save_profile_callback=self._save_profile_ui,
+            apply_profile_callback=self._apply_profile_ui,
+            refresh_profiles_callback=self._refresh_profile_names
         )
         
         # Add status bar at the bottom
@@ -195,6 +202,8 @@ class PromptSequencerGUI:
         self.control_panel.save_settings()
         self.text_tab.save_settings()
         self.image_tab.save_settings()
+        if hasattr(self.config, 'sanitize'):
+            self.config.sanitize()
         self.config.save()
     
     def _start_sequencer(self):
@@ -277,10 +286,170 @@ class PromptSequencerGUI:
                     time.sleep(1)
             
             func(*args)
+
+            if getattr(self.sequencer, 'last_run_summary_file', ''):
+                self._on_log_message(
+                    f"Last run summary: {self.sequencer.last_run_summary_file}",
+                    "info"
+                )
             
         except Exception as e:
             self.logger.error(f"Error in sequencer thread: {e}")
             self._on_log_message(f"Sequencer error: {e}", "error")
+
+    def _resolve_current_mode_inputs(self):
+        """Resolve current UI mode and input payload for preflight/actions."""
+        current_tab = self.notebook.get()
+        if current_tab == "Text Mode":
+            return {
+                "mode": "text",
+                "input_folder": self.config.text_input_folder,
+                "global_prompt_file": "",
+                "queue_items": None
+            }
+
+        if self.config.image_queue_mode:
+            return {
+                "mode": "queue",
+                "input_folder": "",
+                "global_prompt_file": "",
+                "queue_items": self.config.image_queue_items
+            }
+
+        return {
+            "mode": "image",
+            "input_folder": self.config.image_input_folder,
+            "global_prompt_file": self.config.global_prompt_file,
+            "queue_items": None
+        }
+
+    def _format_preflight_message(self, result: dict) -> str:
+        """Format preflight result into a readable message."""
+        lines = [
+            f"Mode: {result.get('mode', '-')}",
+            f"OK: {result.get('ok', False)}",
+            f"Estimated items: {result.get('estimated_items', 0)}",
+            f"Estimated duration: {result.get('estimated_duration_sec', 0)} sec",
+        ]
+
+        info = result.get("info") or []
+        warnings = result.get("warnings") or []
+        errors = result.get("errors") or []
+
+        if info:
+            lines.append("")
+            lines.append("Info:")
+            lines.extend([f"- {msg}" for msg in info])
+        if warnings:
+            lines.append("")
+            lines.append("Warnings:")
+            lines.extend([f"- {msg}" for msg in warnings])
+        if errors:
+            lines.append("")
+            lines.append("Errors:")
+            lines.extend([f"- {msg}" for msg in errors])
+
+        return "\n".join(lines)
+
+    def _run_preflight_ui(self):
+        """Run preflight using current GUI settings and show a dialog."""
+        if self.sequencer_thread and self.sequencer_thread.is_alive():
+            messagebox.showwarning("Preflight", "Cannot run preflight while sequencer is active.")
+            return
+
+        self._save_settings()
+        payload = self._resolve_current_mode_inputs()
+        result = self.sequencer.run_preflight(
+            mode=payload["mode"],
+            input_folder=payload["input_folder"],
+            global_prompt_file=payload["global_prompt_file"],
+            queue_items=payload["queue_items"],
+        )
+
+        self._on_log_message(
+            f"Preflight ({payload['mode']}): ok={result.get('ok')} "
+            f"items={result.get('estimated_items')} "
+            f"duration={result.get('estimated_duration_sec')}s",
+            "info" if result.get("ok") else "warning"
+        )
+
+        message = self._format_preflight_message(result)
+        if result.get("ok"):
+            messagebox.showinfo("Preflight Result", message)
+        else:
+            messagebox.showwarning("Preflight Result", message)
+
+    def _resume_snapshot_worker(self):
+        """Background worker to resume queue from latest snapshot."""
+        success = self.sequencer.resume_image_queue_from_snapshot()
+        if not success:
+            self.root.after(0, lambda: messagebox.showwarning("Resume Snapshot", "No queue snapshot found to resume."))
+
+    def _resume_snapshot_ui(self):
+        """Start a queue resume from snapshot."""
+        if self.sequencer_thread and self.sequencer_thread.is_alive():
+            messagebox.showwarning("Resume Snapshot", "Sequencer is already running.")
+            return
+
+        self._save_settings()
+        self.sequencer_thread = threading.Thread(
+            target=self._run_with_initial_delay,
+            args=(self._resume_snapshot_worker,),
+            daemon=True
+        )
+        self.sequencer_thread.start()
+
+    def _find_latest_summary_file(self) -> str:
+        """Return latest run summary file path if available."""
+        latest = getattr(self.sequencer, 'last_run_summary_file', '') or ''
+        if latest and os.path.exists(latest):
+            return latest
+
+        summary_files = glob.glob(os.path.join("logs", "run_summary_*.json"))
+        if not summary_files:
+            return ""
+        summary_files.sort(key=lambda path: os.path.getmtime(path), reverse=True)
+        return summary_files[0]
+
+    def _open_last_summary_ui(self):
+        """Open the most recent run summary JSON file."""
+        summary_file = self._find_latest_summary_file()
+        if not summary_file:
+            messagebox.showinfo("Run Summary", "No run summary file found yet.")
+            return
+
+        try:
+            os.startfile(summary_file)  # type: ignore[attr-defined]
+        except Exception:
+            messagebox.showinfo("Run Summary", f"Latest summary:\n{summary_file}")
+
+    def _refresh_profile_names(self):
+        """Return available profile names for profile dropdown."""
+        if hasattr(self.config, 'list_profiles'):
+            return self.config.list_profiles()
+        return []
+
+    def _save_profile_ui(self, name: str) -> bool:
+        """Save current UI state as named profile."""
+        self._save_settings()
+        if not hasattr(self.config, 'save_profile'):
+            return False
+        success = self.config.save_profile(name)
+        if success:
+            self.config.save()
+            self._on_log_message(f"Saved profile: {name}", "info")
+        return success
+
+    def _apply_profile_ui(self, name: str) -> bool:
+        """Apply named profile and refresh all GUI controls."""
+        if not hasattr(self.config, 'apply_profile'):
+            return False
+        success = self.config.apply_profile(name)
+        if success:
+            self.config.save()
+            self._load_settings()
+            self._on_log_message(f"Applied profile: {name}", "info")
+        return success
     
     def _pause_sequencer(self):
         """Pause the sequencer"""
@@ -315,23 +484,18 @@ class PromptSequencerGUI:
         """Remove completed queue item by its unique id."""
         try:
             listbox = self.image_tab.queue_listbox
-            items = listbox.get(0, tk.END)
-            match_index = None
-            for idx, text in enumerate(items):
-                # The display text contains folder name; we match by config ids instead
-                pass
 
             # Remove from config by id and then from listbox by rebuilding display entries
-            removed_name = None
+            removed = False
             if hasattr(self.config, 'image_queue_items') and self.config.image_queue_items:
                 for i, itm in enumerate(self.config.image_queue_items):
                     if itm.get('id') == item_id:
-                        removed = self.config.image_queue_items.pop(i)
-                        removed_name = removed.get('name')
+                        self.config.image_queue_items.pop(i)
+                        removed = True
                         break
 
             # Rebuild listbox contents to reflect removal
-            if removed_name is not None:
+            if removed:
                 listbox.delete(0, tk.END)
                 for itm in self.config.image_queue_items:
                     folder_name = itm.get('name', 'Unknown')

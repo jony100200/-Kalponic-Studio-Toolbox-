@@ -265,6 +265,24 @@ class PasteController:
         self.max_retries = 3
         self.retry_delay = 0.5
         self.focus_before_paste = True
+        self.focus_retries = 2
+
+    def configure_retries(self, max_retries: int, retry_delay: float, focus_retries: int = 2):
+        """Configure retry behavior."""
+        try:
+            self.max_retries = max(1, min(10, int(max_retries)))
+        except Exception:
+            self.max_retries = 3
+
+        try:
+            self.retry_delay = max(0.05, min(10.0, float(retry_delay)))
+        except Exception:
+            self.retry_delay = 0.5
+
+        try:
+            self.focus_retries = max(1, min(10, int(focus_retries)))
+        except Exception:
+            self.focus_retries = 2
     
     def paste_text(self, text: str, auto_enter: bool = True, grace_delay: int = 400, 
                    target_window: str = None) -> bool:
@@ -285,7 +303,7 @@ class PasteController:
                             continue
                     
                     # Focus the input box with keyboard navigation
-                    if not self.window_detector.focus_input_box(retries=2):
+                    if not self.window_detector.focus_input_box(retries=self.focus_retries):
                         self.logger.warning(f"Failed to focus input box on attempt {attempt + 1}")
                         if attempt < self.max_retries - 1:
                             time.sleep(self.retry_delay)
@@ -343,7 +361,7 @@ class PasteController:
                             continue
                     
                     # Focus the input box with keyboard navigation
-                    if not self.window_detector.focus_input_box(retries=2):
+                    if not self.window_detector.focus_input_box(retries=self.focus_retries):
                         self.logger.warning(f"Failed to focus input box on attempt {attempt + 1}")
                         if attempt < self.max_retries - 1:
                             time.sleep(self.retry_delay)

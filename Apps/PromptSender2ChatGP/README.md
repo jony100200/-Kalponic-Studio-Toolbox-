@@ -1,173 +1,234 @@
-# Prompt Sequencer
+﻿# Prompt Sequencer
 
-A powerful GUI application for automating prompt sequences to AI applications like ChatGPT, Groq  and more.
+Prompt Sequencer automates sending text prompts and image+text prompts to AI apps (for example ChatGPT desktop/web or Groq clients).
 
-## Features
+It is designed for long batch runs with safety controls, retries, queue management, and resumable processing.
 
-### 🎯 **Responsive Design**
-- **Scrollable Interface:** Adapts to any screen size and resolution
-- **Dynamic Window Sizing:** Automatically adjusts to optimal size for your screen
-- **Grid-Based Layout:** Professional, resizable components
-- **Status Bar:** Real-time window size and scroll guidance
+## Core Features
 
-### 📋 **Two Operating Modes:**
-- Text Mode: Process folders of .txt files with multiple prompts
-- Image + Text Mode: Process image folders with optional global text prompts
-  - **Single Folder Mode:** Process one folder at a time (classic behavior)
-  - **Queue Mode:** Add multiple folders to a queue for batch processing
-
-### 🔒 **Reliable Automation:**
-- Enhanced window detection and focusing with keyboard sequences
-- Multiple focus strategies (Browser/Electron, Generic, Tab Navigation)
-- Clipboard safety (saves and restores original content)
-- Retry mechanisms with exponential backoff
-- Pause/Resume functionality with manual intervention fallback
-
-### 🧠 **Smart Processing:**
-- Automatic file organization (moves processed files to sent_prompts/sent_images)
-- Failed files moved to dedicated failed folders
-- Configurable delays and jitter for natural timing
-- Progress tracking and status indicators
-- Verification system for input box focus
-
-### 📊 **Comprehensive Logging:**
-- Real-time scrollable activity panel
-- Detailed file logging with timestamps
-- Export functionality for logs
+- Two run modes:
+  - Text Mode: process `.txt` files containing one or many prompts.
+  - Image + Text Mode: process image folders with optional prompt text.
+- Queue Mode for image folders:
+  - Add multiple folders.
+  - Reorder, remove, clear.
+  - Dynamic enqueue while running.
+- Reliability and safety:
+  - Keyboard-based focus strategies.
+  - Retry tuning for paste/focus actions.
+  - Manual intervention and resume.
+  - Dry-run mode.
+  - Duplicate detection and skip.
+  - Error screenshot capture.
+- Planning and observability:
+  - Preflight checks with item/time estimate.
+  - Activity log panel.
+  - Run summaries (`JSON` + rolling `CSV`).
+- Recovery:
+  - Queue snapshots.
+  - Resume queue from latest snapshot.
+- Reuse:
+  - Prompt variables (`{{filename}}`, `{{index}}`, `{{date}}`, etc.).
+  - Save/load named profiles.
 
 ## Installation
 
-1. Install required packages:
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Run the application:
+## Run
+
 ```bash
 python main.py
-# OR
+# or
 run.bat
 ```
 
-## Usage
+## GUI Usage
 
-### Global Setup
-1. Set target window by entering a substring of the window title
-2. Use "Find Windows" to see available windows
-3. Test window focusing with "Test Focus" - uses enhanced keyboard navigation
-4. Configure initial delay before starting
+### 1. Global Controls
+
+- Set `Target Window`.
+- Use `Find Windows` and `Test Focus`.
+- Set `Initial Delay`.
+
+### 2. Execution Safety (GUI)
+
+Available in the Global Controls section:
+
+- `Dry Run`
+- `Skip Duplicates`
+- `Prompt Variables`
+- `Queue Snapshots`
+- `Auto Resume Queue`
+- `Error Screenshots`
+
+### 3. Reliability Tuning (GUI)
+
+Available in the Global Controls section:
+
+- `Paste Retries`
+- `Retry Delay`
+- `Focus Retries`
+
+### 4. Profiles (GUI)
+
+Available in the Global Controls section:
+
+- Save current settings to a profile name.
+- Load selected profile.
+- Refresh profile list.
+
+### 5. Utility Actions (GUI)
+
+Available in the Global Controls section:
+
+- `Preflight Check`
+- `Resume Snapshot`
+- `Open Last Summary`
+
+### 6. Risk Indicator (GUI)
+
+Global Controls includes a small risk badge that reflects current safety settings:
+
+- `Safe (Dry Run)`
+- `Guarded`
+- `Normal`
+- `Elevated`
+
+## Modes
 
 ### Text Mode
-1. Select a folder containing .txt files
-2. Each file represents a category and can contain multiple prompts
-3. Prompts can be separated by `---` or blank lines
-4. Configure timing settings (paste grace, generation wait, jitter)
-5. Enable/disable auto-Enter after pasting
 
-### Image + Text Mode
+- Select folder with `.txt` files.
+- Prompt parsing supports:
+  - Numbered sections (`1. Title ...`).
+  - `---` separators.
+  - Double-newline separation.
+- On successful live runs, sent prompts/files are organized into `sent_prompts`.
 
-#### Single Folder Mode (Classic)
-1. Select folder containing images (jpg, png, bmp, gif, webp)
-2. Optionally select a global prompt .txt file
-3. Configure timing and behavior settings
+### Image + Text Mode (Single Folder)
 
-#### Queue Mode (New!)
-1. Select "Queue Mode (Multiple Folders)" radio button
-2. Click "Add Folder" to add image folders to the queue:
-   - Choose an image folder
-   - Optionally choose a prompt file for that folder
-3. Use queue management buttons:
-   - **Remove:** Delete selected queue item
-   - **Clear All:** Empty the entire queue
-   - **Move Up/Down:** Reorder queue items
-4. Click "Start" to process all folders sequentially
+- Select image folder (`.jpg`, `.jpeg`, `.png`, `.bmp`, `.gif`, `.webp`).
+- Optionally select a global prompt file.
+- Images are pasted first, then text (if enabled).
 
-**Queue Benefits:**
-- Set up overnight batch jobs across multiple themed folders
-- Different prompts for different image categories
-- Example: Nature → nature_prompts.txt, Medieval → medieval_prompts.txt
-- Process hundreds of images across multiple themes automatically
-4. Images are pasted first, followed by text (if enabled)
-   - **Important:** Adjust the "Image Upload Delay" slider in Image Mode Settings to ensure sufficient time for image upload to complete before text is pasted
+### Image + Text Mode (Queue)
 
-## Enhanced Window Focus System
+- Add multiple image folders, each with optional prompt file.
+- Items have unique IDs and are removed deterministically when completed.
+- Removing queue items during run is supported:
+  - Not-yet-started items are skipped.
+  - In-progress folder cancellation is cooperative (stops remaining images in that folder).
 
-The application now uses keyboard-based focus strategies instead of unreliable mouse coordinates:
+## Preflight and Dry Run
 
-### 🎯 **Focus Strategies:**
-1. **Browser/Electron Strategy:** `Ctrl+L` → `Tab` sequences
-2. **Generic Strategy:** `Ctrl+K`, `/`, `Ctrl+F` fallbacks  
-3. **Tab Navigation:** Smart tab cycling for complex UIs
+- `Preflight` validates selected inputs and reports:
+  - window availability,
+  - path validity,
+  - estimated item count,
+  - estimated duration.
+- `Dry Run` simulates actions without sending paste events or moving source files.
 
-### ✅ **Verification System:**
-- Uses `<<<TEST>>>` marker to verify input box focus
-- Automatic retry with different strategies
-- Manual intervention mode when automated focus fails
+## Prompt Variables
 
-### 🔄 **Retry Logic:**
-- Up to 2-3 attempts per strategy with increasing delays
-- Automatic fallback between different focus methods
-- "Resume After Manual Fix" option for edge cases
+When enabled, placeholders in prompt text are replaced at runtime, for example:
+
+- `{{filename}}`
+- `{{file_stem}}`
+- `{{file_ext}}`
+- `{{folder}}`
+- `{{index}}`
+- `{{date}}`
+- `{{time}}`
+- `{{datetime}}`
+- `{{mode}}`
+- `{{title}}`
 
 ## Configuration
 
-Settings are automatically saved to `settings.json` and persist between sessions.
+Settings persist in `settings.json`.
 
-**Image Mode Timing:**
-- **Image Upload Delay:** User-adjustable slider and entry field (0-10 seconds) to set the time to wait after pasting an image before text is pasted. This allows sufficient time for image upload to complete in AI applications like ChatGPT. Default: 3 seconds.
+Important advanced keys:
 
-## File Organization
+- `dry_run`
+- `paste_max_retries`
+- `paste_retry_delay`
+- `focus_retries`
+- `skip_duplicates`
+- `prompt_variables_enabled`
+- `queue_snapshot_enabled`
+- `queue_snapshot_file`
+- `auto_resume_queue_from_snapshot`
+- `enable_error_screenshots`
+- `error_screenshot_dir`
+- `profiles`
 
-- Processed text files → `sent_prompts/`
-- Processed images → `sent_images/`
-- Failed files → `sent_prompts/failed/` or `sent_images/failed/`
-- Logs → `logs/prompt_sequencer_YYYYMMDD.log`
+## Output and Artifacts
 
-## Testing & Utilities
+- Processed text files: `sent_prompts/`
+- Processed images: `sent_images/`
+- Failed items:
+  - `sent_prompts/failed/`
+  - `sent_images/failed/`
+- Daily app log: `logs/prompt_sequencer_YYYYMMDD.log`
+- Run summaries:
+  - `logs/run_summary_*.json`
+  - `logs/run_summary_history.csv`
+- Queue snapshot: `logs/queue_snapshot.json`
+- Duplicate history: `logs/processed_history.json`
+- Error screenshots: `logs/error_screenshots/`
 
-### CLI Commands:
+## CLI
+
 ```bash
-# Check dependencies
+# Basics
 python cli.py deps
-
-# List available windows
 python cli.py windows
-
-# Test window focus with enhanced strategies
 python cli.py focus --window "ChatGPT"
-
-# Test individual focus strategies
 python cli.py strategies --window "Firefox"
-
-# Create sample test files
-python cli.py sample_prompts
-
-# Test responsive GUI design
-python cli.py test_gui
-
-# Show current configuration
 python cli.py config
+python cli.py sample_prompts
+python cli.py test_parse --file "test_prompts\\nature.txt"
+
+# Preflight
+python cli.py preflight --mode text --folder "C:\\prompts"
+python cli.py preflight --mode image --folder "C:\\images" --prompt-file "C:\\prompt.txt"
+python cli.py preflight --mode queue
+
+# Run
+python cli.py run --mode text --folder "C:\\prompts" --preflight
+python cli.py run --mode image --folder "C:\\images" --prompt-file "C:\\prompt.txt"
+python cli.py run --mode queue --resume-snapshot
+
+# Optional run flags
+# --dry-run --skip-duplicates --profile NAME --window "ChatGPT" --start-at "2026-02-24 01:30"
+
+# Watch mode
+python cli.py watch --mode text --folder "C:\\prompts" --interval 10
+python cli.py watch --mode image --folder "C:\\images" --prompt-file "C:\\prompt.txt"
+
+# Quick test (single item; dry-run by default)
+python cli.py quick_test --mode text --folder "C:\\prompts"
+python cli.py quick_test --mode image --folder "C:\\images" --prompt-file "C:\\prompt.txt"
+python cli.py quick_test --mode text --folder "C:\\prompts" --live
+
+# Profiles
+python cli.py profile_list
+python cli.py profile_save --name "chatgpt_slow_network"
+python cli.py profile_apply --name "chatgpt_slow_network"
+
+# Resume queue snapshot
+python cli.py resume_snapshot
 ```
 
-## Responsive Design
+## Testing
 
-The application automatically adapts to different screen sizes:
-
-- **Auto Window Sizing:** Calculates optimal size (80% of screen)
-- **Minimum Size Enforcement:** Never smaller than 800x600
-- **Maximum Size Limits:** Caps at 1200x900 for usability
-- **Dynamic Content:** Scrollable interface for all content
-- **Real-time Adaptation:** Responds to window resizing
-- **Status Feedback:** Shows current window dimensions
+```bash
+pytest -q
+```
 
 ## Keyboard Safety
 
-The application includes pyautogui's built-in failsafe - move your mouse to the top-left corner of the screen to emergency stop automation.
-
-## Queue Mode (Dynamic enqueue & auto-remove)
-
-- The queue supports dynamic enqueueing: you can add folders while processing is running. When the GUI is running a queue, items are placed into a live `queue.Queue` (stored on `config.image_queue_obj`) so the worker thread picks them up immediately.
-- Each queue item receives a unique `id` on creation. When the sequencer finishes processing a folder it calls back with the item's `id`, and the GUI removes that exact entry from the visible list and the persisted `config.image_queue_items` list.
-- Removing an item via the GUI rebuilds the live queue from `config.image_queue_items` so order and runtime queue remain in sync. Note: if the sequencer has already dequeued an item and is actively processing it, removing it from the GUI will not cancel the in-flight processing; the item has already been consumed by the worker thread.
-
-If you want cancellation of active items, we can add a cancel flag and cooperative-check in the worker loop.
+`pyautogui` failsafe is enabled: move mouse to top-left corner to emergency-stop automation.

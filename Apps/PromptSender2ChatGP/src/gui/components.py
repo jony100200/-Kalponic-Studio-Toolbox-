@@ -17,6 +17,22 @@ from typing import Callable, Optional, List
 
 from ..core.sequencer import SequencerState
 
+def _clamp_int(value, default: int, minimum: int, maximum: int) -> int:
+    """Parse integer and clamp to safe range."""
+    try:
+        parsed = int(value)
+    except Exception:
+        parsed = default
+    return max(minimum, min(maximum, parsed))
+
+def _clamp_float(value, default: float, minimum: float, maximum: float) -> float:
+    """Parse float and clamp to safe range."""
+    try:
+        parsed = float(value)
+    except Exception:
+        parsed = default
+    return max(minimum, min(maximum, parsed))
+
 class StatusPanel(ctk.CTkFrame):
     """Status panel showing current state and progress"""
     
@@ -98,6 +114,12 @@ class ControlPanel(ctk.CTkFrame):
         self.resume_callback: Optional[Callable] = None
         self.stop_callback: Optional[Callable] = None
         self.manual_resume_callback: Optional[Callable] = None
+        self.preflight_callback: Optional[Callable] = None
+        self.resume_snapshot_callback: Optional[Callable] = None
+        self.show_last_summary_callback: Optional[Callable] = None
+        self.save_profile_callback: Optional[Callable] = None
+        self.apply_profile_callback: Optional[Callable] = None
+        self.refresh_profiles_callback: Optional[Callable] = None
         
         self.setup_ui()
     
@@ -133,6 +155,118 @@ class ControlPanel(ctk.CTkFrame):
         self.delay_var = tk.StringVar(value="3")
         self.delay_spinbox = ctk.CTkEntry(delay_frame, textvariable=self.delay_var, width=60)
         self.delay_spinbox.pack(side="left", padx=5)
+
+        # Safety and behavior toggles
+        safety_frame = ctk.CTkFrame(self)
+        safety_frame.pack(fill="x", padx=10, pady=5)
+        safety_frame.grid_columnconfigure(0, weight=1)
+        safety_frame.grid_columnconfigure(1, weight=1)
+        safety_frame.grid_columnconfigure(2, weight=1)
+
+        safety_label = ctk.CTkLabel(
+            safety_frame,
+            text="Execution Safety",
+            font=ctk.CTkFont(size=13, weight="bold")
+        )
+        safety_label.grid(row=0, column=0, columnspan=3, sticky="w", padx=5, pady=(5, 4))
+
+        self.dry_run_var = tk.BooleanVar(value=False)
+        self.skip_duplicates_var = tk.BooleanVar(value=False)
+        self.prompt_vars_var = tk.BooleanVar(value=True)
+        self.queue_snapshot_var = tk.BooleanVar(value=True)
+        self.auto_resume_snapshot_var = tk.BooleanVar(value=False)
+        self.error_screenshots_var = tk.BooleanVar(value=True)
+        self.dry_run_var.trace_add("write", self._on_safety_toggle_changed)
+        self.skip_duplicates_var.trace_add("write", self._on_safety_toggle_changed)
+        self.queue_snapshot_var.trace_add("write", self._on_safety_toggle_changed)
+        self.auto_resume_snapshot_var.trace_add("write", self._on_safety_toggle_changed)
+
+        ctk.CTkCheckBox(
+            safety_frame, text="Dry Run", variable=self.dry_run_var
+        ).grid(row=1, column=0, sticky="w", padx=5, pady=2)
+        ctk.CTkCheckBox(
+            safety_frame, text="Skip Duplicates", variable=self.skip_duplicates_var
+        ).grid(row=1, column=1, sticky="w", padx=5, pady=2)
+        ctk.CTkCheckBox(
+            safety_frame, text="Prompt Variables", variable=self.prompt_vars_var
+        ).grid(row=1, column=2, sticky="w", padx=5, pady=2)
+
+        ctk.CTkCheckBox(
+            safety_frame, text="Queue Snapshots", variable=self.queue_snapshot_var
+        ).grid(row=2, column=0, sticky="w", padx=5, pady=2)
+        ctk.CTkCheckBox(
+            safety_frame, text="Auto Resume Queue", variable=self.auto_resume_snapshot_var
+        ).grid(row=2, column=1, sticky="w", padx=5, pady=2)
+        ctk.CTkCheckBox(
+            safety_frame, text="Error Screenshots", variable=self.error_screenshots_var
+        ).grid(row=2, column=2, sticky="w", padx=5, pady=2)
+
+        # Retry tuning
+        retry_frame = ctk.CTkFrame(self)
+        retry_frame.pack(fill="x", padx=10, pady=5)
+        retry_frame.grid_columnconfigure(1, weight=1)
+        retry_frame.grid_columnconfigure(3, weight=1)
+        retry_frame.grid_columnconfigure(5, weight=1)
+
+        retry_label = ctk.CTkLabel(
+            retry_frame,
+            text="Reliability Tuning",
+            font=ctk.CTkFont(size=13, weight="bold")
+        )
+        retry_label.grid(row=0, column=0, columnspan=6, sticky="w", padx=5, pady=(5, 4))
+
+        ctk.CTkLabel(retry_frame, text="Paste Retries:").grid(row=1, column=0, sticky="w", padx=5, pady=2)
+        self.paste_retries_var = tk.StringVar(value="3")
+        self.paste_retries_entry = ctk.CTkEntry(retry_frame, textvariable=self.paste_retries_var, width=70)
+        self.paste_retries_entry.grid(row=1, column=1, sticky="w", padx=5, pady=2)
+
+        ctk.CTkLabel(retry_frame, text="Retry Delay (s):").grid(row=1, column=2, sticky="w", padx=5, pady=2)
+        self.retry_delay_var = tk.StringVar(value="0.5")
+        self.retry_delay_entry = ctk.CTkEntry(retry_frame, textvariable=self.retry_delay_var, width=70)
+        self.retry_delay_entry.grid(row=1, column=3, sticky="w", padx=5, pady=2)
+
+        ctk.CTkLabel(retry_frame, text="Focus Retries:").grid(row=1, column=4, sticky="w", padx=5, pady=2)
+        self.focus_retries_var = tk.StringVar(value="3")
+        self.focus_retries_entry = ctk.CTkEntry(retry_frame, textvariable=self.focus_retries_var, width=70)
+        self.focus_retries_entry.grid(row=1, column=5, sticky="w", padx=5, pady=2)
+
+        # Profiles
+        profile_frame = ctk.CTkFrame(self)
+        profile_frame.pack(fill="x", padx=10, pady=5)
+        profile_frame.grid_columnconfigure(1, weight=1)
+
+        profile_label = ctk.CTkLabel(
+            profile_frame,
+            text="Profiles",
+            font=ctk.CTkFont(size=13, weight="bold")
+        )
+        profile_label.grid(row=0, column=0, columnspan=6, sticky="w", padx=5, pady=(5, 4))
+
+        ctk.CTkLabel(profile_frame, text="Saved:").grid(row=1, column=0, sticky="w", padx=5, pady=2)
+        self.profile_var = tk.StringVar(value="<none>")
+        self.profile_menu = ctk.CTkOptionMenu(profile_frame, variable=self.profile_var, values=["<none>"], width=240)
+        self.profile_menu.grid(row=1, column=1, sticky="w", padx=5, pady=2)
+
+        self.load_profile_button = ctk.CTkButton(
+            profile_frame, text="Load", command=self._apply_profile, width=70
+        )
+        self.load_profile_button.grid(row=1, column=2, padx=2, pady=2)
+
+        self.refresh_profiles_button = ctk.CTkButton(
+            profile_frame, text="Refresh", command=self.refresh_profiles, width=70
+        )
+        self.refresh_profiles_button.grid(row=1, column=3, padx=2, pady=2)
+
+        self.profile_name_var = tk.StringVar(value="")
+        self.profile_name_entry = ctk.CTkEntry(
+            profile_frame, textvariable=self.profile_name_var, placeholder_text="new profile name", width=180
+        )
+        self.profile_name_entry.grid(row=2, column=1, sticky="w", padx=5, pady=2)
+
+        self.save_profile_button = ctk.CTkButton(
+            profile_frame, text="Save Current", command=self._save_profile, width=110
+        )
+        self.save_profile_button.grid(row=2, column=2, padx=2, pady=2)
         
         # Control buttons
         button_frame = ctk.CTkFrame(self)
@@ -153,15 +287,60 @@ class ControlPanel(ctk.CTkFrame):
         self.manual_resume_button = ctk.CTkButton(button_frame, text="Resume After Manual Fix", 
                                                  command=self._manual_resume, width=140, state="disabled")
         self.manual_resume_button.pack(side="left", padx=2)
+
+        util_frame = ctk.CTkFrame(self)
+        util_frame.pack(fill="x", padx=10, pady=(0, 5))
+
+        self.preflight_button = ctk.CTkButton(
+            util_frame, text="Preflight Check", command=self._preflight, width=120
+        )
+        self.preflight_button.pack(side="left", padx=5, pady=4)
+
+        self.resume_snapshot_button = ctk.CTkButton(
+            util_frame, text="Resume Snapshot", command=self._resume_snapshot, width=130
+        )
+        self.resume_snapshot_button.pack(side="left", padx=2, pady=4)
+
+        self.last_summary_button = ctk.CTkButton(
+            util_frame, text="Open Last Summary", command=self._show_last_summary, width=140
+        )
+        self.last_summary_button.pack(side="left", padx=2, pady=4)
+
+        self.risk_label = ctk.CTkLabel(
+            util_frame,
+            text="Risk: Normal",
+            font=ctk.CTkFont(size=11),
+            text_color="gray65"
+        )
+        self.risk_label.pack(side="right", padx=10, pady=4)
+        self._update_risk_indicator()
     
-    def set_callbacks(self, start_callback=None, pause_callback=None, resume_callback=None, 
-                      stop_callback=None, manual_resume_callback=None):
+    def set_callbacks(
+        self,
+        start_callback=None,
+        pause_callback=None,
+        resume_callback=None,
+        stop_callback=None,
+        manual_resume_callback=None,
+        preflight_callback=None,
+        resume_snapshot_callback=None,
+        show_last_summary_callback=None,
+        save_profile_callback=None,
+        apply_profile_callback=None,
+        refresh_profiles_callback=None
+    ):
         """Set callback functions"""
         self.start_callback = start_callback
         self.pause_callback = pause_callback
         self.resume_callback = resume_callback
         self.stop_callback = stop_callback
         self.manual_resume_callback = manual_resume_callback
+        self.preflight_callback = preflight_callback
+        self.resume_snapshot_callback = resume_snapshot_callback
+        self.show_last_summary_callback = show_last_summary_callback
+        self.save_profile_callback = save_profile_callback
+        self.apply_profile_callback = apply_profile_callback
+        self.refresh_profiles_callback = refresh_profiles_callback
     
     def _find_windows(self):
         """Find and display available windows"""
@@ -273,6 +452,109 @@ class ControlPanel(ctk.CTkFrame):
         """Manual resume button callback"""
         if self.manual_resume_callback:
             self.manual_resume_callback()
+
+    def _preflight(self):
+        """Preflight button callback."""
+        if self.preflight_callback:
+            self.preflight_callback()
+
+    def _resume_snapshot(self):
+        """Resume snapshot button callback."""
+        if self.resume_snapshot_callback:
+            self.resume_snapshot_callback()
+
+    def _show_last_summary(self):
+        """Open last summary button callback."""
+        if self.show_last_summary_callback:
+            self.show_last_summary_callback()
+
+    def _on_safety_toggle_changed(self, *_):
+        """Recompute risk indicator when safety toggles change."""
+        self._update_risk_indicator()
+
+    def _update_risk_indicator(self):
+        """Update small risk-level indicator from current safety settings."""
+        dry_run = bool(self.dry_run_var.get())
+        skip_duplicates = bool(self.skip_duplicates_var.get())
+        queue_snapshots = bool(self.queue_snapshot_var.get())
+        auto_resume = bool(self.auto_resume_snapshot_var.get())
+
+        if dry_run:
+            text = "Risk: Safe (Dry Run)"
+            color = "#4caf50"
+        elif skip_duplicates and queue_snapshots:
+            text = "Risk: Guarded"
+            color = "#8bc34a"
+        elif queue_snapshots or auto_resume:
+            text = "Risk: Normal"
+            color = "#fbc02d"
+        else:
+            text = "Risk: Elevated"
+            color = "#ff7043"
+
+        self.risk_label.configure(text=text, text_color=color)
+
+    def _save_profile(self):
+        """Save profile callback with entered name."""
+        name = self.profile_name_var.get().strip()
+        if not name:
+            messagebox.showwarning("Profile", "Enter a profile name")
+            return
+
+        if self.save_profile_callback:
+            success = bool(self.save_profile_callback(name))
+        else:
+            success = bool(getattr(self.config, "save_profile", lambda _n: False)(name))
+            if success:
+                self.config.save()
+
+        if success:
+            self.profile_name_var.set("")
+            self.refresh_profiles(select_name=name)
+            messagebox.showinfo("Profile", f"Profile saved: {name}")
+        else:
+            messagebox.showerror("Profile", f"Could not save profile: {name}")
+
+    def _apply_profile(self):
+        """Apply selected profile."""
+        name = (self.profile_var.get() or "").strip()
+        if not name or name == "<none>":
+            messagebox.showwarning("Profile", "Select a profile first")
+            return
+
+        if self.apply_profile_callback:
+            success = bool(self.apply_profile_callback(name))
+        else:
+            success = bool(getattr(self.config, "apply_profile", lambda _n: False)(name))
+            if success:
+                self.config.save()
+
+        if success:
+            messagebox.showinfo("Profile", f"Profile loaded: {name}")
+        else:
+            messagebox.showerror("Profile", f"Profile not found: {name}")
+
+    def refresh_profiles(self, select_name: Optional[str] = None):
+        """Refresh profile dropdown options."""
+        profiles: List[str] = []
+        if self.refresh_profiles_callback:
+            try:
+                profiles = list(self.refresh_profiles_callback() or [])
+            except Exception:
+                profiles = []
+        elif hasattr(self.config, "list_profiles"):
+            try:
+                profiles = list(self.config.list_profiles())
+            except Exception:
+                profiles = []
+
+        values = profiles if profiles else ["<none>"]
+        current = select_name or (self.profile_var.get().strip() if self.profile_var.get() else "")
+        if current not in values:
+            current = values[0]
+
+        self.profile_menu.configure(values=values)
+        self.profile_var.set(current)
     
     def show_manual_intervention_needed(self):
         """Show that manual intervention is needed"""
@@ -288,44 +570,86 @@ class ControlPanel(ctk.CTkFrame):
             self.resume_button.configure(state="disabled")
             self.stop_button.configure(state="disabled")
             self.manual_resume_button.configure(state="disabled")
+            self.preflight_button.configure(state="normal")
+            self.resume_snapshot_button.configure(state="normal")
+            self.save_profile_button.configure(state="normal")
+            self.load_profile_button.configure(state="normal")
+            self.refresh_profiles_button.configure(state="normal")
         elif state == SequencerState.RUNNING:
             self.start_button.configure(state="disabled")
             self.pause_button.configure(state="normal")
             self.resume_button.configure(state="disabled")
             self.stop_button.configure(state="normal")
             self.manual_resume_button.configure(state="disabled")
+            self.preflight_button.configure(state="disabled")
+            self.resume_snapshot_button.configure(state="disabled")
+            self.save_profile_button.configure(state="disabled")
+            self.load_profile_button.configure(state="disabled")
+            self.refresh_profiles_button.configure(state="disabled")
         elif state == SequencerState.PAUSED:
             self.start_button.configure(state="disabled")
             self.pause_button.configure(state="disabled")
             self.resume_button.configure(state="normal")
             self.stop_button.configure(state="normal")
             self.manual_resume_button.configure(state="disabled")
+            self.preflight_button.configure(state="disabled")
+            self.resume_snapshot_button.configure(state="disabled")
+            self.save_profile_button.configure(state="disabled")
+            self.load_profile_button.configure(state="disabled")
+            self.refresh_profiles_button.configure(state="disabled")
         elif state == SequencerState.WAITING_FOR_USER:
             self.start_button.configure(state="disabled")
             self.pause_button.configure(state="disabled")
             self.resume_button.configure(state="disabled")
             self.stop_button.configure(state="normal")
             self.manual_resume_button.configure(state="normal")
+            self.preflight_button.configure(state="disabled")
+            self.resume_snapshot_button.configure(state="disabled")
+            self.save_profile_button.configure(state="disabled")
+            self.load_profile_button.configure(state="disabled")
+            self.refresh_profiles_button.configure(state="disabled")
         else:  # STOPPING, ERROR
             self.start_button.configure(state="disabled")
             self.pause_button.configure(state="disabled")
             self.resume_button.configure(state="disabled")
             self.stop_button.configure(state="disabled")
             self.manual_resume_button.configure(state="disabled")
-    
+            self.preflight_button.configure(state="disabled")
+            self.resume_snapshot_button.configure(state="disabled")
+            self.save_profile_button.configure(state="disabled")
+            self.load_profile_button.configure(state="disabled")
+            self.refresh_profiles_button.configure(state="disabled")
+
     def load_settings(self):
         """Load settings from config"""
         self.window_entry.delete(0, 'end')
         self.window_entry.insert(0, self.config.target_window)
         self.delay_var.set(str(self.config.initial_delay))
-    
+        self.dry_run_var.set(bool(getattr(self.config, "dry_run", False)))
+        self.skip_duplicates_var.set(bool(getattr(self.config, "skip_duplicates", False)))
+        self.prompt_vars_var.set(bool(getattr(self.config, "prompt_variables_enabled", True)))
+        self.queue_snapshot_var.set(bool(getattr(self.config, "queue_snapshot_enabled", True)))
+        self.auto_resume_snapshot_var.set(bool(getattr(self.config, "auto_resume_queue_from_snapshot", False)))
+        self.error_screenshots_var.set(bool(getattr(self.config, "enable_error_screenshots", True)))
+        self.paste_retries_var.set(str(getattr(self.config, "paste_max_retries", 3)))
+        self.retry_delay_var.set(str(getattr(self.config, "paste_retry_delay", 0.5)))
+        self.focus_retries_var.set(str(getattr(self.config, "focus_retries", 3)))
+        self.refresh_profiles()
+        self._update_risk_indicator()
+
     def save_settings(self):
         """Save settings to config"""
         self.config.target_window = self.window_entry.get().strip()
-        try:
-            self.config.initial_delay = int(self.delay_var.get())
-        except ValueError:
-            self.config.initial_delay = 3
+        self.config.initial_delay = _clamp_int(self.delay_var.get(), 3, 0, 600)
+        self.config.dry_run = bool(self.dry_run_var.get())
+        self.config.skip_duplicates = bool(self.skip_duplicates_var.get())
+        self.config.prompt_variables_enabled = bool(self.prompt_vars_var.get())
+        self.config.queue_snapshot_enabled = bool(self.queue_snapshot_var.get())
+        self.config.auto_resume_queue_from_snapshot = bool(self.auto_resume_snapshot_var.get())
+        self.config.enable_error_screenshots = bool(self.error_screenshots_var.get())
+        self.config.paste_max_retries = _clamp_int(self.paste_retries_var.get(), 3, 1, 10)
+        self.config.paste_retry_delay = _clamp_float(self.retry_delay_var.get(), 0.5, 0.05, 10.0)
+        self.config.focus_retries = _clamp_int(self.focus_retries_var.get(), 3, 1, 10)
 
 class TextModeTab(ctk.CTkScrollableFrame):
     """Text mode configuration tab with scrolling"""
@@ -404,12 +728,9 @@ class TextModeTab(ctk.CTkScrollableFrame):
     def save_settings(self):
         """Save settings to config"""
         self.config.text_input_folder = self.folder_entry.get().strip()
-        try:
-            self.config.text_paste_enter_grace = int(self.grace_var.get())
-            self.config.text_generation_wait = int(self.wait_var.get())
-            self.config.text_jitter_percent = int(self.jitter_var.get())
-        except ValueError:
-            pass  # Keep existing values
+        self.config.text_paste_enter_grace = _clamp_int(self.grace_var.get(), 400, 0, 30000)
+        self.config.text_generation_wait = _clamp_int(self.wait_var.get(), 45, 0, 7200)
+        self.config.text_jitter_percent = _clamp_int(self.jitter_var.get(), 15, 0, 100)
         self.config.text_auto_enter = self.auto_enter_var.get()
 
 class ImageModeTab(ctk.CTkScrollableFrame):
@@ -607,7 +928,9 @@ class ImageModeTab(ctk.CTkScrollableFrame):
             "id": str(uuid.uuid4()),
             "image_folder": folder,
             "prompt_file": prompt_file or "",
-            "name": folder_name
+            "name": folder_name,
+            "notes": "",
+            "tags": []
         }
         
         # Add to config queue
@@ -657,22 +980,12 @@ class ImageModeTab(ctk.CTkScrollableFrame):
                     self.config.image_queue_cancel_requests = set()
                     cancel_set = self.config.image_queue_cancel_requests
                 cancel_set.add(removed.get('id'))
+                skip_set = getattr(self.config, 'image_queue_skip_requests', None)
+                if skip_set is None:
+                    self.config.image_queue_skip_requests = set()
+                    skip_set = self.config.image_queue_skip_requests
+                skip_set.add(removed.get('id'))
                 logger.info(f"Requested cancel for queue item id={removed.get('id')}")
-            except Exception:
-                pass
-            # If a live queue exists, rebuild it from the remaining list to keep order in sync
-            try:
-                qobj = getattr(self.config, 'image_queue_obj', None)
-                if qobj is not None:
-                    import queue as _pyqueue
-                    newq = _pyqueue.Queue()
-                    for item in self.config.image_queue_items:
-                        newq.put(item)
-                    try:
-                        logger.info("Rebuilt live queue after GUI removal")
-                    except Exception:
-                        pass
-                    self.config.image_queue_obj = newq
             except Exception:
                 pass
     
@@ -686,8 +999,13 @@ class ImageModeTab(ctk.CTkScrollableFrame):
                 if cancel_set is None:
                     self.config.image_queue_cancel_requests = set()
                     cancel_set = self.config.image_queue_cancel_requests
+                skip_set = getattr(self.config, 'image_queue_skip_requests', None)
+                if skip_set is None:
+                    self.config.image_queue_skip_requests = set()
+                    skip_set = self.config.image_queue_skip_requests
                 for itm in self.config.image_queue_items:
                     cancel_set.add(itm.get('id'))
+                    skip_set.add(itm.get('id'))
                 logger.info(f"Requested cancel for all queue items: count={len(self.config.image_queue_items)}")
             except Exception:
                 pass
@@ -798,14 +1116,11 @@ class ImageModeTab(ctk.CTkScrollableFrame):
         self.config.global_prompt_file = self.prompt_entry.get().strip()
         
         # Other settings
-        try:
-            intra_seconds = float(self.intra_var.get())
-            self.config.image_intra_delay = int(intra_seconds * 1000)
-            self.config.image_paste_enter_grace = int(self.grace_var.get())
-            self.config.image_generation_wait = int(self.wait_var.get())
-            self.config.image_jitter_percent = int(self.jitter_var.get())
-        except ValueError:
-            pass  # Keep existing values
+        intra_seconds = _clamp_float(self.intra_var.get(), 3.0, 0.0, 30.0)
+        self.config.image_intra_delay = int(intra_seconds * 1000)
+        self.config.image_paste_enter_grace = _clamp_int(self.grace_var.get(), 400, 0, 30000)
+        self.config.image_generation_wait = _clamp_int(self.wait_var.get(), 60, 0, 7200)
+        self.config.image_jitter_percent = _clamp_int(self.jitter_var.get(), 15, 0, 100)
         self.config.image_auto_enter = self.auto_enter_var.get()
         self.config.image_repeat_prompt = self.repeat_prompt_var.get()
     
