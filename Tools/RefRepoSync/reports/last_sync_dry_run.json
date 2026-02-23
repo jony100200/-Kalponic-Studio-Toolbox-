@@ -1,0 +1,51 @@
+{
+  "generated_at": "2026-02-23T13:40:32Z",
+  "manifest": "E:\\__Kalponic Studio Repositories\\-Kalponic-Studio-Toolbox-\\Tools\\RefRepoSync\\refrepos_manifest.json",
+  "ref_root": "E:\\__Kalponic Studio Repositories\\RefRepos",
+  "dry_run": true,
+  "keep_old": false,
+  "results": [
+    {
+      "entry_id": "ddgs",
+      "status": "dry_run",
+      "detail": "would download https://codeload.github.com/deedy5/ddgs/zip/refs/tags/v9.10.0",
+      "file_path": "E:\\__Kalponic Studio Repositories\\RefRepos\\Web Search\\ddgs-9.10.0.zip",
+      "deleted_files": []
+    },
+    {
+      "entry_id": "markitdown",
+      "status": "dry_run",
+      "detail": "would download https://codeload.github.com/microsoft/markitdown/zip/refs/tags/v0.1.5",
+      "file_path": "E:\\__Kalponic Studio Repositories\\RefRepos\\Document Parsing and Frameworks\\markitdown-0.1.5.zip",
+      "deleted_files": []
+    },
+    {
+      "entry_id": "parsel",
+      "status": "dry_run",
+      "detail": "would download https://codeload.github.com/scrapy/parsel/zip/refs/tags/v1.11.0",
+      "file_path": "E:\\__Kalponic Studio Repositories\\RefRepos\\Document Parsing and Frameworks\\parsel-1.11.0.zip",
+      "deleted_files": []
+    },
+    {
+      "entry_id": "agentic-doc",
+      "status": "dry_run",
+      "detail": "would download https://codeload.github.com/landing-ai/agentic-doc/zip/refs/tags/v0.3.3",
+      "file_path": "E:\\__Kalponic Studio Repositories\\RefRepos\\Document Parsing and Frameworks\\agentic-doc-0.3.3.zip",
+      "deleted_files": []
+    },
+    {
+      "entry_id": "trafilatura",
+      "status": "dry_run",
+      "detail": "would download https://codeload.github.com/adbar/trafilatura/zip/refs/tags/v2.0.0",
+      "file_path": "E:\\__Kalponic Studio Repositories\\RefRepos\\Front End UI\\trafilatura-2.0.0.zip",
+      "deleted_files": []
+    },
+    {
+      "entry_id": "litellm",
+      "status": "dry_run",
+      "detail": "would download https://codeload.github.com/BerriAI/litellm/zip/refs/tags/v1.81.13",
+      "file_path": "E:\\__Kalponic Studio Repositories\\RefRepos\\Frameworks\\litellm-1.81.13.zip",
+      "deleted_files": []
+    }
+  ]
+}

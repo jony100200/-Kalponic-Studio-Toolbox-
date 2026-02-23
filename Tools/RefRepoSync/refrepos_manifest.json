@@ -1,0 +1,115 @@
+{
+  "ref_root": "E:\\__Kalponic Studio Repositories\\RefRepos",
+  "default_keep_old_versions": false,
+  "entries": [
+    {
+      "id": "ddgs",
+      "enabled": true,
+      "category": "Web Search",
+      "filename_prefix": "ddgs",
+      "source": {
+        "type": "pypi",
+        "package": "ddgs",
+        "repo": "deedy5/ddgs",
+        "download": "github_tag_zip",
+        "strict_version_tag": true
+      }
+    },
+    {
+      "id": "markitdown",
+      "enabled": true,
+      "category": "Document Parsing and Frameworks",
+      "filename_prefix": "markitdown",
+      "source": {
+        "type": "pypi",
+        "package": "markitdown",
+        "repo": "microsoft/markitdown",
+        "download": "github_tag_zip",
+        "strict_version_tag": true
+      }
+    },
+    {
+      "id": "parsel",
+      "enabled": true,
+      "category": "Document Parsing and Frameworks",
+      "filename_prefix": "parsel",
+      "source": {
+        "type": "pypi",
+        "package": "parsel",
+        "repo": "scrapy/parsel",
+        "download": "github_tag_zip",
+        "strict_version_tag": true
+      }
+    },
+    {
+      "id": "agentic-doc",
+      "enabled": true,
+      "category": "Document Parsing and Frameworks",
+      "filename_prefix": "agentic-doc",
+      "source": {
+        "type": "pypi",
+        "package": "agentic-doc",
+        "repo": "landing-ai/agentic-doc",
+        "download": "github_tag_zip",
+        "strict_version_tag": true
+      }
+    },
+    {
+      "id": "trafilatura",
+      "enabled": true,
+      "category": "Front End UI",
+      "filename_prefix": "trafilatura",
+      "source": {
+        "type": "pypi",
+        "package": "trafilatura",
+        "repo": "adbar/trafilatura",
+        "download": "github_tag_zip",
+        "strict_version_tag": true
+      }
+    },
+    {
+      "id": "litellm",
+      "enabled": true,
+      "category": "Frameworks",
+      "filename_prefix": "litellm",
+      "source": {
+        "type": "github_latest_tag",
+        "repo": "BerriAI/litellm",
+        "tag_regex": "^v?\\d+\\.\\d+\\.\\d+"
+      }
+    },
+    {
+      "id": "yt-dlp",
+      "enabled": false,
+      "category": "Model Loader",
+      "filename_prefix": "yt-dlp",
+      "source": {
+        "type": "pypi",
+        "package": "yt-dlp",
+        "repo": "yt-dlp/yt-dlp",
+        "download": "github_tag_zip",
+        "strict_version_tag": false
+      }
+    },
+    {
+      "id": "faster-whisper",
+      "enabled": false,
+      "category": "Model Loader",
+      "filename_prefix": "faster-whisper",
+      "source": {
+        "type": "pypi",
+        "package": "faster-whisper",
+        "repo": "SYSTRAN/faster-whisper",
+        "download": "github_tag_zip",
+        "strict_version_tag": false
+      }
+    }
+  ],
+  "discovery_queries": [
+    "youtube transcript pipeline python",
+    "yt-dlp automation",
+    "web article extraction python",
+    "knowledge base indexing markdown",
+    "faster-whisper batch transcription"
+  ]
+}

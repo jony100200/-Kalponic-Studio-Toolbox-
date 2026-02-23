@@ -1,0 +1,45 @@
+{
+  "generated_at": "2026-02-23T13:40:03Z",
+  "queries": [
+    {
+      "query": "youtube transcript pipeline python",
+      "results": []
+    },
+    {
+      "query": "yt-dlp automation",
+      "results": [
+        {
+          "name": "DialmasterOrg/Youtarr",
+          "url": "https://github.com/DialmasterOrg/Youtarr",
+          "description": "Self-hosted web app that automates downloading, organizing, and scheduling YouTube channel content with support for Plex, Kodi, Emby and Jellyfin",
+          "stars": 869,
+          "updated_at": "2026-02-23T10:37:26Z",
+          "topics": [
+            "automation",
+            "emby",
+            "jellyfin",
+            "kodi",
+            "plex",
+            "plex-media-server",
+            "scheduler",
+            "self-hosted",
+            "youtube-downloader",
+            "yt-dlp"
+          ]
+        }
+      ]
+    },
+    {
+      "query": "web article extraction python",
+      "results": []
+    },
+    {
+      "query": "knowledge base indexing markdown",
+      "results": []
+    },
+    {
+      "query": "faster-whisper batch transcription",
+      "results": []
+    }
+  ]
+}
