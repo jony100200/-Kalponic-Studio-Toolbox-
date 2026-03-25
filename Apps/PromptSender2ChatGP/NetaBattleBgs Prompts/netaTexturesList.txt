@@ -1,0 +1,184 @@
+Good move. This is what actually scales your asset packs.
+
+You don’t want random textures — you want a **structured material library** you can batch-generate and sell.
+
+---
+
+# 🔥 MASTER MATERIAL LIST (GAME-READY CATEGORIES)
+
+Use this as your production checklist.
+
+---
+
+# 🌿 1. ORGANIC / NATURAL
+
+**Core sellers for games**
+
+* Grass (short, tall, wild, glowing)
+* Dirt (dry, wet, muddy, cracked)
+* Sand (fine, dune, rocky desert)
+* Snow (soft, packed, icy mix)
+* Leaves (green, autumn, jungle dense)
+* Moss (light, heavy, creeping)
+* Bark (rough, smooth, stylized)
+* Roots (exposed, tangled)
+* Stone (flat, rough, carved)
+* Rock (large chunks, gravel mix)
+* Clay / Earth (soft, compact)
+* Ash / Dust (volcanic, powdery)
+
+---
+
+# 🪵 2. WOOD
+
+**Very important for fantasy + medieval**
+
+* Wooden planks (clean, worn)
+* Old wood (cracked, aged)
+* Painted wood (peeling paint)
+* Carved wood (ornamental)
+* Bamboo (clean, split, woven)
+* Logs (cut, natural)
+* Parquet floor (stylized)
+
+---
+
+# 🪨 3. STONE / CONSTRUCTION
+
+**High demand category**
+
+* Cobblestone (tight, loose)
+* Brick (clean, worn, broken)
+* Marble (polished, cracked)
+* Granite (rough, heavy)
+* Slate (layered stone)
+* Temple stone (carved patterns)
+* Ruins stone (broken slabs)
+* Pavement (urban, fantasy)
+
+---
+
+# 🏺 4. CERAMIC / TILE / MOSAIC
+
+**Underrated but very valuable**
+
+* Ceramic tiles (clean, worn)
+* Mosaic tiles (Islamic / Persian / African patterns)
+* Glazed tiles (shiny, reflective)
+* Terracotta (warm clay tiles)
+* Decorative floor tiles (ornate)
+* Cracked tiles (aged)
+* Painted tiles (stylized patterns)
+
+---
+
+# ⚙️ 5. METAL
+
+**For sci-fi + industrial + fantasy armor style**
+
+* Steel plates (clean, worn)
+* Iron (rusty, aged)
+* Bronze (ancient, oxidized)
+* Gold (ornate, polished)
+* Copper (green patina)
+* Metal panels (sci-fi)
+* Riveted metal (industrial)
+* Grates / vents
+* Scratched metal
+* Brushed metal
+
+---
+
+# 🧪 6. SCI-FI / SYNTHETIC
+
+**High value for modern games**
+
+* Plastic (matte, glossy)
+* Rubber (smooth, worn)
+* Carbon fiber
+* Neon panels
+* Holographic surfaces
+* Energy grid floors
+* Circuit patterns
+* Glass panels (clean, cracked)
+* Digital grid / Tron-style
+
+---
+
+# 🧵 7. FABRIC / CLOTH (VERY IMPORTANT 🔥)
+
+**Most people ignore this → opportunity**
+
+* Cotton fabric (plain, woven)
+* Silk (smooth, shiny)
+* Wool (soft, thick)
+* Linen (rough weave)
+* Burlap (coarse)
+* Carpet (patterned, worn)
+* Rugs (Persian / African / Asian styles)
+* Tapestry (decorative)
+* Curtains (folded fabric)
+* Cloth wraps (bandage style)
+
+---
+
+# 🧱 8. SPECIAL SURFACES
+
+**Adds uniqueness to packs**
+
+* Lava (flowing, cracked)
+* Ice (clear, frosted)
+* Water surface (stylized ripples)
+* Magic rune floor
+* Crystal surfaces
+* Energy surfaces
+* Foggy ground overlays
+* Shadow gradients (for blending)
+
+---
+
+# 🧭 9. CULTURAL / REGIONAL (YOUR ADVANTAGE 🔥)
+
+This is where you win.
+
+* South Asian clay floors
+* Mughal tile patterns
+* Persian mosaic floors
+* African tribal patterns
+* Desert sandstone carvings
+* Jungle temple stone (SEA)
+* Stepwell stone (India)
+* Courtyard tiles (Middle East)
+* Savannah dirt (Africa)
+
+---
+
+# ⚡ HOW TO USE THIS (IMPORTANT)
+
+### Build packs like:
+
+* **“50 Stylized Ground Textures”**
+* **“50 Stylized Fabric Textures”**
+* **“50 Stylized Sci-Fi Surfaces”**
+* **“100 Cultural Fantasy Textures” (your niche)**
+
+---
+
+# 🔥 SIMPLE RULE FOR GENERATION
+
+Every texture must follow:
+
+* ✅ Large readable shapes (no noise)
+* ✅ Soft gradients (Ghibli feel)
+* ✅ Tileable
+* ✅ Top-down
+* ✅ Minimal harsh contrast
+
+---
+
+# 🚀 NEXT STEP (RECOMMENDED)
+
+Say:
+👉 **“generate 100 fabric + tile + mosaic textures prompts”**
+
+That’s where most people don’t go → less competition → more sales.

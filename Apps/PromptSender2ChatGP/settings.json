@@ -1,5 +1,5 @@
 {
-  "target_window": "2D HD Game Assets - Apocalyptic assets request",
+  "target_window": "Image Variations Guidelines",
   "initial_delay": 8,
   "text_paste_enter_grace": 1500,
   "text_generation_wait": 180,
@@ -7,20 +7,74 @@
   "text_auto_enter": true,
   "image_intra_delay": 7500,
   "image_paste_enter_grace": 1000,
-  "image_generation_wait": 220,
+  "image_generation_wait": 280,
   "image_jitter_percent": 15,
   "image_auto_enter": true,
   "image_repeat_prompt": true,
   "text_input_folder": "I:/My Drive/___Assets for Sale/Low Poly Objects/Weapon Racks",
-  "image_input_folder": "I:/My Drive/___Assets for Sale/3D Char refs/24th Oct 2025",
-  "global_prompt_file": "I:/My Drive/___Assets for Sale/Universal Promps/CharPrompts/Force A Pose.txt",
-  "image_queue_mode": true,
+  "image_input_folder": "G:/___Assets for Sale/_Textures/Tex4 AI 2",
+  "global_prompt_file": "C:/Users/Moinuddin Ahmed/Desktop/Anime Painterly Texture Prompt.txt",
+  "image_queue_mode": false,
   "image_queue_items": [
     {
-      "id": "3ec732db-cc74-4613-94dd-c8c469677a38",
-      "image_folder": "G:/__AI Game Assets/Apocalyptic 3D models/Props/Misc/Back",
-      "prompt_file": "I:/My Drive/___Assets for Sale/Low Poly Objects/Universal Image-to-Asset Prompt - Stylized LP.txt",
-      "name": "Back"
+      "id": "08f822c6-eeae-49c8-83d1-9f967483897f",
+      "image_folder": "G:/___Assets for Sale/to make assets from",
+      "prompt_file": "E:/__Kalponic Studio Repositories/-Kalponic-Studio-Toolbox-/Apps/PromptSender2ChatGP/UNiversal Prompt Templates/Universal Image-to-Asset Prompt - Stylized LP.txt",
+      "name": "to make assets from",
+      "notes": "",
+      "tags": []
     }
-  ]
+  ],
+  "dry_run": false,
+  "paste_max_retries": 3,
+  "paste_retry_delay": 0.5,
+  "focus_retries": 3,
+  "enable_error_screenshots": true,
+  "error_screenshot_dir": "logs/error_screenshots",
+  "skip_duplicates": false,
+  "prompt_variables_enabled": true,
+  "queue_snapshot_enabled": true,
+  "queue_snapshot_file": "logs/queue_snapshot.json",
+  "auto_resume_queue_from_snapshot": false,
+  "profiles": {
+    "gHIBLI Textures": {
+      "target_window": "Image-focused Discussion",
+      "initial_delay": 8,
+      "text_paste_enter_grace": 1500,
+      "text_generation_wait": 180,
+      "text_jitter_percent": 15,
+      "text_auto_enter": true,
+      "image_intra_delay": 7500,
+      "image_paste_enter_grace": 1000,
+      "image_generation_wait": 240,
+      "image_jitter_percent": 15,
+      "image_auto_enter": true,
+      "image_repeat_prompt": true,
+      "text_input_folder": "I:/My Drive/___Assets for Sale/Low Poly Objects/Weapon Racks",
+      "image_input_folder": "G:/___Assets for Sale/_Textures/Tex4 AI 2",
+      "global_prompt_file": "C:/Users/Moinuddin Ahmed/Desktop/Anime Painterly Texture Prompt.txt",
+      "image_queue_mode": false,
+      "image_queue_items": [
+        {
+          "id": "08f822c6-eeae-49c8-83d1-9f967483897f",
+          "image_folder": "G:/___Assets for Sale/to make assets from",
+          "prompt_file": "E:/__Kalponic Studio Repositories/-Kalponic-Studio-Toolbox-/Apps/PromptSender2ChatGP/UNiversal Prompt Templates/Universal Image-to-Asset Prompt - Stylized LP.txt",
+          "name": "to make assets from",
+          "notes": "",
+          "tags": []
+        }
+      ],
+      "dry_run": false,
+      "paste_max_retries": 3,
+      "paste_retry_delay": 0.5,
+      "focus_retries": 3,
+      "enable_error_screenshots": true,
+      "error_screenshot_dir": "logs/error_screenshots",
+      "skip_duplicates": false,
+      "prompt_variables_enabled": true,
+      "queue_snapshot_enabled": true,
+      "queue_snapshot_file": "logs/queue_snapshot.json",
+      "auto_resume_queue_from_snapshot": false
+    }
+  }
 }

@@ -78,7 +78,7 @@ class WindowDetector:
             self.logger.error(f"Error focusing window: {e}")
             return False
     
-    def focus_input_box(self, retries: int = 3) -> bool:
+    def focus_input_box(self, retries: int = 3, final_test_payload: str = None) -> bool:
         """Focus the input box using keyboard navigation strategies"""
         for attempt in range(retries):
             self.logger.info(f"Attempting to focus input box (attempt {attempt + 1}/{retries})")
@@ -86,8 +86,8 @@ class WindowDetector:
             for strategy_func in self.focus_strategies:
                 try:
                     if strategy_func():
-                        # Verify focus with test marker
-                        if self._verify_input_focus():
+                        # Verify focus with test marker (or final payload if provided)
+                        if self._verify_input_focus(final_test_payload):
                             self.logger.info("Successfully focused input box")
                             return True
                         else:
@@ -158,22 +158,33 @@ class WindowDetector:
         
         return False
     
-    def _verify_input_focus(self) -> bool:
-        """Verify input box has focus using a test marker"""
-        test_marker = "<<<TEST>>>"
-        
+    def _verify_input_focus(self, final_payload: str = None) -> bool:
+        """Verify input box has focus.
+
+        By default this types a small visible test marker and removes it.
+        If `final_payload` is provided, send that payload instead (used for final
+        validation before sending an image). When `final_payload` is '/image' we
+        press Enter after typing it so the target app receives the command.
+        """
         try:
-            # Type the test marker
+            if final_payload:
+                # Send the final payload (e.g., '/image') and press Enter when appropriate
+                pyautogui.typewrite(final_payload, interval=0.02)
+                time.sleep(0.05)
+                if final_payload == '/image':
+                    pyautogui.press('enter')
+                    time.sleep(0.05)
+                return True
+
+            # Default verification: type visible test marker then delete it
+            test_marker = "<<<TEST>>>"
             pyautogui.typewrite(test_marker, interval=0.02)
             time.sleep(0.1)
-            
-            # Delete it with backspaces
             for _ in range(len(test_marker)):
                 pyautogui.press('backspace')
                 time.sleep(0.02)
-            
             return True
-            
+
         except Exception as e:
             self.logger.debug(f"Input focus verification failed: {e}")
             return False
@@ -285,7 +296,7 @@ class PasteController:
             self.focus_retries = 2
     
     def paste_text(self, text: str, auto_enter: bool = True, grace_delay: int = 400, 
-                   target_window: str = None) -> bool:
+                   target_window: str = None, final_test_payload: str = None) -> bool:
         """Paste text with optional Enter key and improved focus handling"""
         if not self.clipboard_manager.original_content_saved:
             self.clipboard_manager.save_original_content()
@@ -303,7 +314,7 @@ class PasteController:
                             continue
                     
                     # Focus the input box with keyboard navigation
-                    if not self.window_detector.focus_input_box(retries=self.focus_retries):
+                    if not self.window_detector.focus_input_box(retries=self.focus_retries, final_test_payload=final_test_payload):
                         self.logger.warning(f"Failed to focus input box on attempt {attempt + 1}")
                         if attempt < self.max_retries - 1:
                             time.sleep(self.retry_delay)

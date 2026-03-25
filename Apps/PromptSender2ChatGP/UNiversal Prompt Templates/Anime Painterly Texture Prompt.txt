@@ -1,0 +1,23 @@
+Inspect the reference image and convert it into a seamless, tileable stylised texture.
+
+Do NOT preserve the original rendering style. Instead, fully reinterpret the image into an anime cel-shading blended with painterly art style, leaning toward a soft, hand-painted finish.
+
+Use the source image only as structural and material reference (shapes, forms, surface type), but transform the visual style completely into a stylised, game-ready texture.
+
+Reinterpret all forms and details so the result looks original and not identical — like a new version of the same texture.
+
+Focus on surface quality and material readability. Enhance texture detail in a clean, controlled, painterly way so it reads well when tiled.
+
+Ensure the result is fully seamless on all edges (left/right and top/bottom). The texture must tile cleanly with no visible seams, lighting breaks, or mismatched patterns.
+
+Use clean, readable shapes with a painterly look, soft brushwork, and smooth gradients. ((No Outlines)). Avoid flat fills and avoid heavy outlines.
+
+Distribute visual detail evenly across the surface. Avoid unique focal points or singular features that would break repetition.
+
+Keep lighting soft, even, and neutral so it does not create visible seams when tiled.
+
+Maintain consistent scale and density so the texture works naturally in a repeating environment.
+
+Prioritise stylisation over realism. Simplify and reshape details into a cohesive painterly style rather than copying real-world noise.
+
+Reduce realistic detail and convert surfaces into stylised, hand-painted forms.

@@ -68,6 +68,8 @@ class PromptSequencer:
         self.on_progress_update: Optional[Callable] = None
         self.on_log_message: Optional[Callable] = None
         self.on_manual_intervention_needed: Optional[Callable] = None  # New callback
+        # Optional GUI callback to notify when a queue item is fully processed
+        self.queue_item_done_callback: Optional[Callable[[Any], None]] = None
         
         # Manual intervention
         self.manual_intervention_pending = False
@@ -386,7 +388,7 @@ class PromptSequencer:
 
         def _replace(match: re.Match) -> str:
             key = match.group(1).strip().lower()
-            return context.get(key, match.group(0))
+            return str(context.get(key, match.group(0)))
 
         return self.VARIABLE_PATTERN.sub(_replace, text or "")
 
@@ -1386,13 +1388,16 @@ class PromptSequencer:
             
             # Paste text if configured
             if self.config.image_repeat_prompt and global_prompt:
+                # Final focus validation will send '/image' instead of the test marker,
+                # then paste the actual prompt.
                 success = self.paste_controller.paste_text(
                     global_prompt,
                     auto_enter=self.config.image_auto_enter,
                     grace_delay=self.config.image_paste_enter_grace,
-                    target_window=self.config.target_window
+                    target_window=self.config.target_window,
+                    final_test_payload='/image'
                 )
-                
+
                 if not success:
                     self._log_message(f"Failed to paste text for image {image_index}", "error")
                     self._capture_error_screenshot("paste_image_text_failed")
