@@ -1,5 +1,5 @@
 {
-  "target_window": "Image Variations Guidelines",
+  "target_window": "Image Variation Guidelines",
   "initial_delay": 8,
   "text_paste_enter_grace": 1500,
   "text_generation_wait": 180,
@@ -7,13 +7,13 @@
   "text_auto_enter": true,
   "image_intra_delay": 7500,
   "image_paste_enter_grace": 1000,
-  "image_generation_wait": 280,
+  "image_generation_wait": 165,
   "image_jitter_percent": 15,
   "image_auto_enter": true,
   "image_repeat_prompt": true,
   "text_input_folder": "I:/My Drive/___Assets for Sale/Low Poly Objects/Weapon Racks",
-  "image_input_folder": "G:/___Assets for Sale/_Textures/Tex4 AI 2",
-  "global_prompt_file": "C:/Users/Moinuddin Ahmed/Desktop/Anime Painterly Texture Prompt.txt",
+  "image_input_folder": "G:/Ai Images/chat gpt textures/2D assets/tex 24 mar 2026/Textures 4 AI 1",
+  "global_prompt_file": "C:/Users/Moinuddin Ahmed/Desktop/Anime Painterly Texture Prompt V2.txt",
   "image_queue_mode": false,
   "image_queue_items": [
     {
