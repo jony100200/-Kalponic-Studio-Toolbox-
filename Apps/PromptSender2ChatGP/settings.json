@@ -1,5 +1,5 @@
 {
-  "target_window": "Image Variation Guidelines",
+  "target_window": "2d Art Assets 4 Sale - Parallax Environment Design",
   "initial_delay": 8,
   "text_paste_enter_grace": 1500,
   "text_generation_wait": 180,
@@ -12,8 +12,8 @@
   "image_auto_enter": true,
   "image_repeat_prompt": true,
   "text_input_folder": "I:/My Drive/___Assets for Sale/Low Poly Objects/Weapon Racks",
-  "image_input_folder": "G:/Ai Images/chat gpt textures/2D assets/tex 24 mar 2026/Textures 4 AI 1",
-  "global_prompt_file": "C:/Users/Moinuddin Ahmed/Desktop/Anime Painterly Texture Prompt V2.txt",
+  "image_input_folder": "G:/Other computers/My Computer/2D assets/Premium Battle BGS",
+  "global_prompt_file": "G:/Other computers/My Computer/2D assets/Textures for AI Pass Styling 31 Mar 2026/Anime Painterly Parallax Bgs.txt",
   "image_queue_mode": false,
   "image_queue_items": [
     {

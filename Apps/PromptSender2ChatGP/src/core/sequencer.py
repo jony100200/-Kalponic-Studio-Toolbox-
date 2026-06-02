@@ -98,6 +98,7 @@ class PromptSequencer:
     
     def _setup_directories(self):
         """Create necessary directories"""
+        custom_sent_images_dir = (getattr(self.config, 'sent_images_output_folder', '') or '').strip()
         directories = [
             "sent_prompts",
             "sent_images",
@@ -106,6 +107,11 @@ class PromptSequencer:
             "logs",
             getattr(self.config, 'error_screenshot_dir', 'logs/error_screenshots')
         ]
+        if custom_sent_images_dir:
+            directories.extend([
+                custom_sent_images_dir,
+                os.path.join(custom_sent_images_dir, "failed")
+            ])
         for directory in directories:
             os.makedirs(directory, exist_ok=True)
 
@@ -563,8 +569,11 @@ class PromptSequencer:
             return
 
         try:
-            base_dir = "sent_images" if is_image else "sent_prompts"
+            custom_sent_images_dir = (getattr(self.config, 'sent_images_output_folder', '') or '').strip()
+            base_dir = custom_sent_images_dir if (is_image and custom_sent_images_dir) else ("sent_images" if is_image else "sent_prompts")
             target_dir = f"{base_dir}/failed" if failed else base_dir
+
+            os.makedirs(target_dir, exist_ok=True)
             
             filename = os.path.basename(file_path)
             target_path = os.path.join(target_dir, filename)
