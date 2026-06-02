@@ -35,6 +35,7 @@ class AppConfig:
     text_input_folder: str = ""
     image_input_folder: str = ""
     global_prompt_file: str = ""
+    sent_images_output_folder: str = ""
     
     # Queue system
     image_queue_mode: bool = False
@@ -140,6 +141,7 @@ class AppConfig:
         self.text_input_folder = str(self.text_input_folder or "")
         self.image_input_folder = str(self.image_input_folder or "")
         self.global_prompt_file = str(self.global_prompt_file or "")
+        self.sent_images_output_folder = str(self.sent_images_output_folder or "")
 
         if not isinstance(self.profiles, dict):
             self.profiles = {}

@@ -785,6 +785,24 @@ class ImageModeTab(ctk.CTkScrollableFrame):
         
         prompt_button = ctk.CTkButton(self.single_frame, text="Browse", command=self._select_prompt_file, width=80)
         prompt_button.grid(row=3, column=1, padx=2, pady=2)
+
+        # Optional output folder override for sent images
+        output_label = ctk.CTkLabel(self.single_frame, text="Sent Images Output Folder (optional):")
+        output_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=5, pady=(10, 2))
+
+        self.sent_images_output_entry = ctk.CTkEntry(
+            self.single_frame,
+            placeholder_text="Leave empty to use default sent_images folder"
+        )
+        self.sent_images_output_entry.grid(row=5, column=0, sticky="ew", padx=5, pady=2)
+
+        output_button = ctk.CTkButton(
+            self.single_frame,
+            text="Browse",
+            command=self._select_sent_images_output_folder,
+            width=80
+        )
+        output_button.grid(row=5, column=1, padx=2, pady=2)
         
         # Queue mode UI
         self.queue_frame = ctk.CTkFrame(self)
@@ -1073,6 +1091,13 @@ class ImageModeTab(ctk.CTkScrollableFrame):
         if file:
             self.prompt_entry.delete(0, 'end')
             self.prompt_entry.insert(0, file)
+
+    def _select_sent_images_output_folder(self):
+        """Select output folder for sent images"""
+        folder = filedialog.askdirectory(title="Select Sent Images Output Folder")
+        if folder:
+            self.sent_images_output_entry.delete(0, 'end')
+            self.sent_images_output_entry.insert(0, folder)
     
     def load_settings(self):
         """Load settings from config"""
@@ -1081,6 +1106,8 @@ class ImageModeTab(ctk.CTkScrollableFrame):
         self.img_folder_entry.insert(0, self.config.image_input_folder)
         self.prompt_entry.delete(0, 'end')
         self.prompt_entry.insert(0, self.config.global_prompt_file)
+        self.sent_images_output_entry.delete(0, 'end')
+        self.sent_images_output_entry.insert(0, getattr(self.config, 'sent_images_output_folder', ''))
         
         # Queue mode settings
         self.mode_var.set("queue" if getattr(self.config, 'image_queue_mode', False) else "single")
@@ -1114,6 +1141,7 @@ class ImageModeTab(ctk.CTkScrollableFrame):
         # Single folder mode settings
         self.config.image_input_folder = self.img_folder_entry.get().strip()
         self.config.global_prompt_file = self.prompt_entry.get().strip()
+        self.config.sent_images_output_folder = self.sent_images_output_entry.get().strip()
         
         # Other settings
         intra_seconds = _clamp_float(self.intra_var.get(), 3.0, 0.0, 30.0)
