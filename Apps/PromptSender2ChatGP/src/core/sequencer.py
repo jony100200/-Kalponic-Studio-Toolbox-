@@ -229,6 +229,32 @@ class PromptSequencer:
     def _is_duplicate_image(self, image_path: str) -> bool:
         return self._hash_file(image_path) in self.processed_history["image"]
 
+    def _collect_text_files(self, input_folder: str) -> List[str]:
+        """Collect .txt files recursively from the input folder."""
+        if not input_folder or not os.path.isdir(input_folder):
+            return []
+
+        files: List[str] = []
+        for root, _, names in os.walk(input_folder):
+            for name in names:
+                if name.lower().endswith(".txt"):
+                    files.append(os.path.join(root, name))
+
+        return sorted(files)
+
+    def _collect_image_files(self, input_folder: str) -> List[str]:
+        """Collect supported image files recursively from the input folder."""
+        if not input_folder or not os.path.isdir(input_folder):
+            return []
+
+        files: List[str] = []
+        for root, _, names in os.walk(input_folder):
+            for name in names:
+                if Path(name).suffix.lower() in self.IMAGE_EXTENSIONS:
+                    files.append(os.path.join(root, name))
+
+        return sorted(files)
+
     def _mark_text_processed(self, text: str):
         self.processed_history["text"].add(self._hash_text(text))
 
@@ -497,17 +523,16 @@ class PromptSequencer:
             if not input_folder or not os.path.isdir(input_folder):
                 result["errors"].append("Text input folder does not exist.")
             else:
-                text_files = [f for f in os.listdir(input_folder) if f.lower().endswith('.txt')]
+                text_files = self._collect_text_files(input_folder)
                 if not text_files:
                     result["warnings"].append("No .txt files found in selected text folder.")
                 prompt_count = 0
-                for name in text_files:
-                    path = os.path.join(input_folder, name)
+                for path in text_files:
                     try:
                         with open(path, 'r', encoding='utf-8') as f:
                             prompt_count += len(self._parse_prompts(f.read()))
                     except Exception:
-                        result["warnings"].append(f"Could not parse {name} during preflight.")
+                        result["warnings"].append(f"Could not parse {path} during preflight.")
                 result["estimated_items"] = prompt_count
                 per_item = (
                     float(getattr(self.config, 'text_generation_wait', 45))
@@ -520,7 +545,7 @@ class PromptSequencer:
             if not input_folder or not os.path.isdir(input_folder):
                 result["errors"].append("Image input folder does not exist.")
             else:
-                image_files = [f for f in os.listdir(input_folder) if Path(f).suffix.lower() in self.IMAGE_EXTENSIONS]
+                image_files = self._collect_image_files(input_folder)
                 if not image_files:
                     result["warnings"].append("No image files found in selected folder.")
                 result["estimated_items"] = len(image_files)
@@ -547,7 +572,7 @@ class PromptSequencer:
                 if not folder or not os.path.isdir(folder):
                     result["warnings"].append(f"Queue folder missing: {folder}")
                     continue
-                total_images += len([f for f in os.listdir(folder) if Path(f).suffix.lower() in self.IMAGE_EXTENSIONS])
+                total_images += len(self._collect_image_files(folder))
             result["estimated_items"] = total_images
             per_item = (
                 float(getattr(self.config, 'image_generation_wait', 60))
@@ -579,6 +604,8 @@ class PromptSequencer:
                     # Get the relative path from input root to the file's directory
                     file_dir = os.path.dirname(os.path.abspath(file_path))
                     root_abs = os.path.abspath(input_root_folder)
+                    file_dir = os.path.normcase(file_dir)
+                    root_abs = os.path.normcase(root_abs)
                     if file_dir.startswith(root_abs):
                         relative_path = os.path.relpath(file_dir, root_abs)
                         if relative_path == ".":
@@ -713,12 +740,11 @@ class PromptSequencer:
             self._log_message(f"Starting text mode from folder: {input_folder}")
 
             # Get text files
-            text_files = [f for f in os.listdir(input_folder) if f.lower().endswith('.txt')]
+            text_files = self._collect_text_files(input_folder)
 
             # Pre-calculate total prompt count for better progress/summaries
             prompt_count = 0
-            for file_name in text_files:
-                file_path = os.path.join(input_folder, file_name)
+            for file_path in text_files:
                 try:
                     with open(file_path, 'r', encoding='utf-8') as f:
                         prompt_count += len(self._parse_prompts(f.read()))
@@ -733,13 +759,12 @@ class PromptSequencer:
                 return
             
             # Process each file
-            for file_name in text_files:
+            for file_path in text_files:
                 if self.state == SequencerState.STOPPING:
                     outcome = "stopped"
                     break
                 
-                file_path = os.path.join(input_folder, file_name)
-                self.current_file = file_name
+                self.current_file = os.path.relpath(file_path, input_folder)
                 self._process_text_file(file_path, input_root_folder=input_folder)
             
             self._log_message("Text mode processing completed")
@@ -1088,8 +1113,7 @@ class PromptSequencer:
                     global_prompt = f.read().strip()
             
             # Get image files
-            image_files = [f for f in os.listdir(image_folder) 
-                          if Path(f).suffix.lower() in self.IMAGE_EXTENSIONS]
+            image_files = self._collect_image_files(image_folder)
             
             if not image_files:
                 self._log_message("No image files found in input folder", "warning")
@@ -1100,7 +1124,7 @@ class PromptSequencer:
             self._start_run_summary("image", self.total_items)
             
             # Process each image
-            for i, image_file in enumerate(image_files):
+            for image_path in image_files:
                 if self.state == SequencerState.STOPPING:
                     outcome = "stopped"
                     break
@@ -1111,14 +1135,12 @@ class PromptSequencer:
                     break
                 
                 self.current_item += 1
-                self.current_file = image_file
+                self.current_file = os.path.relpath(image_path, image_folder)
                 self._update_progress()
                 
-                image_path = os.path.join(image_folder, image_file)
-
                 if getattr(self.config, 'skip_duplicates', False) and self._is_duplicate_image(image_path):
-                    self._log_message(f"Skipped duplicate image: {image_file}", "warning")
-                    self._record_run_result("skipped_duplicate", image_path, image_file)
+                    self._log_message(f"Skipped duplicate image: {os.path.basename(image_path)}", "warning")
+                    self._record_run_result("skipped_duplicate", image_path, os.path.basename(image_path))
                     if not getattr(self.config, 'dry_run', False):
                         self._move_file_to_sent(image_path, is_image=True, failed=False, input_root_folder=image_folder)
                     continue
@@ -1127,20 +1149,20 @@ class PromptSequencer:
                     mode="image",
                     source_file=image_path,
                     index=self.current_item,
-                    title=image_file
+                    title=os.path.basename(image_path)
                 )
                 rendered_prompt = self._apply_prompt_variables(global_prompt, context)
                 success = self._send_image_prompt(image_path, rendered_prompt, self.current_item)
                 
                 if success:
                     if getattr(self.config, 'dry_run', False):
-                        self._record_run_result("dry_run_success", image_path, image_file)
+                        self._record_run_result("dry_run_success", image_path, os.path.basename(image_path))
                     else:
-                        self._record_run_result("success", image_path, image_file)
+                        self._record_run_result("success", image_path, os.path.basename(image_path))
                         self._mark_image_processed(image_path)
                         self._move_file_to_sent(image_path, is_image=True, failed=False, input_root_folder=image_folder)
                 else:
-                    self._record_run_result("failed", image_path, image_file)
+                    self._record_run_result("failed", image_path, os.path.basename(image_path))
                     self._move_file_to_sent(image_path, is_image=True, failed=True, input_root_folder=image_folder)
             
             self._log_message("Image mode processing completed")
@@ -1207,8 +1229,7 @@ class PromptSequencer:
                     for item in items_for_count:
                         folder = item.get('image_folder', '')
                         if os.path.exists(folder):
-                            folder_images = [f for f in os.listdir(folder)
-                                             if Path(f).suffix.lower() in self.IMAGE_EXTENSIONS]
+                            folder_images = self._collect_image_files(folder)
                             total_images += len(folder_images)
                     self.total_items = total_images
                 else:
@@ -1283,8 +1304,7 @@ class PromptSequencer:
                             folder_prompt = f.read().strip()
 
                     # Get images in this folder
-                    folder_images = [f for f in os.listdir(folder)
-                                   if Path(f).suffix.lower() in self.IMAGE_EXTENSIONS]
+                    folder_images = self._collect_image_files(folder)
 
                     if not folder_images:
                         self._log_message(f"No images found in: {folder_name}", "warning")
@@ -1293,7 +1313,7 @@ class PromptSequencer:
                         continue
 
                     # Process each image in this folder
-                    for img_idx, image_file in enumerate(folder_images):
+                    for image_path in folder_images:
                         if self.state == SequencerState.STOPPING:
                             outcome = "stopped"
                             break
@@ -1305,7 +1325,7 @@ class PromptSequencer:
 
                         processed_images += 1
                         self.current_item = processed_images
-                        self.current_file = f"{folder_name}/{image_file}"
+                        self.current_file = f"{folder_name}/{os.path.relpath(image_path, folder)}"
                         self._update_progress()
 
                         # Cooperative cancellation check: if the GUI requested cancel for this item id,
@@ -1323,10 +1343,11 @@ class PromptSequencer:
                                 pass
                             break
 
-                        image_path = os.path.join(folder, image_file)
-
                         if getattr(self.config, 'skip_duplicates', False) and self._is_duplicate_image(image_path):
-                            self._log_message(f"Skipped duplicate image: {image_path}", "warning")
+                            self._log_message(
+                                f"Skipped duplicate image: {os.path.basename(image_path)} ({folder_name})",
+                                "warning"
+                            )
                             self._record_run_result("skipped_duplicate", image_path, "duplicate_image")
                             if not getattr(self.config, 'dry_run', False):
                                 self._move_file_to_sent(image_path, is_image=True, failed=False, input_root_folder=folder)

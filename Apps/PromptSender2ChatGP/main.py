@@ -1,9 +1,22 @@
 import tkinter as tk
-from src.gui.main_window import PromptSequencerGUI
 from src.core.config import AppConfig
 import logging
 import os
 from datetime import datetime
+
+
+def _load_gui_class():
+    try:
+        from src.gui.main_window import PromptSequencerGUI
+        return PromptSequencerGUI
+    except ModuleNotFoundError as exc:
+        if exc.name == "customtkinter":
+            raise RuntimeError(
+                "Missing dependency: customtkinter. "
+                "Install app requirements and retry: python -m pip install -r requirements.txt"
+            ) from exc
+        raise
+
 
 def setup_logging():
     """Setup logging configuration"""
@@ -32,11 +45,15 @@ def main():
         config = AppConfig()
         
         # Create and run the GUI
-        app = PromptSequencerGUI(config)
+        AppClass = _load_gui_class()
+        app = AppClass(config)
         app.run()
         
     except Exception as e:
         logger.error(f"Application failed to start: {e}")
+        if isinstance(e, RuntimeError):
+            print(f"\n{e}")
+            input("Press Enter to close . . .")
         raise
 
 if __name__ == "__main__":
