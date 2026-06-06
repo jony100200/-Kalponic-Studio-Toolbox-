@@ -30,6 +30,7 @@ class AppConfig:
     image_jitter_percent: int = 15
     image_auto_enter: bool = True
     image_repeat_prompt: bool = True
+    image_recursive_scan: bool = False
     
     # Paths
     text_input_folder: str = ""
@@ -118,6 +119,7 @@ class AppConfig:
         self.image_jitter_percent = self._clamp_int(self.image_jitter_percent, 0, 100, 15)
         self.image_auto_enter = bool(self.image_auto_enter)
         self.image_repeat_prompt = bool(self.image_repeat_prompt)
+        self.image_recursive_scan = bool(self.image_recursive_scan)
 
         self.image_queue_mode = bool(self.image_queue_mode)
         if not isinstance(self.image_queue_items, list):

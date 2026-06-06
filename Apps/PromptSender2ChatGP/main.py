@@ -3,6 +3,7 @@ from src.core.config import AppConfig
 import logging
 import os
 from datetime import datetime
+import sys
 
 
 def _load_gui_class():
@@ -11,9 +12,12 @@ def _load_gui_class():
         return PromptSequencerGUI
     except ModuleNotFoundError as exc:
         if exc.name == "customtkinter":
+            requirements = os.path.abspath("requirements.txt")
+            pip_cmd = f"\"{sys.executable}\" -m pip install -r \"{requirements}\""
             raise RuntimeError(
                 "Missing dependency: customtkinter. "
-                "Install app requirements and retry: python -m pip install -r requirements.txt"
+                f"Current interpreter: {sys.executable}\n"
+                f"Install app requirements and retry with:\n{pip_cmd}"
             ) from exc
         raise
 

@@ -910,6 +910,13 @@ class ImageModeTab(ctk.CTkScrollableFrame):
         
         self.repeat_prompt_var = tk.BooleanVar(value=True)
         ctk.CTkCheckBox(settings_frame, text="Repeat prompt per image", variable=self.repeat_prompt_var).grid(row=row, column=1, sticky="w", padx=5, pady=5)
+
+        self.image_recursive_scan_var = tk.BooleanVar(value=False)
+        ctk.CTkCheckBox(
+            settings_frame,
+            text="Scan subfolders",
+            variable=self.image_recursive_scan_var
+        ).grid(row=row, column=2, sticky="w", padx=5, pady=5)
         
         # Initialize UI state
         self._on_mode_change()
@@ -1132,6 +1139,7 @@ class ImageModeTab(ctk.CTkScrollableFrame):
         self.jitter_var.set(str(self.config.image_jitter_percent))
         self.auto_enter_var.set(self.config.image_auto_enter)
         self.repeat_prompt_var.set(self.config.image_repeat_prompt)
+        self.image_recursive_scan_var.set(bool(getattr(self.config, "image_recursive_scan", False)))
     
     def save_settings(self):
         """Save settings to config"""
@@ -1151,6 +1159,7 @@ class ImageModeTab(ctk.CTkScrollableFrame):
         self.config.image_jitter_percent = _clamp_int(self.jitter_var.get(), 15, 0, 100)
         self.config.image_auto_enter = self.auto_enter_var.get()
         self.config.image_repeat_prompt = self.repeat_prompt_var.get()
+        self.config.image_recursive_scan = self.image_recursive_scan_var.get()
     
     def _on_intra_slider_change(self, value):
         """Handle intra delay slider change"""

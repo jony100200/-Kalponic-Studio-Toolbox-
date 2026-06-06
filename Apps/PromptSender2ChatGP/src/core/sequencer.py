@@ -242,13 +242,18 @@ class PromptSequencer:
 
         return sorted(files)
 
-    def _collect_image_files(self, input_folder: str) -> List[str]:
-        """Collect supported image files recursively from the input folder."""
+    def _collect_image_files(self, input_folder: str, recursive: bool = False) -> List[str]:
+        """Collect supported image files from the input folder."""
         if not input_folder or not os.path.isdir(input_folder):
             return []
 
         files: List[str] = []
-        for root, _, names in os.walk(input_folder):
+        if recursive:
+            walker = os.walk(input_folder)
+        else:
+            walker = [(input_folder, [], sorted(os.listdir(input_folder), key=str.lower))]
+
+        for root, _, names in walker:
             for name in names:
                 if Path(name).suffix.lower() in self.IMAGE_EXTENSIONS:
                     files.append(os.path.join(root, name))
@@ -545,7 +550,10 @@ class PromptSequencer:
             if not input_folder or not os.path.isdir(input_folder):
                 result["errors"].append("Image input folder does not exist.")
             else:
-                image_files = self._collect_image_files(input_folder)
+                    image_files = self._collect_image_files(
+                        input_folder,
+                        bool(getattr(self.config, 'image_recursive_scan', False))
+                    )
                 if not image_files:
                     result["warnings"].append("No image files found in selected folder.")
                 result["estimated_items"] = len(image_files)
@@ -572,7 +580,10 @@ class PromptSequencer:
                 if not folder or not os.path.isdir(folder):
                     result["warnings"].append(f"Queue folder missing: {folder}")
                     continue
-                total_images += len(self._collect_image_files(folder))
+                total_images += len(self._collect_image_files(
+                    folder,
+                    bool(getattr(self.config, 'image_recursive_scan', False))
+                ))
             result["estimated_items"] = total_images
             per_item = (
                 float(getattr(self.config, 'image_generation_wait', 60))
@@ -1113,7 +1124,10 @@ class PromptSequencer:
                     global_prompt = f.read().strip()
             
             # Get image files
-            image_files = self._collect_image_files(image_folder)
+            image_files = self._collect_image_files(
+                image_folder,
+                bool(getattr(self.config, 'image_recursive_scan', False))
+            )
             
             if not image_files:
                 self._log_message("No image files found in input folder", "warning")
@@ -1229,7 +1243,10 @@ class PromptSequencer:
                     for item in items_for_count:
                         folder = item.get('image_folder', '')
                         if os.path.exists(folder):
-                            folder_images = self._collect_image_files(folder)
+                        folder_images = self._collect_image_files(
+                            folder,
+                            bool(getattr(self.config, 'image_recursive_scan', False))
+                        )
                             total_images += len(folder_images)
                     self.total_items = total_images
                 else:
@@ -1304,7 +1321,10 @@ class PromptSequencer:
                             folder_prompt = f.read().strip()
 
                     # Get images in this folder
-                    folder_images = self._collect_image_files(folder)
+                    folder_images = self._collect_image_files(
+                        folder,
+                        bool(getattr(self.config, 'image_recursive_scan', False))
+                    )
 
                     if not folder_images:
                         self._log_message(f"No images found in: {folder_name}", "warning")
