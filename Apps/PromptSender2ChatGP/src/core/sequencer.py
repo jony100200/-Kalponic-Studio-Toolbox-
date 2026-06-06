@@ -562,8 +562,8 @@ class PromptSequencer:
         result["ok"] = len(result["errors"]) == 0
         return result
     
-    def _move_file_to_sent(self, file_path: str, is_image: bool = False, failed: bool = False):
-        """Move processed file to appropriate directory"""
+    def _move_file_to_sent(self, file_path: str, is_image: bool = False, failed: bool = False, input_root_folder: str = ""):
+        """Move processed file to appropriate directory, preserving folder structure"""
         if getattr(self.config, 'dry_run', False):
             self._log_message(f"[DRY RUN] Would move file: {file_path}")
             return
@@ -571,8 +571,29 @@ class PromptSequencer:
         try:
             custom_sent_images_dir = (getattr(self.config, 'sent_images_output_folder', '') or '').strip()
             base_dir = custom_sent_images_dir if (is_image and custom_sent_images_dir) else ("sent_images" if is_image else "sent_prompts")
-            target_dir = f"{base_dir}/failed" if failed else base_dir
-
+            
+            # Calculate relative path to preserve folder structure
+            relative_path = ""
+            if input_root_folder and os.path.isdir(input_root_folder):
+                try:
+                    # Get the relative path from input root to the file's directory
+                    file_dir = os.path.dirname(os.path.abspath(file_path))
+                    root_abs = os.path.abspath(input_root_folder)
+                    if file_dir.startswith(root_abs):
+                        relative_path = os.path.relpath(file_dir, root_abs)
+                        if relative_path == ".":
+                            relative_path = ""
+                except Exception:
+                    relative_path = ""
+            
+            # Build target directory with preserved structure
+            if relative_path:
+                target_dir = os.path.join(base_dir, relative_path, "failed" if failed else "")
+            else:
+                target_dir = os.path.join(base_dir, "failed" if failed else "")
+            
+            # Normalize path separators
+            target_dir = os.path.normpath(target_dir)
             os.makedirs(target_dir, exist_ok=True)
             
             filename = os.path.basename(file_path)
@@ -719,7 +740,7 @@ class PromptSequencer:
                 
                 file_path = os.path.join(input_folder, file_name)
                 self.current_file = file_name
-                self._process_text_file(file_path)
+                self._process_text_file(file_path, input_root_folder=input_folder)
             
             self._log_message("Text mode processing completed")
             
@@ -735,7 +756,7 @@ class PromptSequencer:
             if self.state != SequencerState.ERROR:
                 self._change_state(SequencerState.IDLE)
     
-    def _process_text_file(self, file_path: str):
+    def _process_text_file(self, file_path: str, input_root_folder: str = ""):
         """Process a single text file with enhanced prompt parsing"""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -825,16 +846,16 @@ class PromptSequencer:
             remaining_content = remaining_content.strip()
             if remaining_content:
                 # Move remaining content to appropriate directory
-                self._move_file_to_sent(file_path, is_image=False, failed=file_failed)
+                self._move_file_to_sent(file_path, is_image=False, failed=file_failed, input_root_folder=input_root_folder)
             else:
                 # File is empty, just move it to sent_prompts
-                self._move_file_to_sent(file_path, is_image=False, failed=False)
+                self._move_file_to_sent(file_path, is_image=False, failed=False, input_root_folder=input_root_folder)
             
         except Exception as e:
             self._record_run_result("failed", file_path, f"text_file_exception: {e}")
             self._log_message(f"Error processing file {file_path}: {e}", "error")
             self._capture_error_screenshot("text_file_error")
-            self._move_file_to_sent(file_path, is_image=False, failed=True)
+            self._move_file_to_sent(file_path, is_image=False, failed=True, input_root_folder=input_root_folder)
     
     def _parse_prompts(self, content: str) -> List[Dict[str, str]]:
         """Parse prompts from content with support for numbered format"""
@@ -1099,7 +1120,7 @@ class PromptSequencer:
                     self._log_message(f"Skipped duplicate image: {image_file}", "warning")
                     self._record_run_result("skipped_duplicate", image_path, image_file)
                     if not getattr(self.config, 'dry_run', False):
-                        self._move_file_to_sent(image_path, is_image=True, failed=False)
+                        self._move_file_to_sent(image_path, is_image=True, failed=False, input_root_folder=image_folder)
                     continue
 
                 context = self._build_prompt_context(
@@ -1117,10 +1138,10 @@ class PromptSequencer:
                     else:
                         self._record_run_result("success", image_path, image_file)
                         self._mark_image_processed(image_path)
-                        self._move_file_to_sent(image_path, is_image=True, failed=False)
+                        self._move_file_to_sent(image_path, is_image=True, failed=False, input_root_folder=image_folder)
                 else:
                     self._record_run_result("failed", image_path, image_file)
-                    self._move_file_to_sent(image_path, is_image=True, failed=True)
+                    self._move_file_to_sent(image_path, is_image=True, failed=True, input_root_folder=image_folder)
             
             self._log_message("Image mode processing completed")
             
@@ -1308,7 +1329,7 @@ class PromptSequencer:
                             self._log_message(f"Skipped duplicate image: {image_path}", "warning")
                             self._record_run_result("skipped_duplicate", image_path, "duplicate_image")
                             if not getattr(self.config, 'dry_run', False):
-                                self._move_file_to_sent(image_path, is_image=True, failed=False)
+                                self._move_file_to_sent(image_path, is_image=True, failed=False, input_root_folder=folder)
                             continue
 
                         context = self._build_prompt_context(
@@ -1327,10 +1348,10 @@ class PromptSequencer:
                             else:
                                 self._record_run_result("success", image_path, folder_name)
                                 self._mark_image_processed(image_path)
-                                self._move_file_to_sent(image_path, is_image=True, failed=False)
+                                self._move_file_to_sent(image_path, is_image=True, failed=False, input_root_folder=folder)
                         else:
                             self._record_run_result("failed", image_path, folder_name)
-                            self._move_file_to_sent(image_path, is_image=True, failed=True)
+                            self._move_file_to_sent(image_path, is_image=True, failed=True, input_root_folder=folder)
 
                     # After finishing this folder, if GUI registered a callback notify it so
                     # the GUI can remove the completed folder from its list.
