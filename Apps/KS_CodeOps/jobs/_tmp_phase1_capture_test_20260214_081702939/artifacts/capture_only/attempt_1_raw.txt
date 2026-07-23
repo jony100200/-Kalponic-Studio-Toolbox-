@@ -1,7 +1,0 @@
-noise
-BEGIN_OUTPUT
-# Architecture
-A
-# Tasks
-B
-END_OUTPUT

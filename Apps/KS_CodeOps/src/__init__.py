@@ -1,1 +1,0 @@
-# KS CodeOps package namespace.

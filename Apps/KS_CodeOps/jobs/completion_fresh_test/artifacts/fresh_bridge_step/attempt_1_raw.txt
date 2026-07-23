@@ -1,3 +1,0 @@
-﻿BEGIN_OUTPUT
-# Fresh output 0
-END_OUTPUT

@@ -1,3 +1,0 @@
-﻿BEGIN_OUTPUT
-# Fresh output 43
-END_OUTPUT
