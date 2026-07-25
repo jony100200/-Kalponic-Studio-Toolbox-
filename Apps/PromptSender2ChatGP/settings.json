@@ -11,6 +11,7 @@
   "image_jitter_percent": 15,
   "image_auto_enter": true,
   "image_repeat_prompt": true,
+  "image_recursive_scan": false,
   "text_input_folder": "I:/My Drive/___Assets for Sale/Low Poly Objects/Weapon Racks",
   "image_input_folder": "G:/Other computers/My Computer/2D assets/Textures for AI Pass Styling 31 Mar 2026/expansion03",
   "global_prompt_file": "G:/Other computers/My Computer/2D assets/Textures for AI Pass Styling 31 Mar 2026/Anime Painterly Texture Prompt V2.txt",
