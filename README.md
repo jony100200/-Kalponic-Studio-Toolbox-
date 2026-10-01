@@ -70,7 +70,7 @@ I’m sharing my “work-in-progress” code and ideas so that:
 
 ⚠️ **Everything here is experimental.**  
 Some scripts may be unfinished, buggy, or get replaced as I iterate.
-
+Want the more stable version of mature tools : https://github.com/jony100200/KS-ToolBox
 ---
 
 ## License
